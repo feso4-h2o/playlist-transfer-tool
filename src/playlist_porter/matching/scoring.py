@@ -8,7 +8,11 @@ from rapidfuzz import fuzz
 
 from playlist_porter.matching.status import MatchStatus, UnavailableReason
 from playlist_porter.models import EvidenceValue, MatchDecision, TrackCandidate, UniversalTrack
-from playlist_porter.normalization import normalize_text, normalize_title
+from playlist_porter.normalization import (
+    normalize_text_forms,
+    normalize_title,
+    normalize_title_forms,
+)
 
 
 @dataclass(frozen=True)
@@ -228,19 +232,30 @@ def decide_match(
 
 
 def _title_score(source: UniversalTrack, destination: UniversalTrack) -> float:
-    source_title = normalize_title(source.title)
-    destination_title = normalize_title(destination.title)
-    return fuzz.token_set_ratio(source_title.core, destination_title.core) / 100
+    source_forms = [title.core for title in normalize_title_forms(source.title)]
+    destination_forms = [title.core for title in normalize_title_forms(destination.title)]
+    return _best_form_score(source_forms, destination_forms)
 
 
 def _text_score(left: str, right: str) -> float:
-    return fuzz.token_set_ratio(normalize_text(left), normalize_text(right)) / 100
+    return _best_form_score(normalize_text_forms(left), normalize_text_forms(right))
 
 
 def _optional_text_score(left: str | None, right: str | None, *, default: float) -> float:
     if left is None or right is None:
         return default
     return _text_score(left, right)
+
+
+def _best_form_score(
+    left_forms: tuple[str, ...] | list[str],
+    right_forms: tuple[str, ...] | list[str],
+) -> float:
+    return max(
+        fuzz.token_set_ratio(left_form, right_form) / 100
+        for left_form in left_forms
+        for right_form in right_forms
+    )
 
 
 def _duration_score(

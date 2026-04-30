@@ -114,6 +114,18 @@ def test_region_limited_candidate_becomes_not_found_with_region_reason() -> None
     assert decision.candidates[0].unavailable_reason is UnavailableReason.REGION_UNAVAILABLE
 
 
+def test_simplified_traditional_metadata_scores_as_high_confidence_match() -> None:
+    source = _track("\u611b\u6b4c", "\u85dd\u8853\u5bb6", duration=180)
+    adapter = MockAdapter(catalog=[_track("\u7231\u6b4c", "\u827a\u672f\u5bb6", track_id="dest-1")])
+
+    decision = match_track(source, adapter)
+
+    assert decision.status is MatchStatus.METADATA_HIGH_CONFIDENCE
+    assert decision.selected_candidate is not None
+    assert decision.evidence["title_score"] == 1.0
+    assert decision.evidence["primary_artist_score"] == 1.0
+
+
 def test_mock_adapter_loads_json_fixtures_and_records_writes(tmp_path) -> None:
     playlists_path = tmp_path / "playlists.json"
     catalog_path = tmp_path / "catalog.json"
