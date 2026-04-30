@@ -509,17 +509,22 @@ class TransferRepository:
     ) -> None:
         values = _source_track_values(transfer_run_id, track, position=position)
         statement = sqlite_insert(source_tracks).values(values)
+        update_values = {
+            column.name: getattr(statement.excluded, column.name)
+            for column in source_tracks.c
+            if column.name not in {"id", "transfer_run_id", "internal_id", "position"}
+        }
+        update_values["position"] = func.coalesce(
+            statement.excluded.position,
+            source_tracks.c.position,
+        )
         connection.execute(
             statement.on_conflict_do_update(
                 index_elements=[
                     source_tracks.c.transfer_run_id,
                     source_tracks.c.internal_id,
                 ],
-                set_={
-                    column.name: getattr(statement.excluded, column.name)
-                    for column in source_tracks.c
-                    if column.name not in {"id", "transfer_run_id", "internal_id"}
-                },
+                set_=update_values,
             )
         )
 

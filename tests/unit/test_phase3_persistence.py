@@ -125,6 +125,47 @@ def test_transfer_metrics_are_populated_after_mock_match_run(tmp_path) -> None:
     assert metrics.unavailable_reason_counts == {"no_candidates": 1}
 
 
+def test_decision_save_preserves_existing_source_playlist_positions(tmp_path) -> None:
+    repo = _repo(tmp_path)
+    first = _track("First", track_id="source-1")
+    second = _track("Second", track_id="source-2")
+    third = _track("Third", track_id="source-3")
+    playlist = Playlist(name="Source", tracks=[first, second, third])
+    run_id = repo.create_run(_run(playlist))
+
+    repo.save_source_playlist(run_id, playlist)
+    repo.save_match_decision(
+        run_id,
+        MatchDecision(
+            source_track=third,
+            status=MatchStatus.NOT_FOUND,
+            reason_codes=[UnavailableReason.NO_CANDIDATES],
+        ),
+    )
+    repo.save_match_decision(
+        run_id,
+        MatchDecision(
+            source_track=first,
+            status=MatchStatus.NOT_FOUND,
+            reason_codes=[UnavailableReason.NO_CANDIDATES],
+        ),
+    )
+
+    assert [track.platform_track_id for track in repo.load_source_tracks(run_id)] == [
+        "source-1",
+        "source-2",
+        "source-3",
+    ]
+    loaded_decision_track_ids = [
+        decision.source_track.platform_track_id
+        for decision in repo.load_match_decisions(run_id)
+    ]
+    assert loaded_decision_track_ids == [
+        "source-1",
+        "source-3",
+    ]
+
+
 def test_metrics_update_after_user_review_and_write_progress(tmp_path) -> None:
     repo = _repo(tmp_path)
     approved_source = _track("Approved", track_id="source-1")
