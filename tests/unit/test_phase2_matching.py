@@ -66,6 +66,17 @@ def test_version_mismatch_is_penalized_and_requires_review() -> None:
     assert decision.score < 0.88
 
 
+def test_extra_version_tags_require_review_even_with_overlap() -> None:
+    source = _track("Song (Remix)", duration=180)
+    adapter = MockAdapter(catalog=[_track("Song (Live Remix)", track_id="dest-1", duration=180)])
+
+    decision = match_track(source, adapter)
+
+    assert decision.status is MatchStatus.NEEDS_REVIEW
+    assert decision.selected_candidate is None
+    assert UnavailableReason.VERSION_MISMATCH in decision.reason_codes
+
+
 def test_multiple_close_candidates_become_needs_review() -> None:
     source = _track("Song", duration=180)
     adapter = MockAdapter(

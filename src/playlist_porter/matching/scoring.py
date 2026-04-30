@@ -295,7 +295,7 @@ def _version_score(
     if not source_tags and not destination_tags:
         return 1.0, None
     if source_tags & destination_tags:
-        return 0.65, None
+        return 0.65, UnavailableReason.VERSION_MISMATCH
     return 0.0, UnavailableReason.VERSION_MISMATCH
 
 
