@@ -173,6 +173,57 @@ def test_mock_adapter_loads_json_fixtures_and_records_writes(tmp_path) -> None:
     }
 
 
+def test_mock_adapter_loads_numeric_json_track_ids_as_strings(tmp_path) -> None:
+    playlists_path = tmp_path / "numeric-playlists.json"
+    catalog_path = tmp_path / "numeric-catalog.json"
+    playlists_path.write_text(
+        json.dumps(
+            {
+                "playlists": [
+                    {
+                        "id": 123,
+                        "name": "Source",
+                        "tracks": [
+                            {
+                                "id": 456,
+                                "title": "Song",
+                                "artists": ["Artist"],
+                                "duration_seconds": 180,
+                            }
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    catalog_path.write_text(
+        json.dumps(
+            {
+                "catalog": [
+                    {
+                        "id": 789,
+                        "title": "Song",
+                        "artists": ["Artist"],
+                        "duration_seconds": 180,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    adapter = MockAdapter.from_json(
+        playlists_path=playlists_path,
+        catalog_path=catalog_path,
+    )
+    playlist = adapter.get_playlist("123")
+    candidates = adapter.search_tracks("song artist")
+
+    assert playlist.tracks[0].platform_track_id == "456"
+    assert candidates[0].track.platform_track_id == "789"
+
+
 def test_playlist_matching_runs_end_to_end_with_mock_adapter() -> None:
     playlist = Playlist(
         name="Source",

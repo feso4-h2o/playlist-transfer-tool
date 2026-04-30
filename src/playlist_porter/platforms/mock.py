@@ -241,11 +241,14 @@ def _track_from_record(record: dict[str, Any], *, platform: str) -> UniversalTra
         title=record["title"],
         artists=_parse_artists(record["artists"]),
         platform=record.get("platform", platform),
-        platform_track_id=_blank_to_none(record.get("platform_track_id") or record.get("id")),
-        album=_blank_to_none(record.get("album")),
-        isrc=_blank_to_none(record.get("isrc")),
+        platform_track_id=_first_optional_text(
+            record.get("platform_track_id"),
+            record.get("id"),
+        ),
+        album=_optional_text(record.get("album")),
+        isrc=_optional_text(record.get("isrc")),
         duration_seconds=_optional_int(record.get("duration_seconds")),
-        release_date=_blank_to_none(record.get("release_date")),
+        release_date=_optional_text(record.get("release_date")),
         release_year=_optional_int(record.get("release_year")),
         explicit=_optional_bool(record.get("explicit")),
         source_playlist_position=_optional_int(record.get("source_playlist_position")),
@@ -278,6 +281,19 @@ def _blank_to_none(value: Any) -> Any | None:
         stripped = value.strip()
         return stripped or None
     return value
+
+
+def _optional_text(value: Any) -> str | None:
+    value = _blank_to_none(value)
+    return str(value) if value is not None else None
+
+
+def _first_optional_text(*values: Any) -> str | None:
+    for value in values:
+        text = _optional_text(value)
+        if text is not None:
+            return text
+    return None
 
 
 def _optional_int(value: Any) -> int | None:
