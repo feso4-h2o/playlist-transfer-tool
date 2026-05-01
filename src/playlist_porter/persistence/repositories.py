@@ -76,6 +76,20 @@ class UserOverride:
     reason_codes: tuple[UnavailableReason, ...] = ()
 
 
+@dataclass(frozen=True)
+class TransferRunRecord:
+    """Stored transfer run metadata used by CLI workflows."""
+
+    transfer_run_id: str
+    source_platform: str
+    destination_platform: str
+    source_playlist_id: str | None
+    source_playlist_name: str | None
+    destination_playlist_id: str | None
+    dry_run: bool
+    metadata: dict[str, Any]
+
+
 class TransferRepository:
     """SQLite-backed repository for transfer run state."""
 
@@ -125,6 +139,41 @@ class TransferRepository:
                 select(transfer_runs.c.internal_id).where(transfer_runs.c.run_key == run_key)
             ).first()
         return str(row.internal_id) if row is not None else None
+
+    def load_run(self, transfer_run_id: str | UUID) -> TransferRunRecord:
+        """Load stored transfer run metadata."""
+
+        with self.engine.connect() as connection:
+            row = connection.execute(
+                select(transfer_runs).where(
+                    transfer_runs.c.internal_id == str(transfer_run_id)
+                )
+            ).mappings().one()
+        return TransferRunRecord(
+            transfer_run_id=row["internal_id"],
+            source_platform=row["source_platform"],
+            destination_platform=row["destination_platform"],
+            source_playlist_id=row["source_playlist_id"],
+            source_playlist_name=row["source_playlist_name"],
+            destination_playlist_id=row["destination_playlist_id"],
+            dry_run=row["dry_run"],
+            metadata=_json_loads(row["metadata_json"], default={}),
+        )
+
+    def update_destination_playlist_id(
+        self,
+        transfer_run_id: str | UUID,
+        destination_playlist_id: str,
+    ) -> None:
+        """Persist the destination playlist id selected or created for execution."""
+
+        with self.engine.begin() as connection:
+            connection.execute(
+                update(transfer_runs)
+                .where(transfer_runs.c.internal_id == str(transfer_run_id))
+                .values(destination_playlist_id=destination_playlist_id)
+            )
+        self.sync_metrics(str(transfer_run_id))
 
     def mark_run_completed(
         self,
@@ -339,6 +388,28 @@ class TransferRepository:
                 for reason in _json_loads(row["reason_codes_json"], default=[])
             ),
         )
+
+    def load_user_overrides(self, transfer_run_id: str | UUID) -> dict[str, UserOverride]:
+        """Load all manual review decisions for a transfer run."""
+
+        with self.engine.connect() as connection:
+            rows = connection.execute(
+                select(user_overrides)
+                .where(user_overrides.c.transfer_run_id == str(transfer_run_id))
+                .order_by(user_overrides.c.id)
+            ).mappings()
+            return {
+                row["source_track_internal_id"]: UserOverride(
+                    source_track_internal_id=row["source_track_internal_id"],
+                    status=MatchStatus(row["status"]),
+                    selected_candidate_internal_id=row["selected_candidate_internal_id"],
+                    reason_codes=tuple(
+                        UnavailableReason(reason)
+                        for reason in _json_loads(row["reason_codes_json"], default=[])
+                    ),
+                )
+                for row in rows
+            }
 
     def record_write_success(
         self,
@@ -953,6 +1024,7 @@ __all__ = [
     "ResumeState",
     "TransferMetrics",
     "TransferRepository",
+    "TransferRunRecord",
     "UserOverride",
     "WRITE_TRACK_STEP",
 ]

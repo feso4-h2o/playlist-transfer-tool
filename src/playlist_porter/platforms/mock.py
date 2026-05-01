@@ -51,7 +51,7 @@ class MockAdapter(BasePlatform):
         self._playlists = playlists or {}
         self._catalog = self._build_catalog(catalog or [], catalog_entries or [])
         self._writes_path = Path(writes_path) if writes_path is not None else None
-        self._writes: dict[str, dict[str, Any]] = {}
+        self._writes: dict[str, dict[str, Any]] = self._load_existing_writes()
         self._min_query_score = min_query_score
         self.authenticated = False
 
@@ -182,6 +182,11 @@ class MockAdapter(BasePlatform):
             json.dumps(self._writes, indent=2, sort_keys=True),
             encoding="utf-8",
         )
+
+    def _load_existing_writes(self) -> dict[str, dict[str, Any]]:
+        if self._writes_path is None or not self._writes_path.exists():
+            return {}
+        return json.loads(self._writes_path.read_text(encoding="utf-8"))
 
     @staticmethod
     def _build_catalog(
