@@ -132,6 +132,24 @@ def test_cli_dry_run_persists_decisions_without_writes(tmp_path) -> None:
     ]
 
 
+def test_repeated_dry_run_refreshes_existing_fixture_tracks(tmp_path) -> None:
+    config_path, database_path, _, _ = _phase4_fixture(tmp_path)
+
+    main(["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"])
+    repo = TransferRepository(database_path)
+    run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
+    assert run_id is not None
+    first_metrics = repo.load_metrics(run_id)
+
+    main(["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"])
+
+    second_metrics = repo.load_metrics(run_id)
+    assert second_metrics.source_track_count == first_metrics.source_track_count
+    assert second_metrics.candidate_count == first_metrics.candidate_count
+    assert len(repo.load_source_tracks(run_id)) == 4
+    assert len(repo.load_match_decisions(run_id)) == 4
+
+
 def test_review_action_updates_sqlite_override(tmp_path) -> None:
     config_path, database_path, _, _ = _phase4_fixture(tmp_path)
     result = dry_run_mock_transfer(

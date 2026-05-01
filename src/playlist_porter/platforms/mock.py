@@ -7,6 +7,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from rapidfuzz import fuzz
 
@@ -242,14 +243,17 @@ def _catalog_entry_from_record(record: dict[str, Any]) -> _CatalogEntry:
 
 
 def _track_from_record(record: dict[str, Any], *, platform: str) -> UniversalTrack:
+    platform_value = record.get("platform", platform)
+    platform_track_id = _first_optional_text(
+        record.get("platform_track_id"),
+        record.get("id"),
+    )
     return UniversalTrack(
+        internal_id=_stable_internal_id(platform_value, platform_track_id, record),
         title=record["title"],
         artists=_parse_artists(record["artists"]),
-        platform=record.get("platform", platform),
-        platform_track_id=_first_optional_text(
-            record.get("platform_track_id"),
-            record.get("id"),
-        ),
+        platform=platform_value,
+        platform_track_id=platform_track_id,
         album=_optional_text(record.get("album")),
         isrc=_optional_text(record.get("isrc")),
         duration_seconds=_optional_int(record.get("duration_seconds")),
@@ -258,6 +262,25 @@ def _track_from_record(record: dict[str, Any], *, platform: str) -> UniversalTra
         explicit=_optional_bool(record.get("explicit")),
         source_playlist_position=_optional_int(record.get("source_playlist_position")),
     )
+
+
+def _stable_internal_id(
+    platform: str,
+    platform_track_id: str | None,
+    record: dict[str, Any],
+) -> UUID:
+    if platform_track_id is None:
+        identity = json.dumps(
+            {
+                "title": record.get("title"),
+                "artists": record.get("artists"),
+                "album": record.get("album"),
+                "duration_seconds": record.get("duration_seconds"),
+            },
+            sort_keys=True,
+        )
+        return uuid5(NAMESPACE_URL, f"mock-track:{platform}:{identity}")
+    return uuid5(NAMESPACE_URL, f"mock-track:{platform}:{platform_track_id}")
 
 
 def _searchable_forms(track: UniversalTrack) -> tuple[str, ...]:
