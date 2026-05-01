@@ -150,6 +150,54 @@ def test_repeated_dry_run_refreshes_existing_fixture_tracks(tmp_path) -> None:
     assert len(repo.load_match_decisions(run_id)) == 4
 
 
+def test_repeated_dry_run_removes_stale_playlist_tracks(tmp_path) -> None:
+    config_path, database_path, writes_path, _ = _phase4_fixture(tmp_path)
+    main(["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"])
+    repo = TransferRepository(database_path)
+    run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
+    assert run_id is not None
+    removed_track = next(
+        track
+        for track in repo.load_source_tracks(run_id)
+        if track.platform_track_id == "source-missing"
+    )
+    repo.save_user_override(
+        run_id,
+        removed_track.internal_id,
+        status=MatchStatus.USER_REJECTED,
+    )
+    repo.record_write_success(run_id, removed_track.internal_id, "obsolete-destination")
+
+    playlists_path = tmp_path / "fixtures" / "playlists.json"
+    playlist_payload = json.loads(playlists_path.read_text(encoding="utf-8"))
+    playlist_payload["playlists"][0]["tracks"] = [
+        track
+        for track in playlist_payload["playlists"][0]["tracks"]
+        if track["id"] != "source-missing"
+    ]
+    _write_json(playlists_path, playlist_payload)
+    main(["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"])
+
+    metrics = repo.load_metrics(run_id)
+    assert metrics.source_track_count == 3
+    assert metrics.user_rejected_count == 0
+    assert metrics.write_success_count == 0
+    assert [track.platform_track_id for track in repo.load_source_tracks(run_id)] == [
+        "source-exact",
+        "source-review",
+        "source-region",
+    ]
+    assert [
+        decision.source_track.platform_track_id
+        for decision in repo.load_match_decisions(run_id)
+    ] == [
+        "source-exact",
+        "source-review",
+        "source-region",
+    ]
+    assert writes_path.exists() is False
+
+
 def test_review_action_updates_sqlite_override(tmp_path) -> None:
     config_path, database_path, _, _ = _phase4_fixture(tmp_path)
     result = dry_run_mock_transfer(
