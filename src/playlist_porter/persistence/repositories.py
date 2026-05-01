@@ -406,16 +406,32 @@ class TransferRepository:
         transfer_run_id: str | UUID,
         destination_track_ids: list[str],
         *,
+        source_track_ids: list[str | UUID] | None = None,
         step_type: str = WRITE_TRACK_STEP,
     ) -> list[str]:
-        """Filter destination ids to those not already completed for the run."""
+        """Filter destination ids to those not already completed for source tracks."""
 
-        resume = self.get_resume_state(transfer_run_id, step_type=step_type)
-        return [
-            track_id
-            for track_id in destination_track_ids
-            if track_id not in resume.completed_destination_track_ids
-        ]
+        if source_track_ids is not None:
+            if len(source_track_ids) != len(destination_track_ids):
+                raise ValueError("source_track_ids must match destination_track_ids length")
+            return [
+                destination_track_id
+                for source_track_id, destination_track_id in zip(
+                    source_track_ids,
+                    destination_track_ids,
+                    strict=True,
+                )
+                if self.should_write_track(
+                    transfer_run_id,
+                    source_track_id,
+                    destination_track_id,
+                    step_type=step_type,
+                )
+            ]
+
+        # Destination-only filtering cannot distinguish intentional duplicate
+        # playlist entries, so do not drop anything without source ids.
+        return list(destination_track_ids)
 
     def get_resume_state(
         self,

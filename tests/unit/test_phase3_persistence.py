@@ -223,10 +223,35 @@ def test_resume_state_skips_completed_write_steps(tmp_path) -> None:
 
     assert repo.should_write_track(run_id, source.internal_id, "dest-1") is False
     assert repo.should_write_track(run_id, source.internal_id, "dest-2") is True
-    assert repo.pending_write_track_ids(run_id, ["dest-1", "dest-2"]) == ["dest-2"]
+    assert repo.pending_write_track_ids(
+        run_id,
+        ["dest-1", "dest-2"],
+        source_track_ids=[source.internal_id, source.internal_id],
+    ) == ["dest-2"]
     assert str(source.internal_id) in resume_state.completed_write_source_track_ids
     assert resume_state.completed_destination_track_ids == frozenset({"dest-1"})
     assert repo.load_metrics(run_id).write_success_count == 1
+
+
+def test_pending_write_filter_keeps_duplicate_destination_tracks_source_aware(tmp_path) -> None:
+    repo = _repo(tmp_path)
+    first = _track("First", track_id="source-1")
+    second = _track("Second", track_id="source-2")
+    playlist = Playlist(name="Source", tracks=[first, second])
+    run_id = repo.create_run(_run(playlist))
+
+    repo.save_source_playlist(run_id, playlist)
+    repo.record_write_success(run_id, first.internal_id, "dest-duplicate")
+
+    assert repo.pending_write_track_ids(
+        run_id,
+        ["dest-duplicate", "dest-duplicate"],
+        source_track_ids=[first.internal_id, second.internal_id],
+    ) == ["dest-duplicate"]
+    assert repo.pending_write_track_ids(
+        run_id,
+        ["dest-duplicate", "dest-duplicate"],
+    ) == ["dest-duplicate", "dest-duplicate"]
 
 
 def test_user_override_survives_process_restart(tmp_path) -> None:
