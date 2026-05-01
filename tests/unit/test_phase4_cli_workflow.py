@@ -1,0 +1,270 @@
+import csv
+import json
+
+from playlist_porter.cli import main
+from playlist_porter.config import PorterConfig
+from playlist_porter.matching.status import MatchStatus
+from playlist_porter.persistence.exports import build_unavailable_rows
+from playlist_porter.persistence.repositories import TransferRepository
+from playlist_porter.workflow import dry_run_mock_transfer, execute_mock_transfer
+
+
+def _write_json(path, payload) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _config_file(tmp_path, *, playlist_tracks, catalog_tracks) -> tuple:
+    playlists_path = tmp_path / "fixtures" / "playlists.json"
+    catalog_path = tmp_path / "fixtures" / "catalog.json"
+    database_path = tmp_path / "state" / "transfer.sqlite"
+    writes_path = tmp_path / "state" / "writes.json"
+    reports_path = tmp_path / "reports"
+    config_path = tmp_path / "porter.json"
+    _write_json(
+        playlists_path,
+        {
+            "playlists": [
+                {
+                    "id": "source-playlist",
+                    "name": "Source",
+                    "tracks": playlist_tracks,
+                }
+            ]
+        },
+    )
+    _write_json(catalog_path, {"catalog": catalog_tracks})
+    _write_json(
+        config_path,
+        {
+            "database_path": str(database_path),
+            "report_output_dir": str(reports_path),
+            "mock": {
+                "source_playlists_path": str(playlists_path),
+                "destination_catalog_path": str(catalog_path),
+                "writes_path": str(writes_path),
+            },
+        },
+    )
+    return config_path, database_path, writes_path, reports_path
+
+
+def _phase4_fixture(tmp_path):
+    return _config_file(
+        tmp_path,
+        playlist_tracks=[
+            {
+                "id": "source-exact",
+                "title": "Alpha",
+                "artists": ["Exact Artist"],
+                "duration_seconds": 180,
+                "isrc": "ISRC1",
+            },
+            {
+                "id": "source-review",
+                "title": "Beta",
+                "artists": ["Review Artist"],
+                "duration_seconds": 180,
+            },
+            {
+                "id": "source-region",
+                "title": "Territory",
+                "artists": ["Region Artist"],
+                "duration_seconds": 180,
+            },
+            {
+                "id": "source-missing",
+                "title": "Qxzv",
+                "artists": ["No Match Artist"],
+                "duration_seconds": 180,
+            },
+        ],
+        catalog_tracks=[
+            {
+                "id": "dest-exact",
+                "title": "Alpha",
+                "artists": ["Exact Artist"],
+                "duration_seconds": 180,
+                "isrc": "ISRC1",
+            },
+            {
+                "id": "dest-review",
+                "title": "Beta (Remix)",
+                "artists": ["Review Artist"],
+                "duration_seconds": 180,
+            },
+            {
+                "id": "dest-region",
+                "title": "Territory",
+                "artists": ["Region Artist"],
+                "duration_seconds": 180,
+                "unavailable_reason": "region_unavailable",
+            },
+        ],
+    )
+
+
+def test_cli_dry_run_persists_decisions_without_writes(tmp_path) -> None:
+    config_path, database_path, writes_path, _ = _phase4_fixture(tmp_path)
+
+    exit_code = main(
+        [
+            "dry-run",
+            "--config",
+            str(config_path),
+            "--source-playlist",
+            "source-playlist",
+        ]
+    )
+
+    repo = TransferRepository(database_path)
+    run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
+    assert run_id is not None
+    decisions = repo.load_match_decisions(run_id)
+
+    assert exit_code == 0
+    assert writes_path.exists() is False
+    assert [decision.status for decision in decisions] == [
+        MatchStatus.ISRC_EXACT,
+        MatchStatus.NEEDS_REVIEW,
+        MatchStatus.NOT_FOUND,
+        MatchStatus.NOT_FOUND,
+    ]
+
+
+def test_review_action_updates_sqlite_override(tmp_path) -> None:
+    config_path, database_path, _, _ = _phase4_fixture(tmp_path)
+    result = dry_run_mock_transfer(
+        PorterConfig(
+            database_path=database_path,
+            report_output_dir=tmp_path / "reports",
+            mock_source_playlists_path=tmp_path / "fixtures" / "playlists.json",
+            mock_destination_catalog_path=tmp_path / "fixtures" / "catalog.json",
+            mock_writes_path=tmp_path / "state" / "writes.json",
+        ),
+        source_playlist_id="source-playlist",
+    )
+    repo = TransferRepository(database_path)
+    review_decision = next(
+        decision
+        for decision in repo.load_match_decisions(result.transfer_run_id)
+        if decision.status is MatchStatus.NEEDS_REVIEW
+    )
+
+    exit_code = main(
+        [
+            "review",
+            "--db",
+            str(database_path),
+            "--run-id",
+            result.transfer_run_id,
+            "--source-track-id",
+            str(review_decision.source_track.internal_id),
+            "--action",
+            "accept",
+            "--candidate-rank",
+            "1",
+        ]
+    )
+
+    override = repo.load_user_override(
+        result.transfer_run_id,
+        review_decision.source_track.internal_id,
+    )
+    assert exit_code == 0
+    assert override is not None
+    assert override.status is MatchStatus.USER_APPROVED
+
+
+def test_execute_and_resume_skip_recorded_duplicate_destination_writes(tmp_path) -> None:
+    config_path, database_path, writes_path, _ = _config_file(
+        tmp_path,
+        playlist_tracks=[
+            {
+                "id": "source-1",
+                "title": "Shared Song",
+                "artists": ["Artist"],
+                "duration_seconds": 180,
+            },
+            {
+                "id": "source-2",
+                "title": "Shared Song",
+                "artists": ["Artist"],
+                "duration_seconds": 180,
+            },
+        ],
+        catalog_tracks=[
+            {
+                "id": "dest-shared",
+                "title": "Shared Song",
+                "artists": ["Artist"],
+                "duration_seconds": 180,
+            }
+        ],
+    )
+    config = PorterConfig(
+        database_path=database_path,
+        report_output_dir=tmp_path / "reports",
+        mock_source_playlists_path=tmp_path / "fixtures" / "playlists.json",
+        mock_destination_catalog_path=tmp_path / "fixtures" / "catalog.json",
+        mock_writes_path=writes_path,
+    )
+    dry_run = dry_run_mock_transfer(config, source_playlist_id="source-playlist")
+
+    first_execute = execute_mock_transfer(
+        config,
+        transfer_run_id=dry_run.transfer_run_id,
+        create_playlist_name="Copied",
+    )
+    resume = main(
+        [
+            "resume",
+            "--config",
+            str(config_path),
+            "--run-id",
+            dry_run.transfer_run_id,
+        ]
+    )
+
+    writes = json.loads(writes_path.read_text(encoding="utf-8"))
+    assert first_execute.attempted_count == 2
+    assert resume == 0
+    assert writes[first_execute.destination_playlist_id]["track_ids"] == [
+        "dest-shared",
+        "dest-shared",
+    ]
+    assert TransferRepository(database_path).load_metrics(
+        dry_run.transfer_run_id
+    ).write_success_count == 2
+
+
+def test_export_reports_include_expected_columns_and_region_reason(tmp_path) -> None:
+    config_path, database_path, _, reports_path = _phase4_fixture(tmp_path)
+    main(["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"])
+    repo = TransferRepository(database_path)
+    run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
+    assert run_id is not None
+
+    exit_code = main(
+        [
+            "export-report",
+            "--db",
+            str(database_path),
+            "--run-id",
+            run_id,
+            "--output-dir",
+            str(reports_path),
+            "--format",
+            "both",
+        ]
+    )
+
+    rows = build_unavailable_rows(repo, run_id)
+    csv_rows = list(csv.DictReader((reports_path / "unavailable-tracks.csv").open()))
+    json_rows = json.loads((reports_path / "unavailable-tracks.json").read_text())
+    assert exit_code == 0
+    assert "region_unavailable" in {
+        reason for row in rows for reason in row["reason_codes"].split(";")
+    }
+    assert csv_rows[0].keys() >= {"source_title", "reason_codes", "top_suggested_alternates"}
+    assert json_rows == rows
