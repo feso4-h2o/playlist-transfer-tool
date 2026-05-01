@@ -94,7 +94,7 @@ class TransferRepository:
         with self.engine.begin() as connection:
             connection.execute(
                 transfer_runs.insert().values(
-                    _run_values(run, run_key=run_key or _default_run_key(run))
+                    _run_values(run, run_key=run_key or _new_run_key(run))
                 )
             )
         self.sync_metrics(str(run.internal_id))
@@ -887,6 +887,10 @@ def _default_run_key(run: TransferRun) -> str:
             mode,
         ]
     )
+
+
+def _new_run_key(run: TransferRun) -> str:
+    return f"{_default_run_key(run)}|run:{run.internal_id}"
 
 
 def _count(connection: Connection, table: Any, whereclause: Any) -> int:

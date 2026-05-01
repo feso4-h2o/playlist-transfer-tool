@@ -266,3 +266,17 @@ def test_get_or_create_run_detects_existing_resume_key(tmp_path) -> None:
     assert first_created is True
     assert second_created is False
     assert second_id == first_id
+
+
+def test_create_run_allows_explicit_restart_for_same_playlist(tmp_path) -> None:
+    repo = _repo(tmp_path)
+    playlist = Playlist(
+        name="Source",
+        platform_playlist_id="source-playlist",
+        tracks=[_track("Song")],
+    )
+
+    first_id = repo.create_run(_run(playlist))
+    second_id = repo.create_run(_run(playlist))
+
+    assert second_id != first_id
