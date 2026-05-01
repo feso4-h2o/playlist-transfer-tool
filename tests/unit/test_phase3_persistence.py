@@ -1,3 +1,4 @@
+import pytest
 from sqlalchemy import inspect
 
 from playlist_porter.matching.candidates import match_playlist
@@ -248,10 +249,11 @@ def test_pending_write_filter_keeps_duplicate_destination_tracks_source_aware(tm
         ["dest-duplicate", "dest-duplicate"],
         source_track_ids=[first.internal_id, second.internal_id],
     ) == ["dest-duplicate"]
-    assert repo.pending_write_track_ids(
-        run_id,
-        ["dest-duplicate", "dest-duplicate"],
-    ) == ["dest-duplicate", "dest-duplicate"]
+    with pytest.raises(ValueError, match="source_track_ids are required"):
+        repo.pending_write_track_ids(
+            run_id,
+            ["dest-duplicate", "dest-duplicate"],
+        )
 
 
 def test_user_override_survives_process_restart(tmp_path) -> None:

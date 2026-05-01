@@ -429,9 +429,7 @@ class TransferRepository:
                 )
             ]
 
-        # Destination-only filtering cannot distinguish intentional duplicate
-        # playlist entries, so do not drop anything without source ids.
-        return list(destination_track_ids)
+        raise ValueError("source_track_ids are required for resume-safe write filtering")
 
     def get_resume_state(
         self,
