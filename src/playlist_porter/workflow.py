@@ -108,6 +108,8 @@ def execute_mock_transfer(
     adapter.authenticate()
     run_record = repository.load_run(transfer_run_id)
     destination_id = destination_playlist_id or run_record.destination_playlist_id
+    if destination_playlist_id is not None:
+        repository.update_destination_playlist_id(transfer_run_id, destination_playlist_id)
     if destination_id is None:
         destination_id = adapter.create_playlist(
             create_playlist_name or f"{run_record.source_playlist_name or 'Playlist'} Copy",

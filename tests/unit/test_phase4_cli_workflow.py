@@ -256,6 +256,59 @@ def test_execute_and_resume_skip_recorded_duplicate_destination_writes(tmp_path)
     ).write_success_count == 2
 
 
+def test_execute_persists_supplied_destination_playlist_for_resume(tmp_path) -> None:
+    config_path, database_path, writes_path, _ = _config_file(
+        tmp_path,
+        playlist_tracks=[
+            {
+                "id": "source-1",
+                "title": "Alpha",
+                "artists": ["Artist"],
+                "duration_seconds": 180,
+            }
+        ],
+        catalog_tracks=[
+            {
+                "id": "dest-1",
+                "title": "Alpha",
+                "artists": ["Artist"],
+                "duration_seconds": 180,
+            }
+        ],
+    )
+    config = PorterConfig(
+        database_path=database_path,
+        report_output_dir=tmp_path / "reports",
+        mock_source_playlists_path=tmp_path / "fixtures" / "playlists.json",
+        mock_destination_catalog_path=tmp_path / "fixtures" / "catalog.json",
+        mock_writes_path=writes_path,
+    )
+    dry_run = dry_run_mock_transfer(config, source_playlist_id="source-playlist")
+
+    execute_mock_transfer(
+        config,
+        transfer_run_id=dry_run.transfer_run_id,
+        destination_playlist_id="existing-playlist",
+    )
+    resume = main(
+        [
+            "resume",
+            "--config",
+            str(config_path),
+            "--run-id",
+            dry_run.transfer_run_id,
+        ]
+    )
+
+    writes = json.loads(writes_path.read_text(encoding="utf-8"))
+    assert resume == 0
+    assert TransferRepository(database_path).load_run(
+        dry_run.transfer_run_id
+    ).destination_playlist_id == "existing-playlist"
+    assert set(writes) == {"existing-playlist"}
+    assert writes["existing-playlist"]["track_ids"] == ["dest-1"]
+
+
 def test_export_reports_include_expected_columns_and_region_reason(tmp_path) -> None:
     config_path, database_path, _, reports_path = _phase4_fixture(tmp_path)
     main(["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"])
