@@ -175,19 +175,27 @@ class TransferRepository:
             )
         self.sync_metrics(str(transfer_run_id))
 
-    def clear_transfer_state(self, transfer_run_id: str | UUID) -> None:
-        """Clear per-track match, review, and write state for a run refresh."""
+    def prune_transfer_state(
+        self,
+        transfer_run_id: str | UUID,
+        source_track_ids: list[str | UUID],
+    ) -> None:
+        """Remove per-track state for source tracks no longer in a refreshed run."""
 
         run_id = str(transfer_run_id)
+        retained_ids = [str(source_track_id) for source_track_id in source_track_ids]
         with self.engine.begin() as connection:
-            for table in (
-                transfer_steps,
-                user_overrides,
-                match_decisions,
-                candidate_tracks,
-                source_tracks,
+            for table, source_column in (
+                (transfer_steps, transfer_steps.c.source_track_internal_id),
+                (user_overrides, user_overrides.c.source_track_internal_id),
+                (match_decisions, match_decisions.c.source_track_internal_id),
+                (candidate_tracks, candidate_tracks.c.source_track_internal_id),
+                (source_tracks, source_tracks.c.internal_id),
             ):
-                connection.execute(delete(table).where(table.c.transfer_run_id == run_id))
+                statement = delete(table).where(table.c.transfer_run_id == run_id)
+                if retained_ids:
+                    statement = statement.where(source_column.not_in(retained_ids))
+                connection.execute(statement)
         self.sync_metrics(run_id)
 
     def mark_run_completed(

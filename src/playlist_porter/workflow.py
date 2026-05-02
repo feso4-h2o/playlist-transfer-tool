@@ -83,7 +83,10 @@ def dry_run_mock_transfer(
     else:
         transfer_run_id, created = repository.get_or_create_run(run)
         if not created:
-            repository.clear_transfer_state(transfer_run_id)
+            repository.prune_transfer_state(
+                transfer_run_id,
+                [track.internal_id for track in playlist.tracks],
+            )
 
     repository.save_source_playlist(transfer_run_id, playlist)
     decisions = match_playlist(playlist, adapter)
