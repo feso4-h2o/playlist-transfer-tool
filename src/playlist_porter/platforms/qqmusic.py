@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, urlparse
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from playlist_porter.models import Playlist, TrackCandidate, UniversalTrack
@@ -460,11 +461,19 @@ def _song_info_from_track_id(track_id: str) -> tuple[int, int]:
 
 
 def _playlist_id_from_value(value: str) -> int:
-    text = value.strip().rstrip("/")
-    if "/" in text:
-        text = text.rsplit("/", 1)[-1]
-    if "id=" in text:
-        text = text.split("id=", 1)[1].split("&", 1)[0]
+    text = value.strip()
+    parsed = urlparse(text)
+    query_id = parse_qs(parsed.query).get("id") or parse_qs(parsed.query).get("disstid")
+    if query_id:
+        text = query_id[0]
+    else:
+        text = (parsed.path or text).strip().rstrip("/")
+        if "/" in text:
+            text = text.rsplit("/", 1)[-1]
+        if "id=" in text:
+            text = text.split("id=", 1)[1].split("&", 1)[0]
+    if text.endswith(".html"):
+        text = text.removesuffix(".html")
     try:
         return int(text)
     except ValueError as exc:

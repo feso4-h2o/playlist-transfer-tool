@@ -210,6 +210,33 @@ def test_qqmusic_adapter_fetches_playlist_through_rate_policy() -> None:
     assert playlist.tracks[0].platform_track_id == "1:0"
 
 
+@pytest.mark.parametrize(
+    "playlist_value",
+    [
+        "https://y.qq.com/n/ryqq/playlist/12345?ADTAG=copy_link",
+        "https://y.qq.com/n/yqq/playlist/12345.html",
+        "https://i.y.qq.com/n2/m/share/details/taoge.html?id=12345&ADTAG=copy_link",
+        "12345?ADTAG=copy_link",
+    ],
+)
+def test_qqmusic_adapter_accepts_copied_playlist_urls(playlist_value: str) -> None:
+    client = FakeQQMusicClient(
+        playlist_payload={
+            "info": {"id": 12345, "title": "华语收藏"},
+            "songs": [song_payload(id=1)],
+        }
+    )
+    adapter = QQMusicAdapter(
+        config=QQMusicConfig(page_size=50),
+        client=client,
+        rate_limit_policy=qq_policy(),
+    )
+
+    playlist = adapter.get_playlist(playlist_value)
+
+    assert playlist.platform_playlist_id == "12345"
+
+
 def test_qqmusic_adapter_fetches_all_playlist_pages_from_client_payload() -> None:
     client = FakeQQMusicClient(
         playlist_payload=[
