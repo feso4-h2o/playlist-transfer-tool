@@ -37,6 +37,10 @@ class LoginExpiredError(Exception):
     pass
 
 
+class NetworkError(Exception):
+    pass
+
+
 class FakeQQMusicClient:
     def __init__(
         self,
@@ -45,11 +49,13 @@ class FakeQQMusicClient:
         search_payload: dict | None = None,
         validate_error: Exception | None = None,
         search_errors_before_success: int = 0,
+        search_error: Exception | None = None,
     ) -> None:
         self.playlist_payload = playlist_payload or {}
         self.search_payload = search_payload or {"song": []}
         self.validate_error = validate_error
         self.search_errors_before_success = search_errors_before_success
+        self.search_error = search_error or TransientNetworkError("temporary QQ search failure")
         self.created_names: list[str] = []
         self.added_songs: list[tuple[int, list[tuple[int, int]]]] = []
         self.search_calls = 0
@@ -68,7 +74,7 @@ class FakeQQMusicClient:
         assert limit == 2
         self.search_calls += 1
         if self.search_calls <= self.search_errors_before_success:
-            raise TransientNetworkError("temporary QQ search failure")
+            raise self.search_error
         return self.search_payload
 
     def create_playlist(self, name: str) -> dict:
@@ -197,6 +203,20 @@ def test_qqmusic_adapter_search_retries_transient_failures() -> None:
     assert clock.sleeps == [0.0]
     assert [candidate.rank for candidate in candidates] == [1, 2]
     assert candidates[0].evidence["qqmusic_capability"] == "search_by_type"
+
+
+def test_qqmusic_adapter_classifies_raw_network_errors_before_retry() -> None:
+    client = FakeQQMusicClient(
+        search_payload={"song": [song_payload(id=1)]},
+        search_errors_before_success=1,
+        search_error=NetworkError("socket reset"),
+    )
+    adapter = QQMusicAdapter(client=client, rate_limit_policy=qq_policy())
+
+    candidates = adapter.search_tracks("七里香 周杰伦", limit=2)
+
+    assert client.search_calls == 2
+    assert candidates[0].track.title == "七里香"
 
 
 def test_qqmusic_auth_failure_is_non_retryable() -> None:

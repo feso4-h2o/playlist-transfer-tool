@@ -210,7 +210,7 @@ class QQMusicAdapter(BasePlatform):
         try:
             self._policy.execute(
                 "qqmusic session validation",
-                self._ensure_client().validate_session,
+                _retryable_qqmusic_operation(self._ensure_client().validate_session),
                 request_kind="read",
             )
         except Exception as exc:
@@ -224,9 +224,11 @@ class QQMusicAdapter(BasePlatform):
         try:
             payload = self._policy.execute(
                 "qqmusic playlist fetch",
-                lambda: self._ensure_client().get_playlist(
-                    playlist_id,
-                    page_size=self.config.page_size,
+                _retryable_qqmusic_operation(
+                    lambda: self._ensure_client().get_playlist(
+                        playlist_id,
+                        page_size=self.config.page_size,
+                    )
                 ),
                 request_kind="read",
             )
@@ -240,7 +242,9 @@ class QQMusicAdapter(BasePlatform):
         try:
             payload = self._policy.execute(
                 "qqmusic track search",
-                lambda: self._ensure_client().search_tracks(query, limit=limit),
+                _retryable_qqmusic_operation(
+                    lambda: self._ensure_client().search_tracks(query, limit=limit)
+                ),
                 request_kind="read",
             )
         except Exception as exc:
@@ -269,7 +273,7 @@ class QQMusicAdapter(BasePlatform):
         try:
             payload = self._policy.execute(
                 "qqmusic playlist create",
-                lambda: self._ensure_client().create_playlist(name),
+                _retryable_qqmusic_operation(lambda: self._ensure_client().create_playlist(name)),
                 request_kind="write",
             )
         except Exception as exc:
@@ -293,7 +297,9 @@ class QQMusicAdapter(BasePlatform):
         try:
             added = self._policy.execute(
                 "qqmusic playlist add tracks",
-                lambda: self._ensure_client().add_songs(int(playlist_id), song_info),
+                _retryable_qqmusic_operation(
+                    lambda: self._ensure_client().add_songs(int(playlist_id), song_info)
+                ),
                 request_kind="write",
             )
         except Exception as exc:
@@ -459,6 +465,16 @@ def _classify_qqmusic_exception(exc: Exception) -> Exception:
             return TemporaryServerError(f"QQ Music temporary server failure: {message}")
         return ValidationFailure(f"QQ Music API rejected the request: {message}")
     return QQMusicAdapterError(f"QQ Music adapter operation failed: {message}")
+
+
+def _retryable_qqmusic_operation[T](operation: Callable[[], T]) -> Callable[[], T]:
+    def wrapped() -> T:
+        try:
+            return operation()
+        except Exception as exc:
+            _raise_classified_qqmusic_exception(exc)
+
+    return wrapped
 
 
 def _raise_classified_qqmusic_exception(exc: Exception) -> None:
