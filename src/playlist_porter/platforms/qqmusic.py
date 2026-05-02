@@ -122,7 +122,7 @@ class QQMusicClientFacade:
         """Fetch a playlist detail page."""
 
         request = self._client.songlist.get_detail(playlist_id, num=page_size)
-        return self._execute(request)
+        return self._run_async(_collect_paginated_request(request))
 
     def search_tracks(self, query: str, *, limit: int) -> Any:
         """Search QQ Music tracks."""
@@ -313,6 +313,13 @@ class QQMusicAdapter(BasePlatform):
         return self._client
 
 
+async def _collect_paginated_request(request: Any) -> Any:
+    pages = []
+    async for page in request.paginate():
+        pages.append(page)
+    return _merge_playlist_pages(pages)
+
+
 def playlist_from_qqmusic_payload(
     payload: Any,
     *,
@@ -320,6 +327,7 @@ def playlist_from_qqmusic_payload(
 ) -> Playlist:
     """Map a QQ Music playlist response into an internal playlist."""
 
+    payload = _merge_playlist_pages(payload)
     info = _first_value(payload, "info", "dirinfo", "songlist_info") or {}
     playlist_id = _first_value(info, "id", "tid", "dirid") or fallback_playlist_id
     title = _first_value(info, "title", "name", "dissname") or "QQ Music Playlist"
@@ -391,6 +399,32 @@ def _song_items_from_playlist_payload(payload: Any) -> Sequence[Any]:
     if not isinstance(songs, Sequence) or isinstance(songs, str | bytes):
         raise ValidationFailure("QQ Music playlist response did not include a song list")
     return songs
+
+
+def _merge_playlist_pages(payload: Any) -> Any:
+    if (
+        not isinstance(payload, Sequence)
+        or isinstance(payload, str | bytes)
+        or isinstance(payload, Mapping)
+    ):
+        return payload
+    pages = list(payload)
+    if not pages:
+        return {}
+
+    first_page = pages[0]
+    songs = [
+        song
+        for page in pages
+        for song in (_first_value(page, "songs", "songlist", "song", "list") or [])
+    ]
+    info = _first_value(first_page, "info", "dirinfo", "songlist_info") or {}
+    return {
+        "info": info,
+        "songs": songs,
+        "total": _first_value(first_page, "total", "total_song_num"),
+        "hasmore": False,
+    }
 
 
 def _artist_names(payload: Any) -> list[str]:

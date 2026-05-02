@@ -144,6 +144,27 @@ def test_qqmusic_playlist_mapping_uses_detail_response_shape() -> None:
     assert [track.source_playlist_position for track in playlist.tracks] == [1, 2]
 
 
+def test_qqmusic_playlist_mapping_combines_paginated_detail_responses() -> None:
+    playlist = playlist_from_qqmusic_payload(
+        [
+            {
+                "info": {"id": 12345, "title": "华语收藏"},
+                "songs": [song_payload(title="第一页", id=1)],
+                "hasmore": True,
+            },
+            {
+                "info": {"id": 12345, "title": "华语收藏"},
+                "songs": [song_payload(title="第二页", id=2)],
+                "hasmore": False,
+            },
+        ]
+    )
+
+    assert playlist.platform_playlist_id == "12345"
+    assert [track.title for track in playlist.tracks] == ["第一页", "第二页"]
+    assert [track.source_playlist_position for track in playlist.tracks] == [1, 2]
+
+
 def test_qqmusic_search_mapping_returns_tracks_from_song_field() -> None:
     tracks = search_tracks_from_qqmusic_payload(
         {"song": [song_payload(id=1), song_payload(id=2, title="晴天")]}
@@ -187,6 +208,32 @@ def test_qqmusic_adapter_fetches_playlist_through_rate_policy() -> None:
 
     assert playlist.name == "华语收藏"
     assert playlist.tracks[0].platform_track_id == "1:0"
+
+
+def test_qqmusic_adapter_fetches_all_playlist_pages_from_client_payload() -> None:
+    client = FakeQQMusicClient(
+        playlist_payload=[
+            {
+                "info": {"id": 12345, "title": "华语收藏"},
+                "songs": [song_payload(id=1, title="第一页")],
+                "hasmore": True,
+            },
+            {
+                "info": {"id": 12345, "title": "华语收藏"},
+                "songs": [song_payload(id=2, title="第二页")],
+                "hasmore": False,
+            },
+        ]
+    )
+    adapter = QQMusicAdapter(
+        config=QQMusicConfig(page_size=50),
+        client=client,
+        rate_limit_policy=qq_policy(),
+    )
+
+    playlist = adapter.get_playlist("12345")
+
+    assert [track.title for track in playlist.tracks] == ["第一页", "第二页"]
 
 
 def test_qqmusic_adapter_search_retries_transient_failures() -> None:
