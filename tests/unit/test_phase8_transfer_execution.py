@@ -169,6 +169,31 @@ def test_phase8_write_run_uses_reviewed_dry_run_approvals(tmp_path) -> None:
     assert writes["reviewed-playlist"]["track_ids"] == ["dest-exact", "dest-review"]
 
 
+def test_phase8_write_run_rejects_destination_playlist_changes(tmp_path) -> None:
+    config = _phase8_config(tmp_path)
+    dry_run = run_transfer(
+        config,
+        source_platform="mock",
+        destination_platform="mock",
+        source_playlist_id="source-playlist",
+        dry_run=True,
+    )
+    execute_transfer_run(
+        config,
+        destination_platform="mock",
+        transfer_run_id=dry_run.transfer_run_id,
+        destination_playlist_id="first-playlist",
+    )
+
+    with pytest.raises(ValueError, match="already targets destination playlist first-playlist"):
+        execute_transfer_run(
+            config,
+            destination_platform="mock",
+            transfer_run_id=dry_run.transfer_run_id,
+            destination_playlist_id="second-playlist",
+        )
+
+
 def test_phase8_write_run_rejects_destination_platform_mismatch(tmp_path) -> None:
     config = _phase8_config(tmp_path)
     dry_run = run_transfer(

@@ -495,9 +495,20 @@ def _execute_transfer_writes(
             attempted_count=0,
             skipped_count=len(write_pairs),
             metrics=repository.load_metrics(transfer_run_id),
-        )
+    )
 
     run_record = repository.load_run(transfer_run_id)
+    if (
+        destination_playlist_id is not None
+        and run_record.destination_playlist_id is not None
+        and destination_playlist_id != run_record.destination_playlist_id
+    ):
+        raise ValueError(
+            "transfer run already targets destination playlist "
+            f"{run_record.destination_playlist_id}; restart the transfer to use "
+            f"{destination_playlist_id}"
+        )
+
     destination_id = destination_playlist_id or run_record.destination_playlist_id
     if destination_playlist_id is not None:
         repository.update_destination_playlist_id(transfer_run_id, destination_playlist_id)
