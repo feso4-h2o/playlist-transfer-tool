@@ -140,6 +140,77 @@ def run_transfer(
     )
 
 
+def execute_transfer_run(
+    config: PorterConfig,
+    *,
+    destination_platform: PlatformName,
+    transfer_run_id: str,
+    database_path: str | Path | None = None,
+    output_dir: str | Path | None = None,
+    destination_playlist_id: str | None = None,
+    create_playlist_name: str | None = None,
+    console: Console | None = None,
+) -> TransferResult:
+    """Execute writes for an existing reviewed transfer run."""
+
+    return execute_transfer_run_with_adapter(
+        create_platform_adapter(config, destination_platform),
+        transfer_run_id=transfer_run_id,
+        database_path=database_path or config.database_path,
+        output_dir=output_dir or config.report_output_dir,
+        destination_playlist_id=destination_playlist_id,
+        create_playlist_name=create_playlist_name,
+        console=console,
+    )
+
+
+def execute_transfer_run_with_adapter(
+    destination: BasePlatform,
+    *,
+    transfer_run_id: str,
+    database_path: str | Path,
+    output_dir: str | Path,
+    destination_playlist_id: str | None = None,
+    create_playlist_name: str | None = None,
+    console: Console | None = None,
+) -> TransferResult:
+    """Execute approved writes from persisted decisions and review overrides."""
+
+    console = console or Console()
+    preflight = validate_execute_preflight(
+        destination,
+        database_path=database_path,
+        output_dir=output_dir,
+    )
+    if not preflight.ok:
+        raise PreflightError(preflight)
+
+    destination.authenticate()
+    repository = TransferRepository(database_path)
+    write_result = _execute_transfer_writes(
+        repository,
+        destination,
+        transfer_run_id,
+        dry_run=False,
+        destination_playlist_id=destination_playlist_id,
+        create_playlist_name=create_playlist_name,
+    )
+    report_paths = tuple(export_reports(repository, transfer_run_id, output_dir))
+    repository.mark_run_completed(transfer_run_id)
+    metrics = repository.load_metrics(transfer_run_id)
+    render_metrics(console, metrics, title="Transfer summary")
+    return TransferResult(
+        transfer_run_id=transfer_run_id,
+        created=False,
+        dry_run=False,
+        destination_playlist_id=write_result.destination_playlist_id or None,
+        written_count=write_result.attempted_count,
+        skipped_count=write_result.skipped_count,
+        report_paths=report_paths,
+        metrics=metrics,
+    )
+
+
 def run_transfer_with_adapters(
     source: BasePlatform,
     destination: BasePlatform,
@@ -259,6 +330,30 @@ def validate_transfer_preflight(
         source_platform=source.platform_name,
         destination_platform=destination.platform_name,
         dry_run=dry_run,
+        issues=tuple(issues),
+    )
+
+
+def validate_execute_preflight(
+    destination: BasePlatform,
+    *,
+    database_path: str | Path,
+    output_dir: str | Path,
+) -> PreflightResult:
+    """Check local state and destination write readiness for a reviewed run."""
+
+    issues: list[str] = []
+    if not destination.capabilities.supports_write:
+        issues.append(f"{destination.platform_name} cannot write destination playlists")
+    issues.extend(_credential_issues(destination))
+    issues.extend(_writable_path_issues(database_path, label="database path"))
+    issues.extend(
+        _writable_path_issues(output_dir, label="report output directory", directory=True)
+    )
+    return PreflightResult(
+        source_platform="persisted",
+        destination_platform=destination.platform_name,
+        dry_run=False,
         issues=tuple(issues),
     )
 
@@ -411,15 +506,18 @@ def _execute_transfer_writes(
         repository,
         transfer_run_id,
     )
-    if pending_pairs:
-        destination.add_tracks(destination_id, [track_id for _, track_id in pending_pairs])
-        for source_track_id, track_id in pending_pairs:
-            repository.record_write_success(transfer_run_id, source_track_id, track_id)
+    written_count = _write_pending_pairs(
+        destination,
+        destination_id,
+        pending_pairs,
+        repository=repository,
+        transfer_run_id=transfer_run_id,
+    )
 
     return ExecuteResult(
         transfer_run_id=transfer_run_id,
         destination_playlist_id=destination_id,
-        attempted_count=len(pending_pairs),
+        attempted_count=written_count,
         skipped_count=len(write_pairs) - len(pending_pairs),
         metrics=repository.load_metrics(transfer_run_id),
     )
@@ -503,6 +601,46 @@ def _pending_pairs(
     return pending_pairs
 
 
+def _write_pending_pairs(
+    destination: BasePlatform,
+    destination_playlist_id: str,
+    pending_pairs: list[tuple[str, str]],
+    *,
+    repository: TransferRepository,
+    transfer_run_id: str,
+) -> int:
+    if not pending_pairs:
+        return 0
+
+    progress_writer = getattr(destination, "add_tracks_with_progress", None)
+    if callable(progress_writer):
+        return int(
+            progress_writer(
+                destination_playlist_id,
+                [source_track_id for source_track_id, _ in pending_pairs],
+                [track_id for _, track_id in pending_pairs],
+                repository=repository,
+                transfer_run_id=transfer_run_id,
+            )
+        )
+
+    written_count = 0
+    for source_track_id, track_id in pending_pairs:
+        try:
+            destination.add_tracks(destination_playlist_id, [track_id])
+        except Exception as exc:
+            repository.record_write_failure(
+                transfer_run_id,
+                source_track_id,
+                track_id,
+                error=str(exc) or exc.__class__.__name__,
+            )
+            raise
+        repository.record_write_success(transfer_run_id, source_track_id, track_id)
+        written_count += 1
+    return written_count
+
+
 def _credential_issues(adapter: BasePlatform) -> list[str]:
     if isinstance(adapter, SpotifyAdapter):
         missing = adapter.config.missing_credentials()
@@ -551,9 +689,12 @@ __all__ = [
     "create_mock_adapter",
     "create_platform_adapter",
     "dry_run_mock_transfer",
+    "execute_transfer_run",
+    "execute_transfer_run_with_adapter",
     "execute_mock_transfer",
     "run_transfer",
     "run_transfer_with_adapters",
     "render_metrics",
+    "validate_execute_preflight",
     "validate_transfer_preflight",
 ]

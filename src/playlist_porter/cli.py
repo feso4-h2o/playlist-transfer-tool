@@ -14,7 +14,12 @@ from playlist_porter.review.terminal import (
     apply_review_update,
     run_interactive_review,
 )
-from playlist_porter.workflow import dry_run_mock_transfer, execute_mock_transfer, run_transfer
+from playlist_porter.workflow import (
+    dry_run_mock_transfer,
+    execute_mock_transfer,
+    execute_transfer_run,
+    run_transfer,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -42,14 +47,14 @@ def build_parser() -> argparse.ArgumentParser:
     transfer_parser.add_argument(
         "--source-platform",
         choices=["mock", "spotify", "qqmusic"],
-        required=True,
     )
     transfer_parser.add_argument(
         "--destination-platform",
         choices=["mock", "spotify", "qqmusic"],
         required=True,
     )
-    transfer_parser.add_argument("--source-playlist", required=True)
+    transfer_parser.add_argument("--source-playlist")
+    transfer_parser.add_argument("--run-id")
     transfer_parser.add_argument("--db")
     transfer_parser.add_argument("--output-dir")
     transfer_parser.add_argument("--restart", action="store_true")
@@ -106,18 +111,35 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "transfer":
         config = load_config(args.config)
-        result = run_transfer(
-            config,
-            source_platform=args.source_platform,
-            destination_platform=args.destination_platform,
-            source_playlist_id=args.source_playlist,
-            dry_run=args.dry_run,
-            database_path=args.db,
-            output_dir=args.output_dir,
-            restart=args.restart,
-            destination_playlist_id=args.destination_playlist_id,
-            create_playlist_name=args.create_playlist,
-        )
+        if args.run_id:
+            if args.dry_run:
+                raise SystemExit("--run-id can only be used with --write")
+            result = execute_transfer_run(
+                config,
+                destination_platform=args.destination_platform,
+                transfer_run_id=args.run_id,
+                database_path=args.db,
+                output_dir=args.output_dir,
+                destination_playlist_id=args.destination_playlist_id,
+                create_playlist_name=args.create_playlist,
+            )
+        else:
+            if not args.source_platform:
+                raise SystemExit("--source-platform is required without --run-id")
+            if not args.source_playlist:
+                raise SystemExit("--source-playlist is required without --run-id")
+            result = run_transfer(
+                config,
+                source_platform=args.source_platform,
+                destination_platform=args.destination_platform,
+                source_playlist_id=args.source_playlist,
+                dry_run=args.dry_run,
+                database_path=args.db,
+                output_dir=args.output_dir,
+                restart=args.restart,
+                destination_playlist_id=args.destination_playlist_id,
+                create_playlist_name=args.create_playlist,
+            )
         print(f"run id: {result.transfer_run_id}")
         print(f"mode: {'dry-run' if result.dry_run else 'write'}")
         if result.destination_playlist_id:

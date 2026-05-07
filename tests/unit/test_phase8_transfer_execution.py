@@ -1,8 +1,10 @@
 import json
+from uuid import UUID
 
 import pytest
 
 from playlist_porter.config import PorterConfig, SpotifyConfig
+from playlist_porter.matching.status import MatchStatus
 from playlist_porter.models import Playlist, TrackCandidate, UniversalTrack
 from playlist_porter.persistence.repositories import TransferRepository
 from playlist_porter.platforms.base import BasePlatform, PlatformCapabilities
@@ -10,6 +12,7 @@ from playlist_porter.platforms.mock import MockAdapter
 from playlist_porter.platforms.spotify import SpotifyAdapter
 from playlist_porter.workflow import (
     PreflightError,
+    execute_transfer_run,
     run_transfer,
     run_transfer_with_adapters,
     validate_transfer_preflight,
@@ -130,6 +133,41 @@ def test_phase8_write_mode_writes_only_auto_accepted_tracks(tmp_path) -> None:
     assert writes[result.destination_playlist_id]["track_ids"] == ["dest-exact"]
 
 
+def test_phase8_write_run_uses_reviewed_dry_run_approvals(tmp_path) -> None:
+    config = _phase8_config(tmp_path)
+    dry_run = run_transfer(
+        config,
+        source_platform="mock",
+        destination_platform="mock",
+        source_playlist_id="source-playlist",
+        dry_run=True,
+    )
+    repo = TransferRepository(config.database_path)
+    review_decision = next(
+        decision
+        for decision in repo.load_match_decisions(dry_run.transfer_run_id)
+        if decision.source_track.platform_track_id == "source-review"
+    )
+    repo.save_user_override(
+        dry_run.transfer_run_id,
+        review_decision.source_track.internal_id,
+        status=MatchStatus.USER_APPROVED,
+        selected_candidate=review_decision.candidates[0],
+    )
+
+    execute = execute_transfer_run(
+        config,
+        destination_platform="mock",
+        transfer_run_id=dry_run.transfer_run_id,
+        destination_playlist_id="reviewed-playlist",
+    )
+
+    writes = json.loads(config.mock_writes_path.read_text(encoding="utf-8"))
+    assert execute.written_count == 2
+    assert execute.transfer_run_id == dry_run.transfer_run_id
+    assert writes["reviewed-playlist"]["track_ids"] == ["dest-exact", "dest-review"]
+
+
 def test_phase8_resume_skips_recorded_writes(tmp_path) -> None:
     config = _phase8_config(tmp_path)
     first = run_transfer(
@@ -158,6 +196,45 @@ def test_phase8_resume_skips_recorded_writes(tmp_path) -> None:
     assert TransferRepository(config.database_path).load_metrics(
         first.transfer_run_id
     ).write_success_count == 1
+
+
+def test_phase8_partial_write_failure_records_success_before_resume(tmp_path) -> None:
+    database_path = tmp_path / "transfer.sqlite"
+    destination = FlakyDestinationAdapter(fail_after_successes=1)
+
+    with pytest.raises(RuntimeError, match="simulated write failure"):
+        run_transfer_with_adapters(
+            TwoTrackSourceAdapter(),
+            destination,
+            source_playlist_id="source-playlist",
+            dry_run=False,
+            database_path=database_path,
+            output_dir=tmp_path / "reports",
+            destination_playlist_id="existing-playlist",
+        )
+
+    repo = TransferRepository(database_path)
+    run_id = repo.find_run_id("static-source|flaky|source-playlist|existing-playlist|write")
+    assert run_id is not None
+    assert destination.added_track_ids == ["dest-1"]
+    assert repo.load_metrics(run_id).write_success_count == 1
+    assert repo.load_metrics(run_id).write_failure_count == 1
+
+    destination.fail_after_successes = None
+    resumed = run_transfer_with_adapters(
+        TwoTrackSourceAdapter(),
+        destination,
+        source_playlist_id="source-playlist",
+        dry_run=False,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+        destination_playlist_id="existing-playlist",
+    )
+
+    assert resumed.transfer_run_id == run_id
+    assert resumed.written_count == 1
+    assert destination.added_track_ids == ["dest-1", "dest-2"]
+    assert repo.load_metrics(run_id).write_success_count == 2
 
 
 def test_phase8_preflight_rejects_non_writable_destination_for_write(tmp_path) -> None:
@@ -233,6 +310,106 @@ class StaticSourceAdapter(BasePlatform):
 
     def add_tracks(self, playlist_id: str, track_ids: list[str]) -> None:
         del playlist_id, track_ids
+
+
+class TwoTrackSourceAdapter(BasePlatform):
+    platform_name = "static-source"
+    capabilities = PlatformCapabilities(supports_read=True)
+
+    def authenticate(self) -> None:
+        return None
+
+    def get_playlist(self, playlist_id_or_url: str) -> Playlist:
+        assert playlist_id_or_url == "source-playlist"
+        return Playlist(
+            name="Source",
+            platform="static-source",
+            platform_playlist_id="source-playlist",
+            tracks=[
+                UniversalTrack(
+                    internal_id=UUID("00000000-0000-0000-0000-000000000001"),
+                    title="Alpha",
+                    artists=["Artist"],
+                    platform="static-source",
+                    platform_track_id="source-1",
+                    duration_seconds=180,
+                ),
+                UniversalTrack(
+                    internal_id=UUID("00000000-0000-0000-0000-000000000002"),
+                    title="Beta",
+                    artists=["Artist"],
+                    platform="static-source",
+                    platform_track_id="source-2",
+                    duration_seconds=180,
+                ),
+            ],
+        )
+
+    def search_tracks(self, query: str, limit: int = 10) -> list[TrackCandidate]:
+        del query, limit
+        return []
+
+    def create_playlist(self, name: str, description: str | None = None) -> str:
+        del name, description
+        return "unused"
+
+    def add_tracks(self, playlist_id: str, track_ids: list[str]) -> None:
+        del playlist_id, track_ids
+
+
+class FlakyDestinationAdapter(BasePlatform):
+    platform_name = "flaky"
+    capabilities = PlatformCapabilities(
+        supports_read=False,
+        supports_search=True,
+        supports_write=True,
+    )
+
+    def __init__(self, *, fail_after_successes: int | None) -> None:
+        self.fail_after_successes = fail_after_successes
+        self.added_track_ids: list[str] = []
+
+    def authenticate(self) -> None:
+        return None
+
+    def get_playlist(self, playlist_id_or_url: str) -> Playlist:
+        del playlist_id_or_url
+        raise NotImplementedError
+
+    def search_tracks(self, query: str, limit: int = 10) -> list[TrackCandidate]:
+        del limit
+        if "alpha" in query:
+            track = UniversalTrack(
+                title="Alpha",
+                artists=["Artist"],
+                platform="flaky",
+                platform_track_id="dest-1",
+                duration_seconds=180,
+            )
+        elif "beta" in query:
+            track = UniversalTrack(
+                title="Beta",
+                artists=["Artist"],
+                platform="flaky",
+                platform_track_id="dest-2",
+                duration_seconds=180,
+            )
+        else:
+            return []
+        return [TrackCandidate(track=track, score=1.0, rank=1, query=query)]
+
+    def create_playlist(self, name: str, description: str | None = None) -> str:
+        del name, description
+        return "created-playlist"
+
+    def add_tracks(self, playlist_id: str, track_ids: list[str]) -> None:
+        del playlist_id
+        if (
+            self.fail_after_successes is not None
+            and len(self.added_track_ids) >= self.fail_after_successes
+        ):
+            raise RuntimeError("simulated write failure")
+        self.added_track_ids.extend(track_ids)
 
 
 class SearchOnlyDestinationAdapter(BasePlatform):
