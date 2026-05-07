@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from playlist_porter.platforms.qqmusic import QQMusicConfig
+
 DEFAULT_SPOTIFY_SCOPES = (
     "playlist-read-private",
     "playlist-read-collaborative",
@@ -67,7 +69,7 @@ class SpotifyConfig:
 
 @dataclass(frozen=True)
 class PorterConfig:
-    """Resolved configuration for the mock CLI workflow."""
+    """Resolved configuration for CLI transfer workflows."""
 
     database_path: Path
     report_output_dir: Path
@@ -75,6 +77,7 @@ class PorterConfig:
     mock_destination_catalog_path: Path
     mock_writes_path: Path | None = None
     spotify: SpotifyConfig | None = None
+    qqmusic: QQMusicConfig | None = None
 
 
 def default_config_payload() -> dict[str, Any]:
@@ -95,6 +98,13 @@ def default_config_payload() -> dict[str, Any]:
             "scopes": list(DEFAULT_SPOTIFY_SCOPES),
             "cache_path": str(_default_spotify_cache_path()),
             "create_public_playlists": False,
+        },
+        "qqmusic": {
+            "credential_path": "${QQMUSIC_CREDENTIAL_PATH}",
+            "user_id": "${QQMUSIC_USER_ID}",
+            "page_size": 100,
+            "supports_create_playlist": True,
+            "supports_add_tracks": True,
         },
     }
 
@@ -121,6 +131,7 @@ def load_config(path: str | Path) -> PorterConfig:
     base_dir = config_path.parent
     mock_payload = payload.get("mock", {})
     spotify_payload = payload.get("spotify")
+    qqmusic_payload = payload.get("qqmusic")
 
     return PorterConfig(
         database_path=_resolve_path(base_dir, payload["database_path"]),
@@ -141,6 +152,11 @@ def load_config(path: str | Path) -> PorterConfig:
         spotify=(
             _load_spotify_config(base_dir, spotify_payload)
             if isinstance(spotify_payload, dict)
+            else None
+        ),
+        qqmusic=(
+            _load_qqmusic_config(base_dir, qqmusic_payload)
+            if isinstance(qqmusic_payload, dict)
             else None
         ),
     )
@@ -167,6 +183,22 @@ def _load_spotify_config(base_dir: Path, payload: dict[str, Any]) -> SpotifyConf
             else _default_spotify_cache_path()
         ),
         create_public_playlists=bool(payload.get("create_public_playlists", False)),
+    )
+
+
+def _load_qqmusic_config(base_dir: Path, payload: dict[str, Any]) -> QQMusicConfig:
+    credential_path_value = _optional_text(_expand_env(payload.get("credential_path")))
+    return QQMusicConfig(
+        credential_payload=payload.get("credential"),
+        credential_path=(
+            _resolve_path(base_dir, credential_path_value)
+            if credential_path_value is not None
+            else None
+        ),
+        user_id=_optional_text(_expand_env(payload.get("user_id"))),
+        page_size=int(payload.get("page_size", 100)),
+        supports_create_playlist=bool(payload.get("supports_create_playlist", True)),
+        supports_add_tracks=bool(payload.get("supports_add_tracks", True)),
     )
 
 
@@ -205,6 +237,7 @@ def _default_spotify_cache_path() -> Path:
 __all__ = [
     "DEFAULT_SPOTIFY_SCOPES",
     "PorterConfig",
+    "QQMusicConfig",
     "SpotifyConfig",
     "default_config_payload",
     "load_config",
