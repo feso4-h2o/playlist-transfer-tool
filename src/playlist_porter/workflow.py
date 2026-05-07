@@ -185,8 +185,22 @@ def execute_transfer_run_with_adapter(
     if not preflight.ok:
         raise PreflightError(preflight)
 
-    destination.authenticate()
     repository = TransferRepository(database_path)
+    run_record = repository.load_run(transfer_run_id)
+    if run_record.destination_platform != destination.platform_name:
+        raise PreflightError(
+            PreflightResult(
+                source_platform=run_record.source_platform,
+                destination_platform=destination.platform_name,
+                dry_run=False,
+                issues=(
+                    "persisted run destination is "
+                    f"{run_record.destination_platform}, not {destination.platform_name}",
+                ),
+            )
+        )
+
+    destination.authenticate()
     write_result = _execute_transfer_writes(
         repository,
         destination,
@@ -614,15 +628,24 @@ def _write_pending_pairs(
 
     progress_writer = getattr(destination, "add_tracks_with_progress", None)
     if callable(progress_writer):
-        return int(
-            progress_writer(
-                destination_playlist_id,
-                [source_track_id for source_track_id, _ in pending_pairs],
-                [track_id for _, track_id in pending_pairs],
+        try:
+            return int(
+                progress_writer(
+                    destination_playlist_id,
+                    [source_track_id for source_track_id, _ in pending_pairs],
+                    [track_id for _, track_id in pending_pairs],
+                    repository=repository,
+                    transfer_run_id=transfer_run_id,
+                )
+            )
+        except Exception as exc:
+            _record_first_incomplete_write_failure(
+                pending_pairs,
                 repository=repository,
                 transfer_run_id=transfer_run_id,
+                error=str(exc) or exc.__class__.__name__,
             )
-        )
+            raise
 
     written_count = 0
     for source_track_id, track_id in pending_pairs:
@@ -639,6 +662,24 @@ def _write_pending_pairs(
         repository.record_write_success(transfer_run_id, source_track_id, track_id)
         written_count += 1
     return written_count
+
+
+def _record_first_incomplete_write_failure(
+    pending_pairs: list[tuple[str, str]],
+    *,
+    repository: TransferRepository,
+    transfer_run_id: str,
+    error: str,
+) -> None:
+    for source_track_id, track_id in pending_pairs:
+        if repository.should_write_track(transfer_run_id, source_track_id, track_id):
+            repository.record_write_failure(
+                transfer_run_id,
+                source_track_id,
+                track_id,
+                error=error,
+            )
+            return
 
 
 def _credential_issues(adapter: BasePlatform) -> list[str]:

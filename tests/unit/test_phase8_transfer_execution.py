@@ -13,6 +13,7 @@ from playlist_porter.platforms.spotify import SpotifyAdapter
 from playlist_porter.workflow import (
     PreflightError,
     execute_transfer_run,
+    execute_transfer_run_with_adapter,
     run_transfer,
     run_transfer_with_adapters,
     validate_transfer_preflight,
@@ -168,6 +169,26 @@ def test_phase8_write_run_uses_reviewed_dry_run_approvals(tmp_path) -> None:
     assert writes["reviewed-playlist"]["track_ids"] == ["dest-exact", "dest-review"]
 
 
+def test_phase8_write_run_rejects_destination_platform_mismatch(tmp_path) -> None:
+    config = _phase8_config(tmp_path)
+    dry_run = run_transfer(
+        config,
+        source_platform="mock",
+        destination_platform="mock",
+        source_playlist_id="source-playlist",
+        dry_run=True,
+    )
+
+    with pytest.raises(PreflightError, match="persisted run destination is mock, not flaky"):
+        execute_transfer_run_with_adapter(
+            FlakyDestinationAdapter(fail_after_successes=None),
+            transfer_run_id=dry_run.transfer_run_id,
+            database_path=config.database_path,
+            output_dir=config.report_output_dir,
+            destination_playlist_id="wrong-platform",
+        )
+
+
 def test_phase8_resume_skips_recorded_writes(tmp_path) -> None:
     config = _phase8_config(tmp_path)
     first = run_transfer(
@@ -235,6 +256,29 @@ def test_phase8_partial_write_failure_records_success_before_resume(tmp_path) ->
     assert resumed.written_count == 1
     assert destination.added_track_ids == ["dest-1", "dest-2"]
     assert repo.load_metrics(run_id).write_success_count == 2
+
+
+def test_phase8_progress_writer_failure_records_first_incomplete_track(tmp_path) -> None:
+    database_path = tmp_path / "transfer.sqlite"
+    destination = ProgressFailureDestinationAdapter()
+
+    with pytest.raises(RuntimeError, match="simulated progress failure"):
+        run_transfer_with_adapters(
+            TwoTrackSourceAdapter(),
+            destination,
+            source_playlist_id="source-playlist",
+            dry_run=False,
+            database_path=database_path,
+            output_dir=tmp_path / "reports",
+            destination_playlist_id="existing-playlist",
+        )
+
+    repo = TransferRepository(database_path)
+    run_id = repo.find_run_id("static-source|flaky|source-playlist|existing-playlist|write")
+    assert run_id is not None
+    metrics = repo.load_metrics(run_id)
+    assert metrics.write_success_count == 1
+    assert metrics.write_failure_count == 1
 
 
 def test_phase8_preflight_rejects_non_writable_destination_for_write(tmp_path) -> None:
@@ -410,6 +454,24 @@ class FlakyDestinationAdapter(BasePlatform):
         ):
             raise RuntimeError("simulated write failure")
         self.added_track_ids.extend(track_ids)
+
+
+class ProgressFailureDestinationAdapter(FlakyDestinationAdapter):
+    def __init__(self) -> None:
+        super().__init__(fail_after_successes=None)
+
+    def add_tracks_with_progress(
+        self,
+        playlist_id: str,
+        source_track_ids: list[str],
+        track_ids: list[str],
+        *,
+        repository: TransferRepository,
+        transfer_run_id: str,
+    ) -> int:
+        del playlist_id
+        repository.record_write_success(transfer_run_id, source_track_ids[0], track_ids[0])
+        raise RuntimeError("simulated progress failure")
 
 
 class SearchOnlyDestinationAdapter(BasePlatform):
