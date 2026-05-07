@@ -14,7 +14,12 @@ from playlist_porter.review.terminal import (
     apply_review_update,
     run_interactive_review,
 )
-from playlist_porter.workflow import dry_run_mock_transfer, execute_mock_transfer
+from playlist_porter.workflow import (
+    dry_run_mock_transfer,
+    execute_mock_transfer,
+    execute_transfer_run,
+    run_transfer,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -33,6 +38,31 @@ def build_parser() -> argparse.ArgumentParser:
     dry_run_parser.add_argument("--source-playlist", required=True)
     dry_run_parser.add_argument("--db")
     dry_run_parser.add_argument("--restart", action="store_true")
+
+    transfer_parser = subparsers.add_parser(
+        "transfer",
+        help="run a direction-aware transfer dry-run or write execution",
+    )
+    _add_config_argument(transfer_parser)
+    transfer_parser.add_argument(
+        "--source-platform",
+        choices=["mock", "spotify", "qqmusic"],
+    )
+    transfer_parser.add_argument(
+        "--destination-platform",
+        choices=["mock", "spotify", "qqmusic"],
+        required=True,
+    )
+    transfer_parser.add_argument("--source-playlist")
+    transfer_parser.add_argument("--run-id")
+    transfer_parser.add_argument("--db")
+    transfer_parser.add_argument("--output-dir")
+    transfer_parser.add_argument("--restart", action="store_true")
+    transfer_parser.add_argument("--destination-playlist-id")
+    transfer_parser.add_argument("--create-playlist")
+    mode = transfer_parser.add_mutually_exclusive_group()
+    mode.add_argument("--dry-run", dest="dry_run", action="store_true", default=True)
+    mode.add_argument("--write", dest="dry_run", action="store_false")
 
     review_parser = subparsers.add_parser("review", help="review persisted uncertain matches")
     review_parser.add_argument("--db", required=True)
@@ -78,6 +108,45 @@ def main(argv: list[str] | None = None) -> int:
             restart=args.restart,
         )
         print(f"run id: {result.transfer_run_id}")
+        return 0
+    if args.command == "transfer":
+        config = load_config(args.config)
+        if args.run_id:
+            if args.dry_run:
+                raise SystemExit("--run-id can only be used with --write")
+            result = execute_transfer_run(
+                config,
+                destination_platform=args.destination_platform,
+                transfer_run_id=args.run_id,
+                database_path=args.db,
+                output_dir=args.output_dir,
+                destination_playlist_id=args.destination_playlist_id,
+                create_playlist_name=args.create_playlist,
+            )
+        else:
+            if not args.source_platform:
+                raise SystemExit("--source-platform is required without --run-id")
+            if not args.source_playlist:
+                raise SystemExit("--source-playlist is required without --run-id")
+            result = run_transfer(
+                config,
+                source_platform=args.source_platform,
+                destination_platform=args.destination_platform,
+                source_playlist_id=args.source_playlist,
+                dry_run=args.dry_run,
+                database_path=args.db,
+                output_dir=args.output_dir,
+                restart=args.restart,
+                destination_playlist_id=args.destination_playlist_id,
+                create_playlist_name=args.create_playlist,
+            )
+        print(f"run id: {result.transfer_run_id}")
+        print(f"mode: {'dry-run' if result.dry_run else 'write'}")
+        if result.destination_playlist_id:
+            print(f"destination playlist: {result.destination_playlist_id}")
+        print(f"written: {result.written_count}; skipped: {result.skipped_count}")
+        for path in result.report_paths:
+            print(f"wrote report: {path}")
         return 0
     if args.command == "review":
         repository = TransferRepository(args.db)
