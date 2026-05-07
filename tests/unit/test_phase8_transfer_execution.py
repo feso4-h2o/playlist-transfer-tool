@@ -258,6 +258,37 @@ def test_phase8_partial_write_failure_records_success_before_resume(tmp_path) ->
     assert repo.load_metrics(run_id).write_success_count == 2
 
 
+def test_phase8_write_resume_keeps_persisted_candidate_after_search_drift(tmp_path) -> None:
+    database_path = tmp_path / "transfer.sqlite"
+    destination = FlakyDestinationAdapter(fail_after_successes=1)
+
+    with pytest.raises(RuntimeError, match="simulated write failure"):
+        run_transfer_with_adapters(
+            TwoTrackSourceAdapter(),
+            destination,
+            source_playlist_id="source-playlist",
+            dry_run=False,
+            database_path=database_path,
+            output_dir=tmp_path / "reports",
+            destination_playlist_id="existing-playlist",
+        )
+
+    destination.fail_after_successes = None
+    destination.alpha_track_id = "dest-1-drifted"
+    resumed = run_transfer_with_adapters(
+        TwoTrackSourceAdapter(),
+        destination,
+        source_playlist_id="source-playlist",
+        dry_run=False,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+        destination_playlist_id="existing-playlist",
+    )
+
+    assert resumed.written_count == 1
+    assert destination.added_track_ids == ["dest-1", "dest-2"]
+
+
 def test_phase8_progress_writer_failure_records_first_incomplete_track(tmp_path) -> None:
     database_path = tmp_path / "transfer.sqlite"
     destination = ProgressFailureDestinationAdapter()
@@ -412,6 +443,7 @@ class FlakyDestinationAdapter(BasePlatform):
     def __init__(self, *, fail_after_successes: int | None) -> None:
         self.fail_after_successes = fail_after_successes
         self.added_track_ids: list[str] = []
+        self.alpha_track_id = "dest-1"
 
     def authenticate(self) -> None:
         return None
@@ -427,7 +459,7 @@ class FlakyDestinationAdapter(BasePlatform):
                 title="Alpha",
                 artists=["Artist"],
                 platform="flaky",
-                platform_track_id="dest-1",
+                platform_track_id=self.alpha_track_id,
                 duration_seconds=180,
             )
         elif "beta" in query:

@@ -271,15 +271,18 @@ def run_transfer_with_adapters(
         created = True
     else:
         transfer_run_id, created = repository.get_or_create_run(run)
-        if not created:
+        if not created and dry_run:
             repository.prune_transfer_state(
                 transfer_run_id,
                 [track.internal_id for track in playlist.tracks],
             )
 
-    repository.save_source_playlist(transfer_run_id, playlist)
-    decisions = match_playlist(playlist, destination)
-    repository.save_match_decisions(transfer_run_id, decisions)
+    if created or dry_run:
+        repository.save_source_playlist(transfer_run_id, playlist)
+        decisions = match_playlist(playlist, destination)
+        repository.save_match_decisions(transfer_run_id, decisions)
+    else:
+        repository.sync_metrics(transfer_run_id)
 
     write_result = _execute_transfer_writes(
         repository,
