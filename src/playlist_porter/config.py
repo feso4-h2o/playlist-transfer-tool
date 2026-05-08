@@ -95,7 +95,7 @@ def default_config_payload() -> dict[str, Any]:
             "client_id": "${SPOTIFY_CLIENT_ID}",
             "client_secret": "${SPOTIFY_CLIENT_SECRET}",
             "redirect_uri": "http://127.0.0.1:8080/callback",
-            "scopes": list(DEFAULT_SPOTIFY_SCOPES),
+            "scopes": "${SPOTIFY_SCOPES}",
             "cache_path": str(_default_spotify_cache_path()),
             "create_public_playlists": False,
         },
@@ -170,7 +170,7 @@ def _resolve_path(base_dir: Path, value: str | Path) -> Path:
 
 
 def _load_spotify_config(base_dir: Path, payload: dict[str, Any]) -> SpotifyConfig:
-    scopes = _parse_scopes(payload.get("scopes"))
+    scopes = _parse_scopes(_expand_env(payload.get("scopes")))
     cache_path_value = _expand_env(payload.get("cache_path"))
     return SpotifyConfig(
         client_id=_optional_text(_expand_env(payload.get("client_id"))),
@@ -212,9 +212,17 @@ def _parse_scopes(value: Any) -> tuple[str, ...]:
     if value is None:
         return ()
     if isinstance(value, str):
+        if value.startswith("${") and value.endswith("}"):
+            return ()
         return tuple(scope for scope in value.split() if scope)
     if isinstance(value, list | tuple):
-        return tuple(str(scope).strip() for scope in value if str(scope).strip())
+        scopes: list[str] = []
+        for scope in value:
+            expanded = _expand_env(scope)
+            if isinstance(expanded, str) and expanded.startswith("${") and expanded.endswith("}"):
+                continue
+            scopes.extend(str(expanded).split())
+        return tuple(scope.strip() for scope in scopes if scope.strip())
     raise ValueError("spotify scopes must be a list or space-delimited string")
 
 

@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import json
 
-from playlist_porter.config import DEFAULT_SPOTIFY_SCOPES, SpotifyConfig, load_config
+from playlist_porter.config import (
+    DEFAULT_SPOTIFY_SCOPES,
+    SpotifyConfig,
+    default_config_payload,
+    load_config,
+)
 
 
 def test_spotify_config_loads_env_placeholders_without_credentials(tmp_path, monkeypatch) -> None:
@@ -47,3 +52,67 @@ def test_spotify_config_from_env_uses_default_scopes(monkeypatch) -> None:
 
     assert config.missing_credentials() == ()
     assert config.scopes == DEFAULT_SPOTIFY_SCOPES
+
+
+def test_default_config_uses_spotify_scope_environment_placeholder() -> None:
+    payload = default_config_payload()
+
+    assert payload["spotify"]["scopes"] == "${SPOTIFY_SCOPES}"
+
+
+def test_spotify_config_expands_scope_environment_placeholder(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("SPOTIFY_SCOPES", "playlist-read-private playlist-modify-public")
+    config_path = tmp_path / "porter.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "database_path": "state/playlist.sqlite",
+                "mock": {
+                    "source_playlists_path": "fixtures/playlists.json",
+                    "destination_catalog_path": "fixtures/catalog.json",
+                },
+                "spotify": {
+                    "client_id": "${SPOTIFY_CLIENT_ID}",
+                    "client_secret": "${SPOTIFY_CLIENT_SECRET}",
+                    "redirect_uri": "http://127.0.0.1:8080/callback",
+                    "scopes": "${SPOTIFY_SCOPES}",
+                    "cache_path": "state/spotify-token-cache",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.spotify is not None
+    assert config.spotify.scopes == ("playlist-read-private", "playlist-modify-public")
+
+
+def test_unset_spotify_scope_placeholder_uses_default_scopes(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("SPOTIFY_SCOPES", raising=False)
+    config_path = tmp_path / "porter.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "database_path": "state/playlist.sqlite",
+                "mock": {
+                    "source_playlists_path": "fixtures/playlists.json",
+                    "destination_catalog_path": "fixtures/catalog.json",
+                },
+                "spotify": {
+                    "client_id": "${SPOTIFY_CLIENT_ID}",
+                    "client_secret": "${SPOTIFY_CLIENT_SECRET}",
+                    "redirect_uri": "http://127.0.0.1:8080/callback",
+                    "scopes": "${SPOTIFY_SCOPES}",
+                    "cache_path": "state/spotify-token-cache",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.spotify is not None
+    assert config.spotify.scopes == DEFAULT_SPOTIFY_SCOPES
