@@ -1,0 +1,32 @@
+{
+  "catalog": [
+    {
+      "id": "dest-alpha",
+      "title": "Alpha",
+      "artists": ["Exact Artist"],
+      "album": "Example Album",
+      "duration_seconds": 180,
+      "isrc": "US-S1Z-99-00001",
+      "release_year": 2024,
+      "popularity": 80
+    },
+    {
+      "id": "dest-beta-remix",
+      "title": "Beta (Remix)",
+      "artists": ["Review Artist"],
+      "album": "Versioned Singles",
+      "duration_seconds": 210,
+      "release_year": 2021,
+      "popularity": 60
+    },
+    {
+      "id": "dest-territory",
+      "title": "Territory",
+      "artists": ["Region Artist"],
+      "album": "Unavailable Examples",
+      "duration_seconds": 199,
+      "unavailable_reason": "region_unavailable",
+      "popularity": 70
+    }
+  ]
+}

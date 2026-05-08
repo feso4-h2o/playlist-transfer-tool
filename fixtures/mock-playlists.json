@@ -1,0 +1,46 @@
+{
+  "playlists": [
+    {
+      "id": "sample-mixed",
+      "name": "Sample Mixed Playlist",
+      "description": "Credential-free sample playlist for local dry-runs.",
+      "tracks": [
+        {
+          "id": "source-alpha",
+          "title": "Alpha",
+          "artists": ["Exact Artist"],
+          "album": "Example Album",
+          "duration_seconds": 180,
+          "isrc": "US-S1Z-99-00001",
+          "release_year": 2024,
+          "source_playlist_position": 1
+        },
+        {
+          "id": "source-beta",
+          "title": "Beta",
+          "artists": ["Review Artist"],
+          "album": "Versioned Singles",
+          "duration_seconds": 210,
+          "release_year": 2021,
+          "source_playlist_position": 2
+        },
+        {
+          "id": "source-territory",
+          "title": "Territory",
+          "artists": ["Region Artist"],
+          "album": "Unavailable Examples",
+          "duration_seconds": 199,
+          "source_playlist_position": 3
+        },
+        {
+          "id": "source-missing",
+          "title": "No Destination",
+          "artists": ["Missing Artist"],
+          "album": "Gap List",
+          "duration_seconds": 188,
+          "source_playlist_position": 4
+        }
+      ]
+    }
+  ]
+}
