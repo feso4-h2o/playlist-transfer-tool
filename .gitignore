@@ -224,3 +224,10 @@ __marimo__/
 # Coding agent related
 .agents/
 AGENTS.md
+
+# Playlist Porter local runtime outputs and secrets
+playlist-porter.json
+state/
+reports/
+qqmusic-credential.json
+spotify-token-cache*
