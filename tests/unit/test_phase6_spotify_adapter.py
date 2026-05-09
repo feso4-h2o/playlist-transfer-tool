@@ -162,6 +162,60 @@ def test_spotify_auto_auth_uses_oauth_for_write_operations(monkeypatch) -> None:
     assert created_auth_managers[0].redirect_uri == "http://127.0.0.1:8888/callback"
 
 
+def test_spotify_auto_auth_upgrades_public_read_to_oauth_write(monkeypatch) -> None:
+    created_auth_managers = []
+
+    class RecordingClientCredentials:
+        def __init__(self, client_id=None, client_secret=None):
+            self.client_id = client_id
+            self.client_secret = client_secret
+
+    class RecordingOAuth:
+        def __init__(
+            self,
+            client_id=None,
+            client_secret=None,
+            redirect_uri=None,
+            scope=None,
+            cache_path=None,
+            open_browser=None,
+        ):
+            self.client_id = client_id
+            self.client_secret = client_secret
+            self.redirect_uri = redirect_uri
+            self.scope = scope
+            self.cache_path = cache_path
+            self.open_browser = open_browser
+
+    class RecordingSpotify(FakeSpotifyClient):
+        def __init__(self, auth_manager):
+            super().__init__()
+            created_auth_managers.append(auth_manager)
+
+    monkeypatch.setattr(
+        "playlist_porter.platforms.spotify.SpotifyClientCredentials",
+        RecordingClientCredentials,
+    )
+    monkeypatch.setattr("playlist_porter.platforms.spotify.SpotifyOAuth", RecordingOAuth)
+    monkeypatch.setattr("playlist_porter.platforms.spotify.Spotify", RecordingSpotify)
+    adapter = SpotifyAdapter(
+        SpotifyConfig(
+            client_id="client-id",
+            client_secret="client-secret",
+            redirect_uri="http://127.0.0.1:8888/callback",
+        )
+    )
+
+    playlist = adapter.get_playlist("playlist-1")
+    playlist_id = adapter.create_playlist("copy")
+
+    assert playlist.platform_playlist_id == "playlist-1"
+    assert playlist_id == "created-copy-"
+    assert adapter._auth_kind == "oauth"
+    assert isinstance(created_auth_managers[0], RecordingClientCredentials)
+    assert isinstance(created_auth_managers[1], RecordingOAuth)
+
+
 def test_spotify_client_credentials_reject_write_operations(monkeypatch) -> None:
     class RecordingClientCredentials:
         def __init__(self, client_id=None, client_secret=None):

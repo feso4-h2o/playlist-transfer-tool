@@ -275,6 +275,13 @@ class SpotifyAdapter(BasePlatform):
         """Force subsequent authentication to use user OAuth for write operations."""
 
         self._oauth_required = True
+        if (
+            self._auth_kind == "client_credentials"
+            and self.config.auth_mode != "client_credentials"
+        ):
+            self._client = None
+            self._authenticated = False
+            self._auth_kind = "none"
 
 
 def _invoke_spotify_operation(operation: Callable[[], Any]) -> Any:
