@@ -200,6 +200,7 @@ def execute_transfer_run_with_adapter(
             )
         )
 
+    _prepare_adapter_authentication(destination, require_write=True)
     destination.authenticate()
     write_result = _execute_transfer_writes(
         repository,
@@ -250,6 +251,9 @@ def run_transfer_with_adapters(
     )
     if not preflight.ok:
         raise PreflightError(preflight)
+
+    _prepare_adapter_authentication(source, require_write=False)
+    _prepare_adapter_authentication(destination, require_write=not dry_run)
 
     source.authenticate()
     if destination is not source:
@@ -334,9 +338,12 @@ def validate_transfer_preflight(
     if not dry_run and not destination.capabilities.supports_write:
         issues.append(f"{destination.platform_name} cannot write destination playlists")
 
-    issues.extend(_credential_issues(source))
-    if destination is not source:
-        issues.extend(_credential_issues(destination))
+    issues.extend(_credential_issues(source, require_write=False))
+    if destination is source:
+        if not dry_run:
+            issues.extend(_credential_issues(destination, require_write=True))
+    else:
+        issues.extend(_credential_issues(destination, require_write=not dry_run))
 
     issues.extend(_writable_path_issues(database_path, label="database path"))
     issues.extend(
@@ -362,7 +369,7 @@ def validate_execute_preflight(
     issues: list[str] = []
     if not destination.capabilities.supports_write:
         issues.append(f"{destination.platform_name} cannot write destination playlists")
-    issues.extend(_credential_issues(destination))
+    issues.extend(_credential_issues(destination, require_write=True))
     issues.extend(_writable_path_issues(database_path, label="database path"))
     issues.extend(
         _writable_path_issues(output_dir, label="report output directory", directory=True)
@@ -696,16 +703,34 @@ def _record_first_incomplete_write_failure(
             return
 
 
-def _credential_issues(adapter: BasePlatform) -> list[str]:
+def _credential_issues(adapter: BasePlatform, *, require_write: bool) -> list[str]:
     if isinstance(adapter, SpotifyAdapter):
-        missing = adapter.config.missing_credentials()
-        if missing and getattr(adapter, "_client", None) is None:
+        if getattr(adapter, "_client", None) is not None:
+            return []
+        if require_write or adapter.config.auth_mode == "oauth":
+            missing = adapter.config.missing_credentials()
+            if not missing:
+                return []
             return [
-                "Spotify credentials are missing: "
+                "Spotify OAuth credentials are missing: "
+                + ", ".join(f"SPOTIFY_{field.upper()}" for field in missing)
+            ]
+        missing = adapter.config.missing_client_credentials()
+        if missing:
+            return [
+                "Spotify Client Credentials are missing: "
                 + ", ".join(f"SPOTIFY_{field.upper()}" for field in missing)
             ]
     if isinstance(adapter, QQMusicAdapter):
         if getattr(adapter, "_client", None) is not None:
+            return []
+        if not require_write and adapter.config.allow_anonymous_read:
+            if adapter.config.credential_path is None:
+                return []
+            try:
+                adapter.config.load_credential_payload()
+            except FileNotFoundError as exc:
+                return [f"QQ Music credential file is missing: {exc.filename}"]
             return []
         try:
             credential_payload = adapter.config.load_credential_payload()
@@ -714,6 +739,11 @@ def _credential_issues(adapter: BasePlatform) -> list[str]:
         if credential_payload is None:
             return ["QQ Music credentials are missing: configure qqmusic.credential_path"]
     return []
+
+
+def _prepare_adapter_authentication(adapter: BasePlatform, *, require_write: bool) -> None:
+    if require_write and isinstance(adapter, SpotifyAdapter):
+        adapter.require_oauth_authentication()
 
 
 def _writable_path_issues(
