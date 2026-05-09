@@ -210,7 +210,11 @@ class SpotifyRateLimitPolicy:
                     raise
                 if attempt >= self.backoff.max_attempts:
                     raise RetryBudgetExceeded(
-                        f"{operation_name} exhausted retry budget"
+                        _retry_budget_message(
+                            operation_name,
+                            attempts=self.backoff.max_attempts,
+                            last_error=exc,
+                        )
                     ) from exc
                 self.sleep(self._delay_for(exc, retry_index=attempt))
         raise AssertionError("retry loop exited unexpectedly")
@@ -291,7 +295,11 @@ class QQMusicRateLimitPolicy:
                 self._record_retryable_failure(operation_name)
                 if attempt >= self.backoff.max_attempts:
                     raise RetryBudgetExceeded(
-                        f"{operation_name} exhausted retry budget"
+                        _retry_budget_message(
+                            operation_name,
+                            attempts=self.backoff.max_attempts,
+                            last_error=exc,
+                        )
                     ) from exc
                 self.sleep(self._full_jitter_delay(retry_index=attempt))
             else:
@@ -354,6 +362,22 @@ def _is_retryable(category: RetryCategory) -> bool:
 def _capped_exponential_delay(backoff: BackoffConfig, retry_index: int) -> float:
     uncapped = backoff.initial_seconds * (backoff.multiplier ** (retry_index - 1))
     return min(backoff.max_seconds, uncapped)
+
+
+def _retry_budget_message(
+    operation_name: str,
+    *,
+    attempts: int,
+    last_error: RetryPolicyError,
+) -> str:
+    message = (
+        f"{operation_name} exhausted retry budget after {attempts} attempts; "
+        f"last {last_error.category} error: {last_error}"
+    )
+    retry_after = getattr(last_error, "retry_after_seconds", None)
+    if isinstance(retry_after, int | float):
+        message += f"; retry after: {retry_after:g}s"
+    return message
 
 
 __all__ = [

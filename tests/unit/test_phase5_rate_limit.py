@@ -51,6 +51,30 @@ def test_spotify_retry_after_is_honored_before_exponential_fallback() -> None:
     assert clock.sleeps == [7]
 
 
+def test_spotify_retry_budget_exhaustion_mentions_last_rate_limit_details() -> None:
+    clock = FakeClock()
+    policy = SpotifyRateLimitPolicy(
+        backoff=BackoffConfig(max_attempts=2, initial_seconds=1, max_seconds=10),
+        sleep=clock.sleep,
+        random=lambda: 0.0,
+    )
+
+    def operation() -> str:
+        raise RateLimitExceeded(
+            "HTTP 429 for /v1/playlists/playlist-1/tracks",
+            retry_after_seconds=7,
+        )
+
+    with pytest.raises(RetryBudgetExceeded) as exc_info:
+        policy.execute("spotify playlist items", operation)
+
+    message = str(exc_info.value)
+    assert "spotify playlist items exhausted retry budget after 2 attempts" in message
+    assert "last throttled error: HTTP 429 for /v1/playlists/playlist-1/tracks" in message
+    assert "retry after: 7s" in message
+    assert clock.sleeps == [7]
+
+
 def test_spotify_exponential_fallback_is_capped() -> None:
     clock = FakeClock()
     calls = 0
