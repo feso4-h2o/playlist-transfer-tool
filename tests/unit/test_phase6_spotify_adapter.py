@@ -86,6 +86,109 @@ def test_spotify_authentication_fails_clearly_without_credentials() -> None:
         adapter.authenticate()
 
 
+def test_spotify_client_credentials_auth_reads_public_playlist(monkeypatch) -> None:
+    created_auth_managers = []
+
+    class RecordingClientCredentials:
+        def __init__(self, client_id=None, client_secret=None):
+            self.client_id = client_id
+            self.client_secret = client_secret
+
+    class RecordingSpotify(FakeSpotifyClient):
+        def __init__(self, auth_manager):
+            super().__init__()
+            created_auth_managers.append(auth_manager)
+
+    monkeypatch.setattr(
+        "playlist_porter.platforms.spotify.SpotifyClientCredentials",
+        RecordingClientCredentials,
+    )
+    monkeypatch.setattr("playlist_porter.platforms.spotify.Spotify", RecordingSpotify)
+    adapter = SpotifyAdapter(
+        SpotifyConfig(
+            client_id="client-id",
+            client_secret="client-secret",
+            redirect_uri="http://127.0.0.1:8888/callback",
+        )
+    )
+
+    playlist = adapter.get_playlist("playlist-1")
+
+    assert playlist.platform_playlist_id == "playlist-1"
+    assert adapter._auth_kind == "client_credentials"
+    assert created_auth_managers[0].client_id == "client-id"
+    assert created_auth_managers[0].client_secret == "client-secret"
+
+
+def test_spotify_auto_auth_uses_oauth_for_write_operations(monkeypatch) -> None:
+    created_auth_managers = []
+
+    class RecordingOAuth:
+        def __init__(
+            self,
+            client_id=None,
+            client_secret=None,
+            redirect_uri=None,
+            scope=None,
+            cache_path=None,
+            open_browser=None,
+        ):
+            self.client_id = client_id
+            self.client_secret = client_secret
+            self.redirect_uri = redirect_uri
+            self.scope = scope
+            self.cache_path = cache_path
+            self.open_browser = open_browser
+
+    class RecordingSpotify(FakeSpotifyClient):
+        def __init__(self, auth_manager):
+            super().__init__()
+            created_auth_managers.append(auth_manager)
+
+    monkeypatch.setattr("playlist_porter.platforms.spotify.SpotifyOAuth", RecordingOAuth)
+    monkeypatch.setattr("playlist_porter.platforms.spotify.Spotify", RecordingSpotify)
+    adapter = SpotifyAdapter(
+        SpotifyConfig(
+            client_id="client-id",
+            client_secret="client-secret",
+            redirect_uri="http://127.0.0.1:8888/callback",
+        )
+    )
+
+    playlist_id = adapter.create_playlist("copy")
+
+    assert playlist_id == "created-copy-"
+    assert adapter._auth_kind == "oauth"
+    assert created_auth_managers[0].redirect_uri == "http://127.0.0.1:8888/callback"
+
+
+def test_spotify_client_credentials_reject_write_operations(monkeypatch) -> None:
+    class RecordingClientCredentials:
+        def __init__(self, client_id=None, client_secret=None):
+            del client_id, client_secret
+
+    class RecordingSpotify(FakeSpotifyClient):
+        def __init__(self, auth_manager):
+            del auth_manager
+            super().__init__()
+
+    monkeypatch.setattr(
+        "playlist_porter.platforms.spotify.SpotifyClientCredentials",
+        RecordingClientCredentials,
+    )
+    monkeypatch.setattr("playlist_porter.platforms.spotify.Spotify", RecordingSpotify)
+    adapter = SpotifyAdapter(
+        SpotifyConfig(
+            client_id="client-id",
+            client_secret="client-secret",
+            auth_mode="client_credentials",
+        )
+    )
+
+    with pytest.raises(AuthenticationFailure, match="write operations require OAuth"):
+        adapter.create_playlist("copy")
+
+
 def test_spotify_playlist_read_maps_paginated_tracks_to_universal_models() -> None:
     client = FakeSpotifyClient()
     adapter = SpotifyAdapter(client=client)
