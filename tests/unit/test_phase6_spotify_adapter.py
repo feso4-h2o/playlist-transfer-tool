@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from spotipy.exceptions import SpotifyOauthError
 
 from playlist_porter.config import SpotifyConfig
 from playlist_porter.matching.candidates import generate_candidates
@@ -84,6 +85,24 @@ def test_spotify_authentication_fails_clearly_without_credentials() -> None:
 
     with pytest.raises(AuthenticationFailure, match="client_id, client_secret, redirect_uri"):
         adapter.authenticate()
+
+
+def test_spotify_oauth_errors_explain_full_callback_url_requirement() -> None:
+    class OAuthFailureClient(FakeSpotifyClient):
+        def playlist(self, playlist_id, fields=None):
+            del playlist_id, fields
+            raise SpotifyOauthError("400 Client Error: Bad Request for token URL")
+
+    adapter = SpotifyAdapter(client=OAuthFailureClient())
+
+    with pytest.raises(AuthenticationFailure) as exc_info:
+        adapter.get_playlist("playlist-1")
+
+    message = str(exc_info.value)
+    assert "Spotify OAuth authorization failed" in message
+    assert "full callback URL" in message
+    assert "?code=..." in message
+    assert "400 Client Error" in message
 
 
 def test_spotify_client_credentials_auth_reads_public_playlist(monkeypatch) -> None:

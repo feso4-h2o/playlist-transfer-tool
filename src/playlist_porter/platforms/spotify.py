@@ -10,7 +10,7 @@ from uuid import NAMESPACE_URL, uuid5
 import requests
 from rapidfuzz import fuzz
 from spotipy import Spotify
-from spotipy.exceptions import SpotifyException
+from spotipy.exceptions import SpotifyException, SpotifyOauthError
 from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
 
 from playlist_porter.config import SpotifyConfig
@@ -289,6 +289,12 @@ class SpotifyAdapter(BasePlatform):
 def _invoke_spotify_operation(operation: Callable[[], Any]) -> Any:
     try:
         return operation()
+    except SpotifyOauthError as exc:
+        raise AuthenticationFailure(
+            "Spotify OAuth authorization failed. When prompted for the redirected URL, "
+            "paste the full callback URL from the browser, including the '?code=...' "
+            f"query string. Original error: {exc}"
+        ) from exc
     except SpotifyException as exc:
         raise _spotify_policy_error(exc) from exc
     except requests.RequestException as exc:
