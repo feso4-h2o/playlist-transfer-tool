@@ -83,7 +83,20 @@ class FakeSpotifyClient:
 def test_spotify_authentication_fails_clearly_without_credentials() -> None:
     adapter = SpotifyAdapter(SpotifyConfig())
 
-    with pytest.raises(AuthenticationFailure, match="client_id, client_secret, redirect_uri"):
+    with pytest.raises(AuthenticationFailure, match="client_id, client_secret"):
+        adapter.authenticate()
+
+
+def test_spotify_oauth_authentication_requires_redirect_uri() -> None:
+    adapter = SpotifyAdapter(
+        SpotifyConfig(
+            client_id="client-id",
+            client_secret="client-secret",
+            auth_mode="oauth",
+        )
+    )
+
+    with pytest.raises(AuthenticationFailure, match="redirect_uri"):
         adapter.authenticate()
 
 
@@ -141,7 +154,7 @@ def test_spotify_client_credentials_auth_reads_public_playlist(monkeypatch) -> N
     assert created_client_options[0] == {"retries": 0, "status_retries": 0}
 
 
-def test_spotify_auto_auth_uses_oauth_for_reads_with_full_oauth_config(monkeypatch) -> None:
+def test_spotify_oauth_auth_uses_oauth_for_reads(monkeypatch) -> None:
     created_auth_managers = []
 
     class RecordingOAuth:
@@ -174,6 +187,7 @@ def test_spotify_auto_auth_uses_oauth_for_reads_with_full_oauth_config(monkeypat
             client_id="client-id",
             client_secret="client-secret",
             redirect_uri="http://127.0.0.1:8888/callback",
+            auth_mode="oauth",
         )
     )
 
@@ -184,7 +198,7 @@ def test_spotify_auto_auth_uses_oauth_for_reads_with_full_oauth_config(monkeypat
     assert created_auth_managers[0].redirect_uri == "http://127.0.0.1:8888/callback"
 
 
-def test_spotify_auto_auth_uses_oauth_for_write_operations(monkeypatch) -> None:
+def test_spotify_oauth_auth_uses_oauth_for_write_operations(monkeypatch) -> None:
     created_auth_managers = []
 
     class RecordingOAuth:
@@ -217,6 +231,7 @@ def test_spotify_auto_auth_uses_oauth_for_write_operations(monkeypatch) -> None:
             client_id="client-id",
             client_secret="client-secret",
             redirect_uri="http://127.0.0.1:8888/callback",
+            auth_mode="oauth",
         )
     )
 
@@ -227,7 +242,7 @@ def test_spotify_auto_auth_uses_oauth_for_write_operations(monkeypatch) -> None:
     assert created_auth_managers[0].redirect_uri == "http://127.0.0.1:8888/callback"
 
 
-def test_spotify_auto_auth_reads_then_writes_with_full_oauth_config(monkeypatch) -> None:
+def test_spotify_oauth_auth_reads_then_writes_with_same_client(monkeypatch) -> None:
     created_auth_managers = []
 
     class RecordingOAuth:
@@ -260,6 +275,7 @@ def test_spotify_auto_auth_reads_then_writes_with_full_oauth_config(monkeypatch)
             client_id="client-id",
             client_secret="client-secret",
             redirect_uri="http://127.0.0.1:8888/callback",
+            auth_mode="oauth",
         )
     )
 
@@ -296,7 +312,7 @@ def test_spotify_client_credentials_reject_write_operations(monkeypatch) -> None
         )
     )
 
-    with pytest.raises(AuthenticationFailure, match="write operations require OAuth"):
+    with pytest.raises(AuthenticationFailure, match='Set spotify.auth_mode to "oauth"'):
         adapter.create_playlist("copy")
 
 
@@ -356,7 +372,7 @@ def test_spotify_search_scores_protect_candidate_truncation() -> None:
 
 def test_spotify_add_tracks_batches_by_api_limit() -> None:
     client = FakeSpotifyClient()
-    adapter = SpotifyAdapter(client=client)
+    adapter = SpotifyAdapter(config=SpotifyConfig(auth_mode="oauth"), client=client)
     track_ids = [f"track-{index}" for index in range(SPOTIFY_BATCH_LIMIT + 1)]
 
     adapter.add_tracks("playlist-1", track_ids)
@@ -370,7 +386,7 @@ def test_spotify_add_tracks_batches_by_api_limit() -> None:
 
 def test_spotify_write_progress_records_successful_batches_and_resumes(tmp_path) -> None:
     client = FakeSpotifyClient()
-    adapter = SpotifyAdapter(client=client)
+    adapter = SpotifyAdapter(config=SpotifyConfig(auth_mode="oauth"), client=client)
     repository = TransferRepository(tmp_path / "transfer.sqlite")
     source_tracks = [
         UniversalTrack(title=f"Source {index}", artists=["Artist"], platform="spotify")

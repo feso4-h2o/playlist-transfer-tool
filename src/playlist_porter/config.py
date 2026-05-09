@@ -20,7 +20,7 @@ DEFAULT_SPOTIFY_SCOPES = (
 
 @dataclass(frozen=True)
 class SpotifyConfig:
-    """Local Spotify OAuth settings."""
+    """Local Spotify authentication settings."""
 
     client_id: str | None = None
     client_secret: str | None = None
@@ -28,7 +28,11 @@ class SpotifyConfig:
     scopes: tuple[str, ...] = DEFAULT_SPOTIFY_SCOPES
     cache_path: Path | None = None
     create_public_playlists: bool = False
-    auth_mode: Literal["auto", "oauth", "client_credentials"] = "auto"
+    auth_mode: Literal["oauth", "client_credentials"] = "client_credentials"
+
+    def __post_init__(self) -> None:
+        if self.auth_mode not in {"oauth", "client_credentials"}:
+            raise ValueError("spotify auth_mode must be client_credentials or oauth")
 
     @classmethod
     def from_env(cls) -> SpotifyConfig:
@@ -109,7 +113,7 @@ def default_config_payload() -> dict[str, Any]:
             "scopes": "${SPOTIFY_SCOPES}",
             "cache_path": str(_default_spotify_cache_path()),
             "create_public_playlists": False,
-            "auth_mode": "auto",
+            "auth_mode": "client_credentials",
         },
         "qqmusic": {
             "credential_path": "${QQMUSIC_CREDENTIAL_PATH}",
@@ -196,7 +200,7 @@ def _load_spotify_config(base_dir: Path, payload: dict[str, Any]) -> SpotifyConf
             else _default_spotify_cache_path()
         ),
         create_public_playlists=bool(payload.get("create_public_playlists", False)),
-        auth_mode=_spotify_auth_mode(payload.get("auth_mode", "auto")),
+        auth_mode=_spotify_auth_mode(payload.get("auth_mode", "client_credentials")),
     )
 
 
@@ -217,10 +221,10 @@ def _load_qqmusic_config(base_dir: Path, payload: dict[str, Any]) -> QQMusicConf
     )
 
 
-def _spotify_auth_mode(value: Any) -> Literal["auto", "oauth", "client_credentials"]:
-    text = _optional_text(_expand_env(value)) or "auto"
-    if text not in {"auto", "oauth", "client_credentials"}:
-        raise ValueError("spotify auth_mode must be auto, oauth, or client_credentials")
+def _spotify_auth_mode(value: Any) -> Literal["oauth", "client_credentials"]:
+    text = _optional_text(_expand_env(value)) or "client_credentials"
+    if text not in {"oauth", "client_credentials"}:
+        raise ValueError("spotify auth_mode must be client_credentials or oauth")
     return text
 
 

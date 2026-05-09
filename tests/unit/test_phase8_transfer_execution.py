@@ -418,7 +418,35 @@ def test_phase8_preflight_requires_spotify_oauth_for_write(tmp_path) -> None:
     )
 
     assert result.ok is False
-    assert result.issues == ("Spotify OAuth credentials are missing: SPOTIFY_REDIRECT_URI",)
+    assert result.issues == (
+        'Spotify write operations require OAuth. Set spotify.auth_mode to "oauth", '
+        "configure SPOTIFY_REDIRECT_URI, then rerun or resume with the existing run id.",
+    )
+
+
+def test_phase8_preflight_allows_spotify_oauth_for_write(tmp_path) -> None:
+    source = MockAdapter(
+        playlists={"source-playlist": Playlist(name="Source", tracks=[])},
+        catalog=[],
+    )
+    destination = SpotifyAdapter(
+        SpotifyConfig(
+            client_id="client-id",
+            client_secret="secret",
+            redirect_uri="http://127.0.0.1:8888/callback",
+            auth_mode="oauth",
+        )
+    )
+
+    result = validate_transfer_preflight(
+        source,
+        destination,
+        dry_run=False,
+        database_path=tmp_path / "transfer.sqlite",
+        output_dir=tmp_path / "reports",
+    )
+
+    assert result.ok is True
 
 
 def test_phase8_preflight_allows_qqmusic_anonymous_dry_run(tmp_path) -> None:

@@ -55,7 +55,6 @@ class SpotifyAdapter(BasePlatform):
         self._client = client
         self._authenticated = client is not None
         self._auth_kind = "injected" if client is not None else "none"
-        self._oauth_required = False
         self.rate_limit_policy = rate_limit_policy or SpotifyRateLimitPolicy(
             limiter=RollingWindowLimiter(max_requests=90),
         )
@@ -67,8 +66,7 @@ class SpotifyAdapter(BasePlatform):
             self._authenticated = True
             return
 
-        auth_kind = self._selected_auth_kind()
-        if auth_kind == "client_credentials":
+        if self.config.auth_mode == "client_credentials":
             missing = self.config.missing_client_credentials()
             if missing:
                 missing_text = ", ".join(missing)
@@ -248,10 +246,12 @@ class SpotifyAdapter(BasePlatform):
         return self._client
 
     def _write_client_or_raise(self) -> Any:
-        self.require_oauth_authentication()
+        if self.config.auth_mode != "oauth":
+            raise AuthenticationFailure(
+                'Spotify write operations require OAuth. Set spotify.auth_mode to "oauth", '
+                "configure SPOTIFY_REDIRECT_URI, then rerun or resume with the existing run id."
+            )
         client = self._client_or_raise()
-        if self._auth_kind == "client_credentials":
-            raise AuthenticationFailure("Spotify write operations require OAuth configuration")
         return client
 
     def _call(self, operation_name: str, operation: Callable[[], Any]) -> Any:
@@ -259,31 +259,6 @@ class SpotifyAdapter(BasePlatform):
             operation_name,
             lambda: _invoke_spotify_operation(operation),
         )
-
-    def _selected_auth_kind(self) -> str:
-        if self.config.auth_mode == "client_credentials":
-            return "client_credentials"
-        if self.config.auth_mode == "oauth":
-            return "oauth"
-        if self._oauth_required:
-            return "oauth"
-        if not self.config.missing_credentials():
-            return "oauth"
-        if not self.config.missing_client_credentials():
-            return "client_credentials"
-        return "oauth"
-
-    def require_oauth_authentication(self) -> None:
-        """Force subsequent authentication to use user OAuth for write operations."""
-
-        self._oauth_required = True
-        if (
-            self._auth_kind == "client_credentials"
-            and self.config.auth_mode != "client_credentials"
-        ):
-            self._client = None
-            self._authenticated = False
-            self._auth_kind = "none"
 
 
 def _invoke_spotify_operation(operation: Callable[[], Any]) -> Any:

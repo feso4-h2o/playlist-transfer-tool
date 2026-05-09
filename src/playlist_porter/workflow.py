@@ -200,7 +200,6 @@ def execute_transfer_run_with_adapter(
             )
         )
 
-    _prepare_adapter_authentication(destination, require_write=True)
     destination.authenticate()
     write_result = _execute_transfer_writes(
         repository,
@@ -251,9 +250,6 @@ def run_transfer_with_adapters(
     )
     if not preflight.ok:
         raise PreflightError(preflight)
-
-    _prepare_adapter_authentication(source, require_write=False)
-    _prepare_adapter_authentication(destination, require_write=not dry_run)
 
     source.authenticate()
     if destination is not source:
@@ -707,7 +703,12 @@ def _credential_issues(adapter: BasePlatform, *, require_write: bool) -> list[st
     if isinstance(adapter, SpotifyAdapter):
         if getattr(adapter, "_client", None) is not None:
             return []
-        if require_write or adapter.config.auth_mode == "oauth":
+        if require_write and adapter.config.auth_mode != "oauth":
+            return [
+                'Spotify write operations require OAuth. Set spotify.auth_mode to "oauth", '
+                "configure SPOTIFY_REDIRECT_URI, then rerun or resume with the existing run id."
+            ]
+        if adapter.config.auth_mode == "oauth":
             missing = adapter.config.missing_credentials()
             if not missing:
                 return []
@@ -739,11 +740,6 @@ def _credential_issues(adapter: BasePlatform, *, require_write: bool) -> list[st
         if credential_payload is None:
             return ["QQ Music credentials are missing: configure qqmusic.credential_path"]
     return []
-
-
-def _prepare_adapter_authentication(adapter: BasePlatform, *, require_write: bool) -> None:
-    if require_write and isinstance(adapter, SpotifyAdapter):
-        adapter.require_oauth_authentication()
 
 
 def _writable_path_issues(
