@@ -107,6 +107,7 @@ def test_spotify_oauth_errors_explain_full_callback_url_requirement() -> None:
 
 def test_spotify_client_credentials_auth_reads_public_playlist(monkeypatch) -> None:
     created_auth_managers = []
+    created_client_options = []
 
     class RecordingClientCredentials:
         def __init__(self, client_id=None, client_secret=None):
@@ -114,9 +115,10 @@ def test_spotify_client_credentials_auth_reads_public_playlist(monkeypatch) -> N
             self.client_secret = client_secret
 
     class RecordingSpotify(FakeSpotifyClient):
-        def __init__(self, auth_manager):
+        def __init__(self, auth_manager, **client_options):
             super().__init__()
             created_auth_managers.append(auth_manager)
+            created_client_options.append(client_options)
 
     monkeypatch.setattr(
         "playlist_porter.platforms.spotify.SpotifyClientCredentials",
@@ -136,6 +138,7 @@ def test_spotify_client_credentials_auth_reads_public_playlist(monkeypatch) -> N
     assert adapter._auth_kind == "client_credentials"
     assert created_auth_managers[0].client_id == "client-id"
     assert created_auth_managers[0].client_secret == "client-secret"
+    assert created_client_options[0] == {"retries": 0, "status_retries": 0}
 
 
 def test_spotify_auto_auth_uses_oauth_for_reads_with_full_oauth_config(monkeypatch) -> None:
@@ -159,7 +162,8 @@ def test_spotify_auto_auth_uses_oauth_for_reads_with_full_oauth_config(monkeypat
             self.open_browser = open_browser
 
     class RecordingSpotify(FakeSpotifyClient):
-        def __init__(self, auth_manager):
+        def __init__(self, auth_manager, **client_options):
+            del client_options
             super().__init__()
             created_auth_managers.append(auth_manager)
 
@@ -201,7 +205,8 @@ def test_spotify_auto_auth_uses_oauth_for_write_operations(monkeypatch) -> None:
             self.open_browser = open_browser
 
     class RecordingSpotify(FakeSpotifyClient):
-        def __init__(self, auth_manager):
+        def __init__(self, auth_manager, **client_options):
+            del client_options
             super().__init__()
             created_auth_managers.append(auth_manager)
 
@@ -243,7 +248,8 @@ def test_spotify_auto_auth_reads_then_writes_with_full_oauth_config(monkeypatch)
             self.open_browser = open_browser
 
     class RecordingSpotify(FakeSpotifyClient):
-        def __init__(self, auth_manager):
+        def __init__(self, auth_manager, **client_options):
+            del client_options
             super().__init__()
             created_auth_managers.append(auth_manager)
 
@@ -273,8 +279,8 @@ def test_spotify_client_credentials_reject_write_operations(monkeypatch) -> None
             del client_id, client_secret
 
     class RecordingSpotify(FakeSpotifyClient):
-        def __init__(self, auth_manager):
-            del auth_manager
+        def __init__(self, auth_manager, **client_options):
+            del auth_manager, client_options
             super().__init__()
 
     monkeypatch.setattr(

@@ -75,6 +75,31 @@ def test_spotify_retry_budget_exhaustion_mentions_last_rate_limit_details() -> N
     assert clock.sleeps == [7]
 
 
+def test_spotify_long_retry_after_fails_without_day_long_sleep() -> None:
+    clock = FakeClock()
+    policy = SpotifyRateLimitPolicy(
+        backoff=BackoffConfig(max_attempts=4, initial_seconds=1, max_seconds=30),
+        sleep=clock.sleep,
+        random=lambda: 0.0,
+    )
+
+    with pytest.raises(RetryBudgetExceeded) as exc_info:
+        policy.execute(
+            "spotify playlist items",
+            lambda: (_ for _ in ()).throw(
+                RateLimitExceeded(
+                    "Your application has reached a rate/request limit",
+                    retry_after_seconds=86400,
+                )
+            ),
+        )
+
+    message = str(exc_info.value)
+    assert "retry after: 86400s" in message
+    assert "retry after exceeds max retry delay: 30s" in message
+    assert clock.sleeps == []
+
+
 def test_spotify_exponential_fallback_is_capped() -> None:
     clock = FakeClock()
     calls = 0

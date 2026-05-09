@@ -208,6 +208,15 @@ class SpotifyRateLimitPolicy:
             except RetryPolicyError as exc:
                 if not _is_retryable(exc.category):
                     raise
+                if _retry_after_exceeds_budget(exc, self.backoff.max_seconds):
+                    raise RetryBudgetExceeded(
+                        _retry_budget_message(
+                            operation_name,
+                            attempts=attempt,
+                            last_error=exc,
+                        )
+                        + f"; retry after exceeds max retry delay: {self.backoff.max_seconds:g}s"
+                    ) from exc
                 if attempt >= self.backoff.max_attempts:
                     raise RetryBudgetExceeded(
                         _retry_budget_message(
@@ -293,6 +302,15 @@ class QQMusicRateLimitPolicy:
                 if not _is_retryable(exc.category):
                     raise
                 self._record_retryable_failure(operation_name)
+                if _retry_after_exceeds_budget(exc, self.backoff.max_seconds):
+                    raise RetryBudgetExceeded(
+                        _retry_budget_message(
+                            operation_name,
+                            attempts=attempt,
+                            last_error=exc,
+                        )
+                        + f"; retry after exceeds max retry delay: {self.backoff.max_seconds:g}s"
+                    ) from exc
                 if attempt >= self.backoff.max_attempts:
                     raise RetryBudgetExceeded(
                         _retry_budget_message(
@@ -362,6 +380,11 @@ def _is_retryable(category: RetryCategory) -> bool:
 def _capped_exponential_delay(backoff: BackoffConfig, retry_index: int) -> float:
     uncapped = backoff.initial_seconds * (backoff.multiplier ** (retry_index - 1))
     return min(backoff.max_seconds, uncapped)
+
+
+def _retry_after_exceeds_budget(exc: RetryPolicyError, max_seconds: float) -> bool:
+    retry_after = getattr(exc, "retry_after_seconds", None)
+    return isinstance(retry_after, int | float) and retry_after > max_seconds
 
 
 def _retry_budget_message(

@@ -79,7 +79,7 @@ class SpotifyAdapter(BasePlatform):
                 client_id=self.config.client_id,
                 client_secret=self.config.client_secret,
             )
-            self._client = Spotify(auth_manager=auth_manager)
+            self._client = _spotify_client(auth_manager)
             self._auth_kind = "client_credentials"
             self._authenticated = True
             return
@@ -101,7 +101,7 @@ class SpotifyAdapter(BasePlatform):
             cache_path=str(cache_path),
             open_browser=False,
         )
-        self._client = Spotify(auth_manager=auth_manager)
+        self._client = _spotify_client(auth_manager)
         self._auth_kind = "oauth"
         self._authenticated = True
 
@@ -299,6 +299,14 @@ def _invoke_spotify_operation(operation: Callable[[], Any]) -> Any:
         raise _spotify_policy_error(exc) from exc
     except requests.RequestException as exc:
         raise TransientNetworkError(str(exc)) from exc
+
+
+def _spotify_client(auth_manager: Any) -> Spotify:
+    return Spotify(
+        auth_manager=auth_manager,
+        retries=0,
+        status_retries=0,
+    )
 
 
 def _spotify_policy_error(exc: SpotifyException) -> Exception:
