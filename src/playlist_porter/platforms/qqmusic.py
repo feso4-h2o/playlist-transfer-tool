@@ -57,6 +57,7 @@ class QQMusicConfig:
     page_size: int = 100
     supports_create_playlist: bool = True
     supports_add_tracks: bool = True
+    allow_anonymous_read: bool = True
 
     @classmethod
     def from_json(cls, path: str | Path) -> QQMusicConfig:
@@ -74,6 +75,7 @@ class QQMusicConfig:
             page_size=int(payload.get("page_size", 100)),
             supports_create_playlist=bool(payload.get("supports_create_playlist", True)),
             supports_add_tracks=bool(payload.get("supports_add_tracks", True)),
+            allow_anonymous_read=bool(payload.get("allow_anonymous_read", True)),
         )
 
     def load_credential_payload(self) -> Mapping[str, Any] | None:
@@ -208,6 +210,11 @@ class QQMusicAdapter(BasePlatform):
     def authenticate(self) -> None:
         """Validate the local QQ Music session before transfer work."""
 
+        if not self._has_configured_credentials() and self.config.allow_anonymous_read:
+            self._ensure_client()
+            self.authenticated = True
+            return
+
         try:
             self._policy.execute(
                 "qqmusic session validation",
@@ -312,6 +319,9 @@ class QQMusicAdapter(BasePlatform):
         if self._client is None:
             self._client = self._client_factory(self.config.load_credential_payload())
         return self._client
+
+    def _has_configured_credentials(self) -> bool:
+        return self.config.credential_payload is not None or self.config.credential_path is not None
 
 
 async def _collect_paginated_request(request: Any) -> Any:

@@ -60,6 +60,7 @@ def test_default_config_uses_spotify_scope_environment_placeholder() -> None:
 
     assert payload["spotify"]["scopes"] == "${SPOTIFY_SCOPES}"
     assert payload["spotify"]["auth_mode"] == "auto"
+    assert payload["qqmusic"]["allow_anonymous_read"] is True
 
 
 def test_spotify_config_expands_scope_environment_placeholder(tmp_path, monkeypatch) -> None:
