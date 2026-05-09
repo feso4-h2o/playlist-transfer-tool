@@ -267,6 +267,8 @@ class SpotifyAdapter(BasePlatform):
             return "oauth"
         if self._oauth_required:
             return "oauth"
+        if not self.config.missing_credentials():
+            return "oauth"
         if not self.config.missing_client_credentials():
             return "client_credentials"
         return "oauth"
