@@ -118,7 +118,7 @@ def test_spotify_oauth_errors_explain_full_callback_url_requirement() -> None:
     assert "400 Client Error" in message
 
 
-def test_spotify_client_credentials_auth_reads_public_playlist(monkeypatch) -> None:
+def test_spotify_client_credentials_auth_supports_search(monkeypatch) -> None:
     created_auth_managers = []
     created_client_options = []
 
@@ -145,13 +145,26 @@ def test_spotify_client_credentials_auth_reads_public_playlist(monkeypatch) -> N
         )
     )
 
-    playlist = adapter.get_playlist("playlist-1")
+    candidates = adapter.search_tracks("alpha artist")
 
-    assert playlist.platform_playlist_id == "playlist-1"
+    assert candidates
     assert adapter._auth_kind == "client_credentials"
     assert created_auth_managers[0].client_id == "client-id"
     assert created_auth_managers[0].client_secret == "client-secret"
     assert created_client_options[0] == {"retries": 0, "status_retries": 0}
+
+
+def test_spotify_client_credentials_reject_playlist_reads() -> None:
+    adapter = SpotifyAdapter(
+        SpotifyConfig(
+            client_id="client-id",
+            client_secret="client-secret",
+            auth_mode="client_credentials",
+        )
+    )
+
+    with pytest.raises(AuthenticationFailure, match="Spotify playlist reads require OAuth"):
+        adapter.get_playlist("playlist-1")
 
 
 def test_spotify_oauth_auth_uses_oauth_for_reads(monkeypatch) -> None:

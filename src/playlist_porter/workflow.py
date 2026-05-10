@@ -22,21 +22,16 @@ from playlist_porter.persistence.repositories import (
 from playlist_porter.platforms.base import BasePlatform
 from playlist_porter.platforms.mock import MockAdapter
 from playlist_porter.platforms.qqmusic import QQMusicAdapter, QQMusicConfig
-from playlist_porter.platforms.spotify import SpotifyAdapter
+from playlist_porter.platforms.spotify import (
+    SPOTIFY_PLAYLIST_READ_OAUTH_MESSAGE,
+    SPOTIFY_WRITE_OAUTH_MESSAGE,
+    SpotifyAdapter,
+)
 
 WRITABLE_AUTO_STATUSES = {
     MatchStatus.ISRC_EXACT,
     MatchStatus.METADATA_HIGH_CONFIDENCE,
 }
-SPOTIFY_PLAYLIST_READ_OAUTH_MESSAGE = (
-    'Spotify playlist reads require OAuth. Set spotify.auth_mode to "oauth", '
-    "configure SPOTIFY_REDIRECT_URI, then rerun. Spotify currently requires "
-    "user authorization to read playlist items, including public playlist item lists."
-)
-SPOTIFY_WRITE_OAUTH_MESSAGE = (
-    'Spotify write operations require OAuth. Set spotify.auth_mode to "oauth", '
-    "configure SPOTIFY_REDIRECT_URI, then rerun or resume with the existing run id."
-)
 
 PlatformName = Literal["mock", "spotify", "qqmusic"]
 

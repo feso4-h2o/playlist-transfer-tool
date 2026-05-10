@@ -30,6 +30,15 @@ from playlist_porter.rate_limit import (
 )
 
 SPOTIFY_BATCH_LIMIT = 100
+SPOTIFY_PLAYLIST_READ_OAUTH_MESSAGE = (
+    'Spotify playlist reads require OAuth. Set spotify.auth_mode to "oauth", '
+    "configure SPOTIFY_REDIRECT_URI, then rerun. Spotify currently requires "
+    "user authorization to read playlist items, including public playlist item lists."
+)
+SPOTIFY_WRITE_OAUTH_MESSAGE = (
+    'Spotify write operations require OAuth. Set spotify.auth_mode to "oauth", '
+    "configure SPOTIFY_REDIRECT_URI, then rerun or resume with the existing run id."
+)
 
 
 class SpotifyAdapter(BasePlatform):
@@ -106,6 +115,8 @@ class SpotifyAdapter(BasePlatform):
     def get_playlist(self, playlist_id_or_url: str) -> Playlist:
         """Fetch a Spotify playlist and convert all track pages to internal models."""
 
+        if self.config.auth_mode != "oauth" and self._auth_kind != "injected":
+            raise AuthenticationFailure(SPOTIFY_PLAYLIST_READ_OAUTH_MESSAGE)
         client = self._client_or_raise()
         playlist_id = _playlist_id_from_input(playlist_id_or_url)
         playlist_payload = self._call(
@@ -247,10 +258,7 @@ class SpotifyAdapter(BasePlatform):
 
     def _write_client_or_raise(self) -> Any:
         if self.config.auth_mode != "oauth":
-            raise AuthenticationFailure(
-                'Spotify write operations require OAuth. Set spotify.auth_mode to "oauth", '
-                "configure SPOTIFY_REDIRECT_URI, then rerun or resume with the existing run id."
-            )
+            raise AuthenticationFailure(SPOTIFY_WRITE_OAUTH_MESSAGE)
         client = self._client_or_raise()
         return client
 
@@ -425,4 +433,9 @@ def _optional_text(value: Any) -> str | None:
     return text or None
 
 
-__all__ = ["SPOTIFY_BATCH_LIMIT", "SpotifyAdapter"]
+__all__ = [
+    "SPOTIFY_BATCH_LIMIT",
+    "SPOTIFY_PLAYLIST_READ_OAUTH_MESSAGE",
+    "SPOTIFY_WRITE_OAUTH_MESSAGE",
+    "SpotifyAdapter",
+]
