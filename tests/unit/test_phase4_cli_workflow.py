@@ -6,6 +6,7 @@ from playlist_porter.config import PorterConfig
 from playlist_porter.matching.status import MatchStatus
 from playlist_porter.persistence.exports import build_unavailable_rows
 from playlist_porter.persistence.repositories import TransferRepository
+from playlist_porter.rate_limit import AuthenticationFailure
 from playlist_porter.workflow import dry_run_mock_transfer, execute_mock_transfer
 
 
@@ -286,6 +287,36 @@ def test_review_action_updates_sqlite_override(tmp_path) -> None:
     assert exit_code == 0
     assert override is not None
     assert override.status is MatchStatus.USER_APPROVED
+
+
+def test_cli_prints_operational_errors_without_traceback(tmp_path, monkeypatch, capsys) -> None:
+    config_path, _, _, _ = _phase4_fixture(tmp_path)
+
+    def fail_transfer(*args, **kwargs):
+        del args, kwargs
+        raise AuthenticationFailure("clear spotify auth error")
+
+    monkeypatch.setattr("playlist_porter.cli.run_transfer", fail_transfer)
+
+    exit_code = main(
+        [
+            "transfer",
+            "--config",
+            str(config_path),
+            "--source-platform",
+            "spotify",
+            "--destination-platform",
+            "mock",
+            "--source-playlist",
+            "source-playlist",
+            "--dry-run",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert captured.out == "clear spotify auth error\n"
+    assert "Traceback" not in captured.err
 
 
 def test_execute_and_resume_skip_recorded_duplicate_destination_writes(tmp_path) -> None:
