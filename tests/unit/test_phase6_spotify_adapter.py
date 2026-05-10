@@ -348,6 +348,15 @@ def test_spotify_playlist_read_maps_paginated_tracks_to_universal_models() -> No
     assert playlist.tracks[1].release_date is None
 
 
+def test_spotify_playlist_read_accepts_current_item_payload_shape() -> None:
+    client = CurrentPlaylistItemClient()
+    adapter = SpotifyAdapter(client=client)
+
+    playlist = adapter.get_playlist("playlist-1")
+
+    assert [track.platform_track_id for track in playlist.tracks] == ["track-1", "track-2"]
+
+
 def test_spotify_search_returns_ranked_candidates() -> None:
     adapter = SpotifyAdapter(client=FakeSpotifyClient())
 
@@ -477,4 +486,20 @@ class OutOfOrderSearchClient(FakeSpotifyClient):
                     _spotify_track("exact", "Alpha", ["Artist"], popularity=1),
                 ]
             }
+        }
+
+
+class CurrentPlaylistItemClient(FakeSpotifyClient):
+    def playlist_items(self, playlist_id, limit=100, offset=0, additional_types=None):
+        page = super().playlist_items(
+            playlist_id,
+            limit=limit,
+            offset=offset,
+            additional_types=additional_types,
+        )
+        return {
+            **page,
+            "items": [
+                {"item": entry["track"], "is_local": False} for entry in page["items"]
+            ],
         }

@@ -126,11 +126,11 @@ class SpotifyAdapter(BasePlatform):
                 fields="id,name,description,owner(id),external_urls",
             ),
         )
-        tracks = [
-            _track_from_spotify_payload(item["track"], position=position)
-            for position, item in enumerate(self._iter_playlist_items(playlist_id))
-            if _is_playable_track_item(item)
-        ]
+        tracks = []
+        for position, item in enumerate(self._iter_playlist_items(playlist_id)):
+            track_payload = _playlist_item_track_payload(item)
+            if track_payload is not None:
+                tracks.append(_track_from_spotify_payload(track_payload, position=position))
 
         return Playlist(
             name=playlist_payload["name"],
@@ -353,12 +353,26 @@ def _playlist_id_from_input(value: str) -> str:
 
 
 def _is_playable_track_item(item: dict[str, Any]) -> bool:
-    track = item.get("track")
+    track = _playlist_item_track_payload(item)
     return (
         isinstance(track, dict)
         and track.get("type", "track") == "track"
         and bool(track.get("id"))
     )
+
+
+def _playlist_item_track_payload(item: dict[str, Any]) -> dict[str, Any] | None:
+    """Return track payload from Spotify's legacy or current playlist item shape."""
+
+    for key in ("track", "item"):
+        payload = item.get(key)
+        if (
+            isinstance(payload, dict)
+            and payload.get("type", "track") == "track"
+            and payload.get("id")
+        ):
+            return payload
+    return None
 
 
 def _track_from_spotify_payload(
