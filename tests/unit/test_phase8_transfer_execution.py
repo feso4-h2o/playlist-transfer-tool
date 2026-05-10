@@ -402,6 +402,54 @@ def test_phase8_preflight_allows_spotify_client_credentials_for_dry_run(tmp_path
     assert result.ok is True
 
 
+def test_phase8_preflight_requires_spotify_oauth_for_source_playlist_read(tmp_path) -> None:
+    source = SpotifyAdapter(SpotifyConfig(client_id="client-id", client_secret="secret"))
+    destination = MockAdapter(
+        playlists={"unused": Playlist(name="Unused", tracks=[])},
+        catalog=[],
+    )
+
+    result = validate_transfer_preflight(
+        source,
+        destination,
+        dry_run=True,
+        database_path=tmp_path / "transfer.sqlite",
+        output_dir=tmp_path / "reports",
+    )
+
+    assert result.ok is False
+    assert result.issues == (
+        'Spotify playlist reads require OAuth. Set spotify.auth_mode to "oauth", '
+        "configure SPOTIFY_REDIRECT_URI, then rerun. Spotify currently requires "
+        "user authorization to read playlist items, including public playlist item lists.",
+    )
+
+
+def test_phase8_preflight_allows_spotify_oauth_for_source_playlist_read(tmp_path) -> None:
+    source = SpotifyAdapter(
+        SpotifyConfig(
+            client_id="client-id",
+            client_secret="secret",
+            redirect_uri="http://127.0.0.1:8888/callback",
+            auth_mode="oauth",
+        )
+    )
+    destination = MockAdapter(
+        playlists={"unused": Playlist(name="Unused", tracks=[])},
+        catalog=[],
+    )
+
+    result = validate_transfer_preflight(
+        source,
+        destination,
+        dry_run=True,
+        database_path=tmp_path / "transfer.sqlite",
+        output_dir=tmp_path / "reports",
+    )
+
+    assert result.ok is True
+
+
 def test_phase8_preflight_requires_spotify_oauth_for_write(tmp_path) -> None:
     source = MockAdapter(
         playlists={"source-playlist": Playlist(name="Source", tracks=[])},

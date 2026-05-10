@@ -28,6 +28,15 @@ WRITABLE_AUTO_STATUSES = {
     MatchStatus.ISRC_EXACT,
     MatchStatus.METADATA_HIGH_CONFIDENCE,
 }
+SPOTIFY_PLAYLIST_READ_OAUTH_MESSAGE = (
+    'Spotify playlist reads require OAuth. Set spotify.auth_mode to "oauth", '
+    "configure SPOTIFY_REDIRECT_URI, then rerun. Spotify currently requires "
+    "user authorization to read playlist items, including public playlist item lists."
+)
+SPOTIFY_WRITE_OAUTH_MESSAGE = (
+    'Spotify write operations require OAuth. Set spotify.auth_mode to "oauth", '
+    "configure SPOTIFY_REDIRECT_URI, then rerun or resume with the existing run id."
+)
 
 PlatformName = Literal["mock", "spotify", "qqmusic"]
 
@@ -334,7 +343,7 @@ def validate_transfer_preflight(
     if not dry_run and not destination.capabilities.supports_write:
         issues.append(f"{destination.platform_name} cannot write destination playlists")
 
-    issues.extend(_credential_issues(source, require_write=False))
+    issues.extend(_credential_issues(source, require_write=False, require_playlist_read=True))
     if destination is source:
         if not dry_run:
             issues.extend(_credential_issues(destination, require_write=True))
@@ -699,15 +708,19 @@ def _record_first_incomplete_write_failure(
             return
 
 
-def _credential_issues(adapter: BasePlatform, *, require_write: bool) -> list[str]:
+def _credential_issues(
+    adapter: BasePlatform,
+    *,
+    require_write: bool,
+    require_playlist_read: bool = False,
+) -> list[str]:
     if isinstance(adapter, SpotifyAdapter):
         if getattr(adapter, "_client", None) is not None:
             return []
         if require_write and adapter.config.auth_mode != "oauth":
-            return [
-                'Spotify write operations require OAuth. Set spotify.auth_mode to "oauth", '
-                "configure SPOTIFY_REDIRECT_URI, then rerun or resume with the existing run id."
-            ]
+            return [SPOTIFY_WRITE_OAUTH_MESSAGE]
+        if require_playlist_read and adapter.config.auth_mode != "oauth":
+            return [SPOTIFY_PLAYLIST_READ_OAUTH_MESSAGE]
         if adapter.config.auth_mode == "oauth":
             missing = adapter.config.missing_credentials()
             if not missing:
