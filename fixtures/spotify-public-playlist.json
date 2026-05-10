@@ -1,0 +1,929 @@
+{
+  "playlists": [
+    {
+      "description": "Public Spotify playlist metadata captured from a dry-run.",
+      "id": "spotify-public-sample",
+      "name": "Spotify Public Sample Playlist",
+      "platform": "spotify",
+      "source_run_id": "sanitized-local-run",
+      "tracks": [
+        {
+          "album": "Celeste (Original Soundtrack)",
+          "artists": [
+            "Lena Raine"
+          ],
+          "duration_seconds": 68,
+          "explicit": false,
+          "isrc": "QZARB1852740",
+          "platform_track_id": "7irQdnDBovK2AVSBilasDZ",
+          "release_date": "2018-01-25",
+          "release_year": 2018,
+          "source_playlist_position": 0,
+          "title": "Prologue"
+        },
+        {
+          "album": "Celeste (Original Soundtrack)",
+          "artists": [
+            "Lena Raine"
+          ],
+          "duration_seconds": 219,
+          "explicit": false,
+          "isrc": "QZARB1852741",
+          "platform_track_id": "4MsC3bu5B8WQGHQjOoH2NG",
+          "release_date": "2018-01-25",
+          "release_year": 2018,
+          "source_playlist_position": 1,
+          "title": "First Steps"
+        },
+        {
+          "album": "Celeste (Original Soundtrack)",
+          "artists": [
+            "Lena Raine"
+          ],
+          "duration_seconds": 579,
+          "explicit": false,
+          "isrc": "QZARB1852742",
+          "platform_track_id": "3flQv4DNGg31Ic4vBv45Tj",
+          "release_date": "2018-01-25",
+          "release_year": 2018,
+          "source_playlist_position": 2,
+          "title": "Resurrections"
+        },
+        {
+          "album": "Celeste (Original Soundtrack)",
+          "artists": [
+            "Lena Raine"
+          ],
+          "duration_seconds": 149,
+          "explicit": false,
+          "isrc": "QZARB1852743",
+          "platform_track_id": "35p6mssMRYhqo1hFO0o6T9",
+          "release_date": "2018-01-25",
+          "release_year": 2018,
+          "source_playlist_position": 3,
+          "title": "Awake"
+        },
+        {
+          "album": "Celeste (Original Soundtrack)",
+          "artists": [
+            "Lena Raine"
+          ],
+          "duration_seconds": 669,
+          "explicit": false,
+          "isrc": "QZARB1852757",
+          "platform_track_id": "6l9ygDSnRhbcuzzppGksQr",
+          "release_date": "2018-01-25",
+          "release_year": 2018,
+          "source_playlist_position": 4,
+          "title": "Reach for the Summit"
+        },
+        {
+          "album": "Celeste B-Sides (Original Game Soundtrack)",
+          "artists": [
+            "Maxo"
+          ],
+          "duration_seconds": 151,
+          "explicit": false,
+          "isrc": "QZ6K41800272",
+          "platform_track_id": "48p6Htea7tGnuUcRPOcK7U",
+          "release_date": "2018-01-25",
+          "release_year": 2018,
+          "source_playlist_position": 5,
+          "title": "Forsaken City - Sever the Skyline Mix"
+        },
+        {
+          "album": "Celeste B-Sides (Original Game Soundtrack)",
+          "artists": [
+            "Ben Prunty"
+          ],
+          "duration_seconds": 204,
+          "explicit": false,
+          "isrc": "QZ6K41800273",
+          "platform_track_id": "2fnovdkrP33dRMtJQ0O41c",
+          "release_date": "2018-01-25",
+          "release_year": 2018,
+          "source_playlist_position": 6,
+          "title": "Old Site - Black Moonrise Mix"
+        },
+        {
+          "album": "Celeste B-Sides (Original Game Soundtrack)",
+          "artists": [
+            "Christa Lee"
+          ],
+          "duration_seconds": 226,
+          "explicit": false,
+          "isrc": "QZ6K41800274",
+          "platform_track_id": "1kSZjgHQG9MTVbJMId8EPU",
+          "release_date": "2018-01-25",
+          "release_year": 2018,
+          "source_playlist_position": 7,
+          "title": "Celestial Resort - Good Karma Mix"
+        },
+        {
+          "album": "Celeste B-Sides (Original Game Soundtrack)",
+          "artists": [
+            "In Love With a Ghost"
+          ],
+          "duration_seconds": 294,
+          "explicit": false,
+          "isrc": "QZ6K41800275",
+          "platform_track_id": "2XiVI1ZMabQc0VIChp9KoV",
+          "release_date": "2018-01-25",
+          "release_year": 2018,
+          "source_playlist_position": 8,
+          "title": "Golden Ridge - Golden Feather Mix"
+        },
+        {
+          "album": "Celeste B-Sides (Original Game Soundtrack)",
+          "artists": [
+            "2 Mello"
+          ],
+          "duration_seconds": 236,
+          "explicit": false,
+          "isrc": "QZ6K41800276",
+          "platform_track_id": "1wtbL0IKJN7n2oCThDgw73",
+          "release_date": "2018-01-25",
+          "release_year": 2018,
+          "source_playlist_position": 9,
+          "title": "Mirror Temple - Mirror Magic Mix"
+        },
+        {
+          "album": "Celeste B-Sides (Original Game Soundtrack)",
+          "artists": [
+            "Kuraine"
+          ],
+          "duration_seconds": 517,
+          "explicit": false,
+          "isrc": "QZ6K41800278",
+          "platform_track_id": "1XDmXmq1aYbwNPsannu4n8",
+          "release_date": "2018-01-25",
+          "release_year": 2018,
+          "source_playlist_position": 10,
+          "title": "Summit - No More Running Mix"
+        },
+        {
+          "album": "有理想",
+          "artists": [
+            "Ronghao Li"
+          ],
+          "duration_seconds": 313,
+          "explicit": false,
+          "isrc": "TWA531509039",
+          "platform_track_id": "5DH8nF7aWoXXg5Sm3gjCWD",
+          "release_date": "2016-01-22",
+          "release_year": 2016,
+          "source_playlist_position": 11,
+          "title": "不將就 (電影\"何以笙簫默\"片尾曲)"
+        },
+        {
+          "album": "Man’s Best Friend (Bonus Track Version)",
+          "artists": [
+            "Sabrina Carpenter"
+          ],
+          "duration_seconds": 232,
+          "explicit": false,
+          "isrc": "USUM72504451",
+          "platform_track_id": "5INY1sXYVmFCN5I6cbwdmk",
+          "release_date": "2025-12-24",
+          "release_year": 2025,
+          "source_playlist_position": 12,
+          "title": "Such A Funny Way"
+        },
+        {
+          "album": "RISE",
+          "artists": [
+            "TAEYANG"
+          ],
+          "duration_seconds": 230,
+          "explicit": false,
+          "isrc": "KRB471402723",
+          "platform_track_id": "0lYtIvI7bO51PZSeK22Mbz",
+          "release_date": "2014-06-03",
+          "release_year": 2014,
+          "source_playlist_position": 13,
+          "title": "눈,코,입 (Eyes, Nose, Lips)"
+        },
+        {
+          "album": "emails i can't send",
+          "artists": [
+            "Sabrina Carpenter"
+          ],
+          "duration_seconds": 164,
+          "explicit": false,
+          "isrc": "USUM72210708",
+          "platform_track_id": "6dgUya35uo964z7GZXM07g",
+          "release_date": "2022-07-15",
+          "release_year": 2022,
+          "source_playlist_position": 14,
+          "title": "Nonsense"
+        },
+        {
+          "album": "emails i can't send",
+          "artists": [
+            "Sabrina Carpenter"
+          ],
+          "duration_seconds": 191,
+          "explicit": false,
+          "isrc": "USUM72210707",
+          "platform_track_id": "1RAeuvRyRzCweAK3jUT0ZW",
+          "release_date": "2022-07-15",
+          "release_year": 2022,
+          "source_playlist_position": 15,
+          "title": "bet u wanna"
+        },
+        {
+          "album": "Áššogáttis: By the Embers",
+          "artists": [
+            "Sofia Jannok"
+          ],
+          "duration_seconds": 204,
+          "explicit": false,
+          "isrc": "SEAGA0813030",
+          "platform_track_id": "3WGhMNBudyOzDU4lU9vTiC",
+          "release_date": "2010-09-01",
+          "release_year": 2010,
+          "source_playlist_position": 16,
+          "title": "Liekkas"
+        },
+        {
+          "album": "emails i can’t send fwd:",
+          "artists": [
+            "Sabrina Carpenter"
+          ],
+          "duration_seconds": 188,
+          "explicit": false,
+          "isrc": "USUM72210712",
+          "platform_track_id": "1pp48yqPWZIsaDSIBrVe0r",
+          "release_date": "2023-03-17",
+          "release_year": 2023,
+          "source_playlist_position": 17,
+          "title": "Bad for Business"
+        },
+        {
+          "album": "At Last!",
+          "artists": [
+            "Etta James"
+          ],
+          "duration_seconds": 180,
+          "explicit": false,
+          "isrc": "USMC16046323",
+          "platform_track_id": "4Hhv2vrOTy89HFRcjU3QOx",
+          "release_year": 1960,
+          "source_playlist_position": 18,
+          "title": "At Last"
+        },
+        {
+          "album": "Purple Rain",
+          "artists": [
+            "Prince"
+          ],
+          "duration_seconds": 522,
+          "explicit": false,
+          "isrc": "USWB10001880",
+          "platform_track_id": "1uvyZBs4IZYRebHIB1747m",
+          "release_date": "1984-06-25",
+          "release_year": 1984,
+          "source_playlist_position": 19,
+          "title": "Purple Rain"
+        },
+        {
+          "album": "\"Heroes\" (2017 Remaster)",
+          "artists": [
+            "David Bowie"
+          ],
+          "duration_seconds": 371,
+          "explicit": false,
+          "isrc": "USJT11700005",
+          "platform_track_id": "7Jh1bpe76CNTCgdgAdBw4Z",
+          "release_year": 1977,
+          "source_playlist_position": 20,
+          "title": "\"Heroes\" - 2017 Remaster"
+        },
+        {
+          "album": "All the Things She Said",
+          "artists": [
+            "Harrison"
+          ],
+          "duration_seconds": 171,
+          "explicit": false,
+          "isrc": "DK4YA2290301",
+          "platform_track_id": "2ihHDb5epUtpn97W0pOsOA",
+          "release_date": "2022-10-07",
+          "release_year": 2022,
+          "source_playlist_position": 21,
+          "title": "All the Things She Said"
+        },
+        {
+          "album": "Stranger Things, Vol. 1 (A Netflix Original Series Soundtrack)",
+          "artists": [
+            "Kyle Dixon & Michael Stein"
+          ],
+          "duration_seconds": 158,
+          "explicit": false,
+          "isrc": "USLS51683402",
+          "platform_track_id": "68gzf3AleOyt4NlKwpV0MY",
+          "release_date": "2016-08-12",
+          "release_year": 2016,
+          "source_playlist_position": 22,
+          "title": "Kids"
+        },
+        {
+          "album": "Stranger Things, Vol. 1 (A Netflix Original Series Soundtrack)",
+          "artists": [
+            "Kyle Dixon & Michael Stein"
+          ],
+          "duration_seconds": 68,
+          "explicit": false,
+          "isrc": "USLS51683401",
+          "platform_track_id": "0kwuKfWntoGh0EWyYb7Mpf",
+          "release_date": "2016-08-12",
+          "release_year": 2016,
+          "source_playlist_position": 23,
+          "title": "Stranger Things"
+        },
+        {
+          "album": "Stranger Things 4 (Original Score From The Netflix Series)",
+          "artists": [
+            "Kyle Dixon & Michael Stein"
+          ],
+          "duration_seconds": 126,
+          "explicit": false,
+          "isrc": "QZ8BZ2201197",
+          "platform_track_id": "206TnJYAbYb6uFvFoPll0V",
+          "release_date": "2022-07-01",
+          "release_year": 2022,
+          "source_playlist_position": 24,
+          "title": "Teens"
+        },
+        {
+          "album": "THE CORE - 核",
+          "artists": [
+            "XG"
+          ],
+          "duration_seconds": 227,
+          "explicit": false,
+          "isrc": "JPB602502960",
+          "platform_track_id": "748Uvc654IhPLrmiBGlPhd",
+          "release_date": "2026-01-23",
+          "release_year": 2026,
+          "source_playlist_position": 25,
+          "title": "GALA"
+        },
+        {
+          "album": "GALA",
+          "artists": [
+            "XG"
+          ],
+          "duration_seconds": 227,
+          "explicit": false,
+          "isrc": "JPB602503174",
+          "platform_track_id": "1ytuqcA6cwZC1m8sGNL5Rf",
+          "release_date": "2025-09-19",
+          "release_year": 2025,
+          "source_playlist_position": 26,
+          "title": "GALA - Instrumental"
+        },
+        {
+          "album": "WHERE IS MY HUSBAND!",
+          "artists": [
+            "RAYE"
+          ],
+          "duration_seconds": 197,
+          "explicit": false,
+          "isrc": "QMFME2535037",
+          "platform_track_id": "55lijDD6OAjLFFUHU9tcDm",
+          "release_date": "2025-09-19",
+          "release_year": 2025,
+          "source_playlist_position": 27,
+          "title": "WHERE IS MY HUSBAND!"
+        },
+        {
+          "album": "第二人生(末日版)",
+          "artists": [
+            "Mayday"
+          ],
+          "duration_seconds": 284,
+          "explicit": false,
+          "isrc": "TWK231104801",
+          "platform_track_id": "0cDN0N6Ho17FIxuzOvakQk",
+          "release_date": "2011-12-16",
+          "release_year": 2011,
+          "source_playlist_position": 28,
+          "title": "星空"
+        },
+        {
+          "album": "The Loneliest Time (Clean)",
+          "artists": [
+            "Carly Rae Jepsen"
+          ],
+          "duration_seconds": 242,
+          "explicit": false,
+          "isrc": "USUM72214849",
+          "platform_track_id": "1W6zG8SnRVRttnKnZyMxn8",
+          "release_date": "2022-10-21",
+          "release_year": 2022,
+          "source_playlist_position": 29,
+          "title": "Keep Away (Bonus Track)"
+        },
+        {
+          "album": "Honeymoon",
+          "artists": [
+            "Lana Del Rey"
+          ],
+          "duration_seconds": 295,
+          "explicit": false,
+          "isrc": "GBUM71503925",
+          "platform_track_id": "5jqNQZBwbZWQXPWfo0ygZF",
+          "release_date": "2015-09-18",
+          "release_year": 2015,
+          "source_playlist_position": 30,
+          "title": "Art Deco"
+        },
+        {
+          "album": "Norman Fucking Rockwell!",
+          "artists": [
+            "Lana Del Rey"
+          ],
+          "duration_seconds": 349,
+          "explicit": false,
+          "isrc": "GBUM71701687",
+          "platform_track_id": "7vRfxLcDDwgYW2WTrtEgUV",
+          "release_date": "2019-08-30",
+          "release_year": 2019,
+          "source_playlist_position": 31,
+          "title": "The Next Best American Record"
+        },
+        {
+          "album": "Lost At Sea (ANNA Remix)",
+          "artists": [
+            "Rob Grant",
+            "Lana Del Rey",
+            "ANNA"
+          ],
+          "duration_seconds": 294,
+          "explicit": false,
+          "isrc": "GBUM72311312",
+          "platform_track_id": "3d1sRLMVrXnCBawEZo69bR",
+          "release_date": "2024-02-09",
+          "release_year": 2024,
+          "source_playlist_position": 32,
+          "title": "Lost at Sea - ANNA Remix"
+        },
+        {
+          "album": "Lost At Sea",
+          "artists": [
+            "Rob Grant",
+            "Lana Del Rey"
+          ],
+          "duration_seconds": 188,
+          "explicit": false,
+          "isrc": "GBUM72208099",
+          "platform_track_id": "6N7NO9Z1Hi6la8dqG3Aoew",
+          "release_date": "2023-06-01",
+          "release_year": 2023,
+          "source_playlist_position": 33,
+          "title": "Lost at Sea"
+        },
+        {
+          "album": "安和桥北",
+          "artists": [
+            "宋冬野"
+          ],
+          "duration_seconds": 125,
+          "explicit": false,
+          "isrc": "CNA231300693",
+          "platform_track_id": "5kpqZy4npLRTd8AEjkV6YH",
+          "release_date": "2013-08-30",
+          "release_year": 2013,
+          "source_playlist_position": 34,
+          "title": "给抱着盒子的姑娘"
+        },
+        {
+          "album": "Fancy Some More?",
+          "artists": [
+            "PinkPantheress",
+            "Zara Larsson"
+          ],
+          "duration_seconds": 185,
+          "explicit": false,
+          "isrc": "GBAYE2501217",
+          "platform_track_id": "1DwscornXpj8fmOmYVlqZt",
+          "release_date": "2025-10-10",
+          "release_year": 2025,
+          "source_playlist_position": 35,
+          "title": "Stateside + Zara Larsson"
+        },
+        {
+          "album": "JOJO'S BIZARRE ADVENTURE -Golden Wind O.S.T vol.1 Overture",
+          "artists": [
+            "Yugo Kanno"
+          ],
+          "duration_seconds": 296,
+          "explicit": false,
+          "isrc": "JPQ461800540",
+          "platform_track_id": "17VP4tofJ3evJbtY8Tk1Qi",
+          "release_date": "2018-12-19",
+          "release_year": 2018,
+          "source_playlist_position": 36,
+          "title": "il vento d'oro"
+        },
+        {
+          "album": "JOJO'S BIZARRE ADVENTURE -Diamond is unbreakable O.S.T Vol.1 -Good Morning Morioh Cho- Music by Yugo Kanno",
+          "artists": [
+            "Yugo Kanno"
+          ],
+          "duration_seconds": 248,
+          "explicit": false,
+          "isrc": "JPQ461600319",
+          "platform_track_id": "6GqMQUzxuTG88y5WZ0HYLr",
+          "release_date": "2016-07-27",
+          "release_year": 2016,
+          "source_playlist_position": 37,
+          "title": "Diamond is unbreakable - Main Theme"
+        },
+        {
+          "album": "JOJO'S BIZARRE ADVENTURE -Golden Wind O.S.T vol.1 Overture",
+          "artists": [
+            "Yugo Kanno"
+          ],
+          "duration_seconds": 145,
+          "explicit": false,
+          "isrc": "JPQ461800557",
+          "platform_track_id": "5aanhLobXHQ8ODj2LBJ077",
+          "release_date": "2018-12-19",
+          "release_year": 2018,
+          "source_playlist_position": 38,
+          "title": "Canzoni preferite"
+        },
+        {
+          "album": "JOJO'S BIZARRE ADVENTURE -Golden Wind O.S.T vol.3 Finare",
+          "artists": [
+            "Yugo Kanno"
+          ],
+          "duration_seconds": 219,
+          "explicit": false,
+          "isrc": "JPQ461900343",
+          "platform_track_id": "3q7hI6kxCAbj0yDTR4asML",
+          "release_date": "2019-08-14",
+          "release_year": 2019,
+          "source_playlist_position": 39,
+          "title": "Uragirimonono Requiem - Giorno Ver."
+        },
+        {
+          "album": "JOJO'S BIZARRE ADVENTURE -Diamond is unbreakable O.S.T Vol.2 -Good Night Morioh Cho- Music by Yugo Kanno",
+          "artists": [
+            "Yugo Kanno"
+          ],
+          "duration_seconds": 184,
+          "explicit": false,
+          "isrc": "JPQ461600479",
+          "platform_track_id": "21YiaS85ngOoYT773cMFlW",
+          "release_date": "2016-12-21",
+          "release_year": 2016,
+          "source_playlist_position": 40,
+          "title": "Killer"
+        },
+        {
+          "album": "Dance with STEEL BALL RUN",
+          "artists": [
+            "Yugo Kanno"
+          ],
+          "duration_seconds": 287,
+          "explicit": false,
+          "isrc": "JPQ462600001",
+          "platform_track_id": "2Q0fRmDT1rIzDYvpwhLAXW",
+          "release_date": "2026-03-20",
+          "release_year": 2026,
+          "source_playlist_position": 41,
+          "title": "Dance with STEEL BALL RUN"
+        },
+        {
+          "album": "The Animals",
+          "artists": [
+            "The Animals"
+          ],
+          "duration_seconds": 271,
+          "explicit": false,
+          "isrc": "USA176460010",
+          "platform_track_id": "7BY005dacJkbO6EPiOh2wb",
+          "release_date": "1964-01-01",
+          "release_year": 1964,
+          "source_playlist_position": 42,
+          "title": "House Of The Rising Sun"
+        },
+        {
+          "album": "万能青年旅店",
+          "artists": [
+            "万能青年旅店"
+          ],
+          "duration_seconds": 344,
+          "explicit": false,
+          "isrc": "FR26V2014409",
+          "platform_track_id": "2oSyibxNEOnHUYh1J0xNYX",
+          "release_date": "2010-11-12",
+          "release_year": 2010,
+          "source_playlist_position": 43,
+          "title": "杀死那个石家庄人"
+        },
+        {
+          "album": "Ultraviolence (Deluxe)",
+          "artists": [
+            "Lana Del Rey"
+          ],
+          "duration_seconds": 271,
+          "explicit": false,
+          "isrc": "GBUM71402503",
+          "platform_track_id": "6IfPyMb0Sxptpx6jBUATOS",
+          "release_date": "2014-01-01",
+          "release_year": 2014,
+          "source_playlist_position": 44,
+          "title": "Old Money"
+        },
+        {
+          "album": "I've Tried Everything But Therapy (Complete Edition)",
+          "artists": [
+            "Teddy Swims"
+          ],
+          "duration_seconds": 213,
+          "explicit": false,
+          "isrc": "USWB12302870",
+          "platform_track_id": "7j9GxRNmIV2L5Qe7yoTHug",
+          "release_date": "2025-06-27",
+          "release_year": 2025,
+          "source_playlist_position": 45,
+          "title": "The Door"
+        },
+        {
+          "album": "Mr. Know It All",
+          "artists": [
+            "Teddy Swims"
+          ],
+          "duration_seconds": 198,
+          "explicit": false,
+          "isrc": "USWB12601324",
+          "platform_track_id": "2g5kPQh1EexoG8kGZH2nOZ",
+          "release_date": "2026-04-09",
+          "release_year": 2026,
+          "source_playlist_position": 46,
+          "title": "Mr. Know It All"
+        },
+        {
+          "album": "Are You Even Real (feat. Givēon)",
+          "artists": [
+            "Teddy Swims",
+            "GIVĒON"
+          ],
+          "duration_seconds": 148,
+          "explicit": false,
+          "isrc": "USWB12404289",
+          "platform_track_id": "4ZO4HvFADvujrrEidSatEC",
+          "release_date": "2025-01-10",
+          "release_year": 2025,
+          "source_playlist_position": 47,
+          "title": "Are You Even Real (feat. Givēon)"
+        },
+        {
+          "album": "The Family Business",
+          "artists": [
+            "Jonas Brothers"
+          ],
+          "duration_seconds": 250,
+          "explicit": false,
+          "isrc": "USHR10723196",
+          "platform_track_id": "1vwzGPigYTGSQk7uGpJxxQ",
+          "release_date": "2023-02-17",
+          "release_year": 2023,
+          "source_playlist_position": 48,
+          "title": "When You Look Me In The Eyes"
+        },
+        {
+          "album": "Bad Dreams",
+          "artists": [
+            "Teddy Swims"
+          ],
+          "duration_seconds": 185,
+          "explicit": false,
+          "isrc": "USWB12403749",
+          "platform_track_id": "3nHuKdFJZm78CoeBnDcFKe",
+          "release_date": "2024-09-13",
+          "release_year": 2024,
+          "source_playlist_position": 49,
+          "title": "Bad Dreams"
+        },
+        {
+          "album": "You've Got Another Thing Coming (From the Netflix Series \"Nobody Wants This\" Season 2)",
+          "artists": [
+            "Teddy Swims"
+          ],
+          "duration_seconds": 179,
+          "explicit": false,
+          "isrc": "USWB12503766",
+          "platform_track_id": "21aPACBBGxnw2qKQkTpAYz",
+          "release_date": "2025-10-09",
+          "release_year": 2025,
+          "source_playlist_position": 50,
+          "title": "You've Got Another Thing Coming - From the Netflix Series \"Nobody Wants This\" Season 2"
+        },
+        {
+          "album": "I've Tried Everything But Therapy (Part 1)",
+          "artists": [
+            "Teddy Swims"
+          ],
+          "duration_seconds": 242,
+          "explicit": false,
+          "isrc": "USWB12302869",
+          "platform_track_id": "3sXWFs0hku4tR5cy54PnRz",
+          "release_date": "2023-09-15",
+          "release_year": 2023,
+          "source_playlist_position": 51,
+          "title": "Some Things I'll Never Know"
+        },
+        {
+          "album": "万能青年旅店",
+          "artists": [
+            "万能青年旅店"
+          ],
+          "duration_seconds": 424,
+          "explicit": false,
+          "isrc": "FR26V2014403",
+          "platform_track_id": "6jhupo3u5l6PIVRNdqrVJT",
+          "release_date": "2010-11-12",
+          "release_year": 2010,
+          "source_playlist_position": 52,
+          "title": "大石碎胸口"
+        },
+        {
+          "album": "THE CORE - 核",
+          "artists": [
+            "XG"
+          ],
+          "duration_seconds": 171,
+          "explicit": false,
+          "isrc": "JPB602600009",
+          "platform_track_id": "3fEX9NgOeklq816Fw00uoo",
+          "release_date": "2026-01-23",
+          "release_year": 2026,
+          "source_playlist_position": 53,
+          "title": "HYPNOTIZE"
+        },
+        {
+          "album": "THE CORE - 核",
+          "artists": [
+            "XG"
+          ],
+          "duration_seconds": 208,
+          "explicit": false,
+          "isrc": "JPB602600007",
+          "platform_track_id": "6f9cRA5Ar7RggRyShSCmIl",
+          "release_date": "2026-01-23",
+          "release_year": 2026,
+          "source_playlist_position": 54,
+          "title": "TAKE MY BREATH"
+        },
+        {
+          "album": "Michael",
+          "artists": [
+            "Michael Jackson"
+          ],
+          "duration_seconds": 274,
+          "explicit": false,
+          "isrc": "USSM11004248",
+          "platform_track_id": "3VDJf1JQWl9m3H1JgdhUNj",
+          "release_date": "2010-12-10",
+          "release_year": 2010,
+          "source_playlist_position": 55,
+          "title": "(I Like) The Way You Love Me"
+        },
+        {
+          "album": "THE CORE - 核",
+          "artists": [
+            "XG"
+          ],
+          "duration_seconds": 275,
+          "explicit": false,
+          "isrc": "JPB602600012",
+          "platform_track_id": "71LP1o5OzVVxBWIcIF6NAD",
+          "release_date": "2026-01-23",
+          "release_year": 2026,
+          "source_playlist_position": 56,
+          "title": "4 SEASONS"
+        },
+        {
+          "album": "The Lumineers",
+          "artists": [
+            "The Lumineers"
+          ],
+          "duration_seconds": 163,
+          "explicit": false,
+          "isrc": "USDMG1260805",
+          "platform_track_id": "0DwClY2t9YAWHBROMIgrXb",
+          "release_date": "2012-04-03",
+          "release_year": 2012,
+          "source_playlist_position": 57,
+          "title": "Ho Hey"
+        },
+        {
+          "album": "Uncertain, TX",
+          "artists": [
+            "Kacey Musgraves",
+            "Willie Nelson"
+          ],
+          "duration_seconds": 213,
+          "explicit": true,
+          "isrc": "USUG12510475",
+          "platform_track_id": "3LYZJ28tEami0cwkoij6jM",
+          "release_date": "2026-04-30",
+          "release_year": 2026,
+          "source_playlist_position": 58,
+          "title": "Uncertain, TX"
+        },
+        {
+          "album": "Middle of Nowhere",
+          "artists": [
+            "Kacey Musgraves"
+          ],
+          "duration_seconds": 198,
+          "explicit": false,
+          "isrc": "USUG12510467",
+          "platform_track_id": "5rS4oyksANQJJeUgTNld5b",
+          "release_date": "2026-05-01",
+          "release_year": 2026,
+          "source_playlist_position": 59,
+          "title": "Dry Spell"
+        },
+        {
+          "album": "Middle of Nowhere",
+          "artists": [
+            "Kacey Musgraves"
+          ],
+          "duration_seconds": 223,
+          "explicit": true,
+          "isrc": "USUG12510477",
+          "platform_track_id": "7xKr077iMufVJwge6aO9xJ",
+          "release_date": "2026-05-01",
+          "release_year": 2026,
+          "source_playlist_position": 60,
+          "title": "Mexico Honey"
+        },
+        {
+          "album": "Easy (with Kacey Musgraves feat. Mark Ronson)",
+          "artists": [
+            "Troye Sivan",
+            "Kacey Musgraves",
+            "Mark Ronson"
+          ],
+          "duration_seconds": 214,
+          "explicit": false,
+          "isrc": "AUUM72000950",
+          "platform_track_id": "4XWaUb7mKRcJR5RPp4IIDr",
+          "release_date": "2020-12-10",
+          "release_year": 2020,
+          "source_playlist_position": 61,
+          "title": "Easy (with Kacey Musgraves feat. Mark Ronson)"
+        },
+        {
+          "album": "Middle of Nowhere",
+          "artists": [
+            "Kacey Musgraves"
+          ],
+          "duration_seconds": 214,
+          "explicit": false,
+          "isrc": "USUG12510476",
+          "platform_track_id": "3gzUTPvmKy7L7xaKoVIvBD",
+          "release_date": "2026-05-01",
+          "release_year": 2026,
+          "source_playlist_position": 62,
+          "title": "Rhinestoned"
+        },
+        {
+          "album": "Hot Potatoes: The Best Of Devo",
+          "artists": [
+            "DEVO"
+          ],
+          "duration_seconds": 205,
+          "explicit": false,
+          "isrc": "GBAAA8200348",
+          "platform_track_id": "6ybEnnIJuPZqBfZShVNX4T",
+          "release_date": "1993-01-01",
+          "release_year": 1993,
+          "source_playlist_position": 63,
+          "title": "That's Good"
+        },
+        {
+          "album": "主角",
+          "artists": [
+            "Faye Wong"
+          ],
+          "duration_seconds": 300,
+          "explicit": false,
+          "isrc": "HKH722602011",
+          "platform_track_id": "12KGNSCmvbTO8sJaDlvf9w",
+          "release_date": "2026-05-07",
+          "release_year": 2026,
+          "source_playlist_position": 64,
+          "title": "主角"
+        }
+      ]
+    }
+  ]
+}
