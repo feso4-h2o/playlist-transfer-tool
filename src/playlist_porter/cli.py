@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 
 from playlist_porter import __version__
-from playlist_porter.config import load_config, write_default_config
+from playlist_porter.config import PorterConfig, load_config, write_default_config
 from playlist_porter.persistence.exports import export_reports
 from playlist_porter.persistence.repositories import TransferRepository
 from playlist_porter.rate_limit import (
@@ -59,43 +59,46 @@ def build_parser() -> argparse.ArgumentParser:
     transfer_parser.add_argument(
         "--destination-platform",
         choices=["mock", "spotify", "qqmusic"],
-        required=True,
     )
     transfer_parser.add_argument("--source-playlist")
     transfer_parser.add_argument("--run-id")
     transfer_parser.add_argument("--db")
     transfer_parser.add_argument("--output-dir")
-    transfer_parser.add_argument("--restart", action="store_true")
+    restart_mode = transfer_parser.add_mutually_exclusive_group()
+    restart_mode.add_argument("--restart", dest="restart", action="store_true", default=None)
+    restart_mode.add_argument("--no-restart", dest="restart", action="store_false")
     transfer_parser.add_argument("--destination-playlist-id")
     transfer_parser.add_argument("--create-playlist")
     mode = transfer_parser.add_mutually_exclusive_group()
-    mode.add_argument("--dry-run", dest="dry_run", action="store_true", default=True)
+    mode.add_argument("--dry-run", dest="dry_run", action="store_true", default=None)
     mode.add_argument("--write", dest="dry_run", action="store_false")
 
     review_parser = subparsers.add_parser("review", help="review persisted uncertain matches")
-    review_parser.add_argument("--db", required=True)
-    review_parser.add_argument("--run-id", required=True)
+    review_parser.add_argument("--config")
+    review_parser.add_argument("--db")
+    review_parser.add_argument("--run-id")
     review_parser.add_argument("--source-track-id")
     review_parser.add_argument("--action", choices=["accept", "reject", "skip"])
-    review_parser.add_argument("--candidate-rank", type=int, default=1)
+    review_parser.add_argument("--candidate-rank", type=int)
 
     execute_parser = subparsers.add_parser("execute", help="write approved mock tracks")
     _add_config_argument(execute_parser)
-    execute_parser.add_argument("--run-id", required=True)
+    execute_parser.add_argument("--run-id")
     execute_parser.add_argument("--db")
     execute_parser.add_argument("--destination-playlist-id")
     execute_parser.add_argument("--create-playlist")
 
     resume_parser = subparsers.add_parser("resume", help="continue approved mock writes")
     _add_config_argument(resume_parser)
-    resume_parser.add_argument("--run-id", required=True)
+    resume_parser.add_argument("--run-id")
     resume_parser.add_argument("--db")
 
     export_parser = subparsers.add_parser("export-report", help="export transfer reports")
-    export_parser.add_argument("--db", required=True)
-    export_parser.add_argument("--run-id", required=True)
-    export_parser.add_argument("--output-dir", required=True)
-    export_parser.add_argument("--format", choices=["csv", "json", "both"], default="both")
+    export_parser.add_argument("--config")
+    export_parser.add_argument("--db")
+    export_parser.add_argument("--run-id")
+    export_parser.add_argument("--output-dir")
+    export_parser.add_argument("--format", choices=["csv", "json", "both"])
     return parser
 
 
@@ -137,34 +140,55 @@ def _main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "transfer":
         config = load_config(args.config)
-        if args.run_id:
-            if args.dry_run:
+        defaults = config.commands.transfer
+        transfer_run_id = _coalesce(args.run_id, defaults.run_id)
+        destination_platform = _resolve_platform(
+            _coalesce(args.destination_platform, defaults.destination_platform),
+            setting="transfer.destination_platform",
+            flag="--destination-platform",
+        )
+        dry_run = _coalesce(args.dry_run, defaults.dry_run, True)
+        database_path = _coalesce(args.db, defaults.database_path)
+        output_dir = _coalesce(args.output_dir, defaults.output_dir)
+        destination_playlist_id = _coalesce(
+            args.destination_playlist_id,
+            defaults.destination_playlist_id,
+        )
+        create_playlist_name = _coalesce(args.create_playlist, defaults.create_playlist)
+        if transfer_run_id:
+            if dry_run:
                 raise SystemExit("--run-id can only be used with --write")
             result = execute_transfer_run(
                 config,
-                destination_platform=args.destination_platform,
-                transfer_run_id=args.run_id,
-                database_path=args.db,
-                output_dir=args.output_dir,
-                destination_playlist_id=args.destination_playlist_id,
-                create_playlist_name=args.create_playlist,
+                destination_platform=destination_platform,
+                transfer_run_id=transfer_run_id,
+                database_path=database_path,
+                output_dir=output_dir,
+                destination_playlist_id=destination_playlist_id,
+                create_playlist_name=create_playlist_name,
             )
         else:
-            if not args.source_platform:
-                raise SystemExit("--source-platform is required without --run-id")
-            if not args.source_playlist:
-                raise SystemExit("--source-playlist is required without --run-id")
+            source_platform = _resolve_platform(
+                _coalesce(args.source_platform, defaults.source_platform),
+                setting="transfer.source_platform",
+                flag="--source-platform",
+            )
+            source_playlist = _required(
+                _coalesce(args.source_playlist, defaults.source_playlist),
+                setting="transfer.source_playlist",
+                flag="--source-playlist",
+            )
             result = run_transfer(
                 config,
-                source_platform=args.source_platform,
-                destination_platform=args.destination_platform,
-                source_playlist_id=args.source_playlist,
-                dry_run=args.dry_run,
-                database_path=args.db,
-                output_dir=args.output_dir,
-                restart=args.restart,
-                destination_playlist_id=args.destination_playlist_id,
-                create_playlist_name=args.create_playlist,
+                source_platform=source_platform,
+                destination_platform=destination_platform,
+                source_playlist_id=source_playlist,
+                dry_run=dry_run,
+                database_path=database_path,
+                output_dir=output_dir,
+                restart=_coalesce(args.restart, defaults.restart, False),
+                destination_playlist_id=destination_playlist_id,
+                create_playlist_name=create_playlist_name,
             )
         print(f"run id: {result.transfer_run_id}")
         print(f"mode: {'dry-run' if result.dry_run else 'write'}")
@@ -175,52 +199,116 @@ def _main(argv: list[str] | None = None) -> int:
             print(f"wrote report: {path}")
         return 0
     if args.command == "review":
-        repository = TransferRepository(args.db)
+        config = _load_optional_config(args.config)
+        defaults = config.commands.review if config is not None else None
+        database_path = _required(
+            _coalesce(
+                args.db,
+                getattr(defaults, "database_path", None),
+                config.database_path if config is not None else None,
+            ),
+            setting="review.database_path",
+            flag="--db",
+        )
+        run_id = _required(
+            _coalesce(args.run_id, getattr(defaults, "run_id", None)),
+            setting="review.run_id",
+            flag="--run-id",
+        )
+        candidate_rank = _coalesce(
+            args.candidate_rank,
+            getattr(defaults, "candidate_rank", None),
+            1,
+        )
+        repository = TransferRepository(database_path)
         if args.action:
             if not args.source_track_id:
                 raise SystemExit("--source-track-id is required with --action")
             apply_review_update(
                 repository,
-                args.run_id,
+                run_id,
                 ReviewUpdate(
                     source_track_internal_id=args.source_track_id,
                     action=args.action,
-                    candidate_rank=args.candidate_rank,
+                    candidate_rank=candidate_rank,
                 ),
             )
             print("saved review update")
         else:
-            saved_count = run_interactive_review(repository, args.run_id)
+            saved_count = run_interactive_review(repository, run_id)
             print(f"saved review updates: {saved_count}")
         return 0
     if args.command == "execute":
         config = load_config(args.config)
+        defaults = config.commands.execute
+        run_id = _required(
+            _coalesce(args.run_id, defaults.run_id),
+            setting="execute.run_id",
+            flag="--run-id",
+        )
         result = execute_mock_transfer(
             config,
-            transfer_run_id=args.run_id,
-            database_path=args.db,
-            destination_playlist_id=args.destination_playlist_id,
-            create_playlist_name=args.create_playlist,
+            transfer_run_id=run_id,
+            database_path=_coalesce(args.db, defaults.database_path),
+            destination_playlist_id=_coalesce(
+                args.destination_playlist_id,
+                defaults.destination_playlist_id,
+            ),
+            create_playlist_name=_coalesce(args.create_playlist, defaults.create_playlist),
         )
         print(f"destination playlist: {result.destination_playlist_id}")
         print(f"written: {result.attempted_count}; skipped: {result.skipped_count}")
         return 0
     if args.command == "resume":
         config = load_config(args.config)
+        defaults = config.commands.resume
+        run_id = _required(
+            _coalesce(args.run_id, defaults.run_id),
+            setting="resume.run_id",
+            flag="--run-id",
+        )
         result = execute_mock_transfer(
             config,
-            transfer_run_id=args.run_id,
-            database_path=args.db,
+            transfer_run_id=run_id,
+            database_path=_coalesce(args.db, defaults.database_path),
         )
         print(f"destination playlist: {result.destination_playlist_id}")
         print(f"written: {result.attempted_count}; skipped: {result.skipped_count}")
         return 0
     if args.command == "export-report":
+        config = _load_optional_config(args.config)
+        defaults = config.commands.export_report if config is not None else None
+        database_path = _required(
+            _coalesce(
+                args.db,
+                getattr(defaults, "database_path", None),
+                config.database_path if config is not None else None,
+            ),
+            setting="export_report.database_path",
+            flag="--db",
+        )
+        run_id = _required(
+            _coalesce(args.run_id, getattr(defaults, "run_id", None)),
+            setting="export_report.run_id",
+            flag="--run-id",
+        )
+        output_dir = _required(
+            _coalesce(
+                args.output_dir,
+                getattr(defaults, "output_dir", None),
+                config.report_output_dir if config is not None else None,
+            ),
+            setting="export_report.output_dir",
+            flag="--output-dir",
+        )
+        output_format = _coalesce(args.format, getattr(defaults, "output_format", None), "both")
+        if output_format not in {"csv", "json", "both"}:
+            raise SystemExit("export_report.format must be one of csv, json, both")
         paths = export_reports(
-            TransferRepository(args.db),
-            args.run_id,
-            Path(args.output_dir),
-            output_format=args.format,
+            TransferRepository(database_path),
+            run_id,
+            Path(output_dir),
+            output_format=output_format,
         )
         for path in paths:
             print(f"wrote report: {path}")
@@ -230,6 +318,32 @@ def _main(argv: list[str] | None = None) -> int:
 
 def _add_config_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--config", required=True)
+
+
+def _load_optional_config(path: str | None) -> PorterConfig | None:
+    if path is None:
+        return None
+    return load_config(path)
+
+
+def _coalesce(*values):
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
+def _required(value, *, setting: str, flag: str):
+    if value is None:
+        raise SystemExit(f"{setting} is required; set it in config or pass {flag}")
+    return value
+
+
+def _resolve_platform(value: str | None, *, setting: str, flag: str):
+    platform = _required(value, setting=setting, flag=flag)
+    if platform not in {"mock", "spotify", "qqmusic"}:
+        raise SystemExit(f"{setting} must be one of mock, spotify, qqmusic")
+    return platform
 
 
 __all__ = ["build_parser", "main"]

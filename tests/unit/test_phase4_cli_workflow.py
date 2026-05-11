@@ -15,7 +15,7 @@ def _write_json(path, payload) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
-def _config_file(tmp_path, *, playlist_tracks, catalog_tracks) -> tuple:
+def _config_file(tmp_path, *, playlist_tracks, catalog_tracks, commands=None) -> tuple:
     playlists_path = tmp_path / "fixtures" / "playlists.json"
     catalog_path = tmp_path / "fixtures" / "catalog.json"
     database_path = tmp_path / "state" / "transfer.sqlite"
@@ -35,18 +35,18 @@ def _config_file(tmp_path, *, playlist_tracks, catalog_tracks) -> tuple:
         },
     )
     _write_json(catalog_path, {"catalog": catalog_tracks})
-    _write_json(
-        config_path,
-        {
-            "database_path": str(database_path),
-            "report_output_dir": str(reports_path),
-            "mock": {
-                "source_playlists_path": str(playlists_path),
-                "destination_catalog_path": str(catalog_path),
-                "writes_path": str(writes_path),
-            },
+    payload = {
+        "database_path": str(database_path),
+        "report_output_dir": str(reports_path),
+        "mock": {
+            "source_playlists_path": str(playlists_path),
+            "destination_catalog_path": str(catalog_path),
+            "writes_path": str(writes_path),
         },
-    )
+    }
+    if commands is not None:
+        payload["commands"] = commands
+    _write_json(config_path, payload)
     return config_path, database_path, writes_path, reports_path
 
 
@@ -319,6 +319,96 @@ def test_cli_prints_operational_errors_without_traceback(tmp_path, monkeypatch, 
     assert "Traceback" not in captured.err
 
 
+def test_transfer_uses_config_defaults_when_cli_args_are_omitted(tmp_path) -> None:
+    config_path, database_path, _, reports_path = _config_file(
+        tmp_path,
+        playlist_tracks=[
+            {
+                "id": "source-1",
+                "title": "Alpha",
+                "artists": ["Artist"],
+                "duration_seconds": 180,
+            }
+        ],
+        catalog_tracks=[
+            {
+                "id": "dest-1",
+                "title": "Alpha",
+                "artists": ["Artist"],
+                "duration_seconds": 180,
+            }
+        ],
+        commands={
+            "transfer": {
+                "source_platform": "mock",
+                "destination_platform": "mock",
+                "source_playlist": "source-playlist",
+                "dry_run": True,
+                "restart": False,
+                "output_dir": "reports/config-transfer",
+            }
+        },
+    )
+
+    exit_code = main(["transfer", "--config", str(config_path)])
+
+    repo = TransferRepository(database_path)
+    assert exit_code == 0
+    assert repo.find_run_id("mock|mock|source-playlist||dry-run") is not None
+    assert (reports_path.parent / "reports" / "config-transfer" / "transfer-summary.json").exists()
+
+
+def test_transfer_cli_args_override_config_defaults(tmp_path) -> None:
+    config_path, database_path, _, _ = _config_file(
+        tmp_path,
+        playlist_tracks=[
+            {
+                "id": "source-1",
+                "title": "Alpha",
+                "artists": ["Artist"],
+                "duration_seconds": 180,
+            }
+        ],
+        catalog_tracks=[
+            {
+                "id": "dest-1",
+                "title": "Alpha",
+                "artists": ["Artist"],
+                "duration_seconds": 180,
+            }
+        ],
+        commands={
+            "transfer": {
+                "source_platform": "spotify",
+                "destination_platform": "spotify",
+                "source_playlist": "wrong-playlist",
+                "dry_run": False,
+                "restart": True,
+            }
+        },
+    )
+
+    exit_code = main(
+        [
+            "transfer",
+            "--config",
+            str(config_path),
+            "--source-platform",
+            "mock",
+            "--destination-platform",
+            "mock",
+            "--source-playlist",
+            "source-playlist",
+            "--dry-run",
+            "--no-restart",
+        ]
+    )
+
+    repo = TransferRepository(database_path)
+    assert exit_code == 0
+    assert repo.find_run_id("mock|mock|source-playlist||dry-run") is not None
+
+
 def test_execute_and_resume_skip_recorded_duplicate_destination_writes(tmp_path) -> None:
     config_path, database_path, writes_path, _ = _config_file(
         tmp_path,
@@ -379,6 +469,55 @@ def test_execute_and_resume_skip_recorded_duplicate_destination_writes(tmp_path)
     assert TransferRepository(database_path).load_metrics(
         dry_run.transfer_run_id
     ).write_success_count == 2
+
+
+def test_execute_and_resume_use_configured_run_defaults(tmp_path) -> None:
+    config_path, database_path, writes_path, _ = _config_file(
+        tmp_path,
+        playlist_tracks=[
+            {
+                "id": "source-1",
+                "title": "Alpha",
+                "artists": ["Artist"],
+                "duration_seconds": 180,
+            }
+        ],
+        catalog_tracks=[
+            {
+                "id": "dest-1",
+                "title": "Alpha",
+                "artists": ["Artist"],
+                "duration_seconds": 180,
+            }
+        ],
+    )
+    config = PorterConfig(
+        database_path=database_path,
+        report_output_dir=tmp_path / "reports",
+        mock_source_playlists_path=tmp_path / "fixtures" / "playlists.json",
+        mock_destination_catalog_path=tmp_path / "fixtures" / "catalog.json",
+        mock_writes_path=writes_path,
+    )
+    dry_run = dry_run_mock_transfer(config, source_playlist_id="source-playlist")
+    payload = json.loads(config_path.read_text(encoding="utf-8"))
+    payload["commands"] = {
+        "execute": {
+            "run_id": dry_run.transfer_run_id,
+            "create_playlist": "Copied",
+        },
+        "resume": {
+            "run_id": dry_run.transfer_run_id,
+        },
+    }
+    _write_json(config_path, payload)
+
+    execute = main(["execute", "--config", str(config_path)])
+    resume = main(["resume", "--config", str(config_path)])
+
+    writes = json.loads(writes_path.read_text(encoding="utf-8"))
+    assert execute == 0
+    assert resume == 0
+    assert list(writes.values())[0]["track_ids"] == ["dest-1"]
 
 
 def test_execute_persists_supplied_destination_playlist_for_resume(tmp_path) -> None:
@@ -464,3 +603,46 @@ def test_export_reports_include_expected_columns_and_region_reason(tmp_path) -> 
     }
     assert csv_rows[0].keys() >= {"source_title", "reason_codes", "top_suggested_alternates"}
     assert json_rows == rows
+
+
+def test_review_and_export_report_use_config_defaults(tmp_path) -> None:
+    config_path, database_path, _, reports_path = _phase4_fixture(tmp_path)
+    main(["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"])
+    repo = TransferRepository(database_path)
+    run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
+    assert run_id is not None
+    review_decision = next(
+        decision
+        for decision in repo.load_match_decisions(run_id)
+        if decision.status is MatchStatus.NEEDS_REVIEW
+    )
+    payload = json.loads(config_path.read_text(encoding="utf-8"))
+    payload["commands"] = {
+        "review": {
+            "run_id": run_id,
+            "candidate_rank": 1,
+        },
+        "export_report": {
+            "run_id": run_id,
+            "output_dir": "reports/config-export",
+            "format": "json",
+        },
+    }
+    _write_json(config_path, payload)
+
+    review = main(
+        [
+            "review",
+            "--config",
+            str(config_path),
+            "--source-track-id",
+            str(review_decision.source_track.internal_id),
+            "--action",
+            "accept",
+        ]
+    )
+    export = main(["export-report", "--config", str(config_path)])
+
+    assert review == 0
+    assert export == 0
+    assert (reports_path.parent / "reports" / "config-export" / "unavailable-tracks.json").exists()
