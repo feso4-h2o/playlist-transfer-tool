@@ -1,0 +1,3483 @@
+{
+  "catalog": [
+    {
+      "album": "reputation",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 208,
+      "explicit": false,
+      "id": "2yLa0QULdQr0qAIvVwN6B5",
+      "isrc": "USCJY1750003",
+      "platform": "spotify",
+      "platform_track_id": "2yLa0QULdQr0qAIvVwN6B5",
+      "release_date": "2017-11-10",
+      "release_year": 2017,
+      "title": "...Ready For It?"
+    },
+    {
+      "album": "Red (Big Machine Radio Release Special)",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 232,
+      "explicit": false,
+      "id": "6ce41JVa6KFaryfmC2bu2W",
+      "isrc": "USCJY1231040",
+      "platform": "spotify",
+      "platform_track_id": "6ce41JVa6KFaryfmC2bu2W",
+      "release_date": "2012-10-22",
+      "release_year": 2012,
+      "title": "22"
+    },
+    {
+      "album": "Red (Taylor's Version)",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 231,
+      "explicit": false,
+      "id": "2T9WeqSMJJb8YBDHPYGU4p",
+      "isrc": "USUG12103666",
+      "platform": "spotify",
+      "platform_track_id": "2T9WeqSMJJb8YBDHPYGU4p",
+      "release_date": "2021-11-12",
+      "release_year": 2021,
+      "title": "22 (Taylor's Version)"
+    },
+    {
+      "album": "Red (Taylor's Version)",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 231,
+      "explicit": false,
+      "id": "3yII7UwgLF6K5zW3xad3MP",
+      "isrc": "USUG12103666",
+      "platform": "spotify",
+      "platform_track_id": "3yII7UwgLF6K5zW3xad3MP",
+      "release_date": "2021-11-12",
+      "release_year": 2021,
+      "title": "22 (Taylor's Version)"
+    },
+    {
+      "album": "Break Up Tunes",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 173,
+      "explicit": false,
+      "id": "2O5ak2IHMmaMpWGe0clxfl",
+      "isrc": "USUM71900768",
+      "platform": "spotify",
+      "platform_track_id": "2O5ak2IHMmaMpWGe0clxfl",
+      "release_date": "2021-10-22",
+      "release_year": 2021,
+      "title": "8"
+    },
+    {
+      "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 173,
+      "explicit": false,
+      "id": "6X29iaaazwho3ab7GNue5r",
+      "isrc": "USUM71900768",
+      "platform": "spotify",
+      "platform_track_id": "6X29iaaazwho3ab7GNue5r",
+      "release_date": "2019-03-29",
+      "release_year": 2019,
+      "title": "8"
+    },
+    {
+      "album": "Lover",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 223,
+      "explicit": false,
+      "id": "1SymEzIT3H8UZfibCs3TYi",
+      "isrc": "USUG11901484",
+      "platform": "spotify",
+      "platform_track_id": "1SymEzIT3H8UZfibCs3TYi",
+      "release_date": "2019-08-23",
+      "release_year": 2019,
+      "title": "Afterglow"
+    },
+    {
+      "album": "ZZang KARAOKE 2024 POP Vol.211",
+      "artists": [
+        "ZZang KARAOKE"
+      ],
+      "duration_seconds": 218,
+      "explicit": false,
+      "id": "4sGYXEVhyJdLy992TTwX6Q",
+      "isrc": "KSB012329042",
+      "platform": "spotify",
+      "platform_track_id": "4sGYXEVhyJdLy992TTwX6Q",
+      "release_date": "2024-12-11",
+      "release_year": 2024,
+      "title": "Afterglow (By Taylor Swift) (Melody Karaoke Version)"
+    },
+    {
+      "album": "Halloween 2021",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 169,
+      "explicit": false,
+      "id": "3er147SR8vdcVDNO7S5vGK",
+      "isrc": "USUM71900766",
+      "platform": "spotify",
+      "platform_track_id": "3er147SR8vdcVDNO7S5vGK",
+      "release_date": "2021-10-01",
+      "release_year": 2021,
+      "title": "all the good girls go to hell"
+    },
+    {
+      "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 169,
+      "explicit": false,
+      "id": "6IRdLKIyS4p7XNiP8r6rsx",
+      "isrc": "USUM71900766",
+      "platform": "spotify",
+      "platform_track_id": "6IRdLKIyS4p7XNiP8r6rsx",
+      "release_date": "2019-03-29",
+      "release_year": 2019,
+      "title": "all the good girls go to hell"
+    },
+    {
+      "album": "Mix para el orden",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 167,
+      "explicit": false,
+      "id": "2ZS1diJkBIHD3fuT3MeKlh",
+      "isrc": "USUM72110527",
+      "platform": "spotify",
+      "platform_track_id": "2ZS1diJkBIHD3fuT3MeKlh",
+      "release_date": "2023-07-21",
+      "release_year": 2023,
+      "title": "all the good girls go to hell - Prime Day Show x Billie Eilish"
+    },
+    {
+      "album": "Femme Power Pop Hits",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 167,
+      "explicit": false,
+      "id": "3C46r0nICUc9kNKjuKdqa1",
+      "isrc": "USUM72110527",
+      "platform": "spotify",
+      "platform_track_id": "3C46r0nICUc9kNKjuKdqa1",
+      "release_date": "2023-05-25",
+      "release_year": 2023,
+      "title": "all the good girls go to hell - Prime Day Show x Billie Eilish"
+    },
+    {
+      "album": "Festival Season Hits 2023",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 167,
+      "explicit": false,
+      "id": "60nzejjYGIsfWn1abHlCBq",
+      "isrc": "USUM72110527",
+      "platform": "spotify",
+      "platform_track_id": "60nzejjYGIsfWn1abHlCBq",
+      "release_date": "2023-02-17",
+      "release_year": 2023,
+      "title": "all the good girls go to hell - Prime Day Show x Billie Eilish"
+    },
+    {
+      "album": "Red (Taylor's Version)",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 613,
+      "explicit": true,
+      "id": "5enxwA8aAbwZbf5qCHORXi",
+      "isrc": "USUG12103690",
+      "platform": "spotify",
+      "platform_track_id": "5enxwA8aAbwZbf5qCHORXi",
+      "release_date": "2021-11-12",
+      "release_year": 2021,
+      "title": "All Too Well (10 Minute Version) (Taylor's Version) (From The Vault)"
+    },
+    {
+      "album": "Midnights",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 201,
+      "explicit": false,
+      "id": "0V3wPSX9ygBnCm8psDIegu",
+      "isrc": "USUG12205736",
+      "platform": "spotify",
+      "platform_track_id": "0V3wPSX9ygBnCm8psDIegu",
+      "release_date": "2022-10-21",
+      "release_year": 2022,
+      "title": "Anti-Hero"
+    },
+    {
+      "album": "Ayo Girl (Fayahh Beat) [feat. Rema]",
+      "artists": [
+        "Robinson",
+        "Jason Derulo",
+        "Rema"
+      ],
+      "duration_seconds": 165,
+      "explicit": false,
+      "id": "57Hk0AE5OhgXrPWZOhipHt",
+      "isrc": "ZZOPM2225332",
+      "platform": "spotify",
+      "platform_track_id": "57Hk0AE5OhgXrPWZOhipHt",
+      "release_date": "2022-03-15",
+      "release_year": 2022,
+      "title": "Ayo Girl (Fayahh Beat) [feat. Rema]"
+    },
+    {
+      "album": "Game Music",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 194,
+      "explicit": false,
+      "id": "1hewNsVmijBqjKvFRQfk4m",
+      "isrc": "USUM71900764",
+      "platform": "spotify",
+      "platform_track_id": "1hewNsVmijBqjKvFRQfk4m",
+      "release_date": "2021-08-13",
+      "release_year": 2021,
+      "title": "bad guy"
+    },
+    {
+      "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 194,
+      "explicit": false,
+      "id": "2Fxmhks0bxGSBdJ92vM42m",
+      "isrc": "USUM71900764",
+      "platform": "spotify",
+      "platform_track_id": "2Fxmhks0bxGSBdJ92vM42m",
+      "release_date": "2019-03-29",
+      "release_year": 2019,
+      "title": "bad guy"
+    },
+    {
+      "album": "bad guy (with Justin Bieber)",
+      "artists": [
+        "Billie Eilish",
+        "Justin Bieber"
+      ],
+      "duration_seconds": 195,
+      "explicit": false,
+      "id": "3yNZ5r3LKfdmjoS3gkhUCT",
+      "isrc": "USUM71912813",
+      "platform": "spotify",
+      "platform_track_id": "3yNZ5r3LKfdmjoS3gkhUCT",
+      "release_date": "2019-07-11",
+      "release_year": 2019,
+      "title": "bad guy (with Justin Bieber)"
+    },
+    {
+      "album": "TV Anime \"Attack on Titan Season 2\" (Original Soundtrack)",
+      "artists": [
+        "Sawano Hiroyuki"
+      ],
+      "duration_seconds": 221,
+      "explicit": false,
+      "id": "6iaQi9uPzHoXLMo5g490Bj",
+      "isrc": "JPPC01700987",
+      "platform": "spotify",
+      "platform_track_id": "6iaQi9uPzHoXLMo5g490Bj",
+      "release_date": "2017-06-07",
+      "release_year": 2017,
+      "title": "Barricades"
+    },
+    {
+      "album": "\"Attack on Titan\" Season 3 Original Soundtrack",
+      "artists": [
+        "Sawano Hiroyuki"
+      ],
+      "duration_seconds": 258,
+      "explicit": false,
+      "id": "3ACa8DImXMFWsa44oEUKr1",
+      "isrc": "JPPC01800871",
+      "platform": "spotify",
+      "platform_track_id": "3ACa8DImXMFWsa44oEUKr1",
+      "release_date": "2019-08-26",
+      "release_year": 2019,
+      "title": "Barricades - Movie Ver."
+    },
+    {
+      "album": "\"Attack on Titan\" Season 3 Original Soundtrack",
+      "artists": [
+        "Sawano Hiroyuki"
+      ],
+      "duration_seconds": 256,
+      "explicit": false,
+      "id": "0qORxBlOyNeVjLUKdoQC9V",
+      "isrc": "JPPC01802776",
+      "platform": "spotify",
+      "platform_track_id": "0qORxBlOyNeVjLUKdoQC9V",
+      "release_date": "2019-08-26",
+      "release_year": 2019,
+      "title": "Barricades - Movie Ver. / Instrumental"
+    },
+    {
+      "album": "iv",
+      "artists": [
+        "SawanoHiroyuki[nZk]",
+        "Yosh"
+      ],
+      "duration_seconds": 221,
+      "explicit": false,
+      "id": "2yERyVtOeUj8Ays6QRZkC3",
+      "isrc": "JPU902003530",
+      "platform": "spotify",
+      "platform_track_id": "2yERyVtOeUj8Ays6QRZkC3",
+      "release_year": 2019,
+      "title": "Barricades <MODv>"
+    },
+    {
+      "album": "iv",
+      "artists": [
+        "SawanoHiroyuki[nZk]",
+        "Yosh"
+      ],
+      "duration_seconds": 221,
+      "explicit": false,
+      "id": "6ifVlWjbfDBIwmlz4QmOzS",
+      "isrc": "JPU902003530",
+      "platform": "spotify",
+      "platform_track_id": "6ifVlWjbfDBIwmlz4QmOzS",
+      "release_date": "2021-03-03",
+      "release_year": 2021,
+      "title": "Barricades <MODv>"
+    },
+    {
+      "album": "dont smile at me",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 179,
+      "explicit": false,
+      "id": "1ni8ZTAY1GHXEFOGHl7fdg",
+      "isrc": "USUM71615103",
+      "platform": "spotify",
+      "platform_track_id": "1ni8ZTAY1GHXEFOGHl7fdg",
+      "release_date": "2017-12-22",
+      "release_year": 2017,
+      "title": "bellyache"
+    },
+    {
+      "album": "Gym Motivation",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 179,
+      "explicit": false,
+      "id": "3Vy0Bth1Q27DMPrMlACqS1",
+      "isrc": "USUM71615103",
+      "platform": "spotify",
+      "platform_track_id": "3Vy0Bth1Q27DMPrMlACqS1",
+      "release_date": "2021-08-18",
+      "release_year": 2021,
+      "title": "bellyache"
+    },
+    {
+      "album": "Bellyache",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 179,
+      "explicit": false,
+      "id": "51NFxnQvaosfDDutk0tams",
+      "isrc": "USUM71615103",
+      "platform": "spotify",
+      "platform_track_id": "51NFxnQvaosfDDutk0tams",
+      "release_date": "2017-02-24",
+      "release_year": 2017,
+      "title": "bellyache"
+    },
+    {
+      "album": "Bellyache (Marian Hill Remix)",
+      "artists": [
+        "Billie Eilish",
+        "Marian Hill"
+      ],
+      "duration_seconds": 221,
+      "explicit": false,
+      "id": "61X077SWMs5aAGQHhf4pd0",
+      "isrc": "USUM71703692",
+      "platform": "spotify",
+      "platform_track_id": "61X077SWMs5aAGQHhf4pd0",
+      "release_date": "2017-05-05",
+      "release_year": 2017,
+      "title": "Bellyache - Marian Hill Remix"
+    },
+    {
+      "album": "Billie Eilish, Khalid - Lovely (Samy Jebari Remix)",
+      "artists": [
+        "Samy Jebari"
+      ],
+      "duration_seconds": 214,
+      "explicit": false,
+      "id": "0gpQTeovUpcwREcZB9vEoc",
+      "isrc": "TRBSF2500159",
+      "platform": "spotify",
+      "platform_track_id": "0gpQTeovUpcwREcZB9vEoc",
+      "release_date": "2025-06-14",
+      "release_year": 2025,
+      "title": "Billie Eilish, Khalid - Lovely (Samy Jebari Remix)"
+    },
+    {
+      "album": "BILLIE EILISH.",
+      "artists": [
+        "Armani White"
+      ],
+      "duration_seconds": 99,
+      "explicit": true,
+      "id": "27ZZdyTSQWI7Cug2d2PkqV",
+      "isrc": "SGB502248062",
+      "platform": "spotify",
+      "platform_track_id": "27ZZdyTSQWI7Cug2d2PkqV",
+      "release_date": "2022-05-19",
+      "release_year": 2022,
+      "title": "BILLIE EILISH."
+    },
+    {
+      "album": "Road to CASABLANCO.",
+      "artists": [
+        "Armani White"
+      ],
+      "duration_seconds": 99,
+      "explicit": true,
+      "id": "2tDOCMuKSX9IEo9TJ4pBBk",
+      "isrc": "SGB502248062",
+      "platform": "spotify",
+      "platform_track_id": "2tDOCMuKSX9IEo9TJ4pBBk",
+      "release_date": "2023-05-05",
+      "release_year": 2023,
+      "title": "BILLIE EILISH."
+    },
+    {
+      "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 193,
+      "explicit": false,
+      "id": "4SSnFejRGlZikf02HLewEF",
+      "isrc": "USUM71900770",
+      "platform": "spotify",
+      "platform_track_id": "4SSnFejRGlZikf02HLewEF",
+      "release_date": "2019-03-29",
+      "release_year": 2019,
+      "title": "bury a friend"
+    },
+    {
+      "album": "Party People",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 193,
+      "explicit": false,
+      "id": "4TyFrayvkf11uPcqEEmj9N",
+      "isrc": "USUM71900770",
+      "platform": "spotify",
+      "platform_track_id": "4TyFrayvkf11uPcqEEmj9N",
+      "release_date": "2021-08-18",
+      "release_year": 2021,
+      "title": "bury a friend"
+    },
+    {
+      "album": "Gaming Bangers",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 193,
+      "explicit": false,
+      "id": "4ZNqrr5PZAAOwdc9SvDrDM",
+      "isrc": "USUM71900770",
+      "platform": "spotify",
+      "platform_track_id": "4ZNqrr5PZAAOwdc9SvDrDM",
+      "release_date": "2021-10-18",
+      "release_year": 2021,
+      "title": "bury a friend"
+    },
+    {
+      "album": "Halloween 2021",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 193,
+      "explicit": false,
+      "id": "4yFkWTaWaUE940DORqbI5D",
+      "isrc": "USUM71900770",
+      "platform": "spotify",
+      "platform_track_id": "4yFkWTaWaUE940DORqbI5D",
+      "release_date": "2021-10-01",
+      "release_year": 2021,
+      "title": "bury a friend"
+    },
+    {
+      "album": "Hollywood's Bleeding",
+      "artists": [
+        "Post Malone"
+      ],
+      "duration_seconds": 215,
+      "explicit": false,
+      "id": "21jGcNKet2qwijlDFuPiPb",
+      "isrc": "USUM71915699",
+      "platform": "spotify",
+      "platform_track_id": "21jGcNKet2qwijlDFuPiPb",
+      "release_date": "2019-09-06",
+      "release_year": 2019,
+      "title": "Circles"
+    },
+    {
+      "album": "The Diamond Collection",
+      "artists": [
+        "Post Malone"
+      ],
+      "duration_seconds": 215,
+      "explicit": false,
+      "id": "7GK4ay71U4Ef3HBXP8auZF",
+      "isrc": "USUM71915699",
+      "platform": "spotify",
+      "platform_track_id": "7GK4ay71U4Ef3HBXP8auZF",
+      "release_date": "2023-04-21",
+      "release_year": 2023,
+      "title": "Circles"
+    },
+    {
+      "album": "The Diamond Collection (Deluxe)",
+      "artists": [
+        "Post Malone"
+      ],
+      "duration_seconds": 215,
+      "explicit": false,
+      "id": "7nfFMYx0A6KklZeveSHYwV",
+      "isrc": "USUM71915699",
+      "platform": "spotify",
+      "platform_track_id": "7nfFMYx0A6KklZeveSHYwV",
+      "release_date": "2023-04-21",
+      "release_year": 2023,
+      "title": "Circles"
+    },
+    {
+      "album": "THE TORTURED POETS DEPARTMENT",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 217,
+      "explicit": false,
+      "id": "1UlhrRvYzbHEyugEDspXUB",
+      "isrc": "USUG12401043",
+      "platform": "spotify",
+      "platform_track_id": "1UlhrRvYzbHEyugEDspXUB",
+      "release_date": "2024-04-18",
+      "release_year": 2024,
+      "title": "Clara Bow"
+    },
+    {
+      "album": "THE TORTURED POETS DEPARTMENT: THE ANTHOLOGY",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 217,
+      "explicit": false,
+      "id": "4d9PtIEVij9jW5OaLinH66",
+      "isrc": "USUG12401043",
+      "platform": "spotify",
+      "platform_track_id": "4d9PtIEVij9jW5OaLinH66",
+      "release_date": "2024-04-19",
+      "release_year": 2024,
+      "title": "Clara Bow"
+    },
+    {
+      "album": "1989",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 271,
+      "explicit": false,
+      "id": "06WgOCf0LV2h4keYXDRnuh",
+      "isrc": "USCJY1431419",
+      "platform": "spotify",
+      "platform_track_id": "06WgOCf0LV2h4keYXDRnuh",
+      "release_date": "2014-10-27",
+      "release_year": 2014,
+      "title": "Clean"
+    },
+    {
+      "album": "1989 (Deluxe Edition)",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 271,
+      "explicit": false,
+      "id": "2IiaiMqyk1NmbgSLyjORZJ",
+      "isrc": "USCJY1431419",
+      "platform": "spotify",
+      "platform_track_id": "2IiaiMqyk1NmbgSLyjORZJ",
+      "release_date": "2014-10-27",
+      "release_year": 2014,
+      "title": "Clean"
+    },
+    {
+      "album": "1989 (Deluxe Edition)",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 271,
+      "explicit": false,
+      "id": "4bXCcoesMt8u99xMsbLr9U",
+      "isrc": "USCJY1431419",
+      "platform": "spotify",
+      "platform_track_id": "4bXCcoesMt8u99xMsbLr9U",
+      "release_date": "2014-10-27",
+      "release_year": 2014,
+      "title": "Clean"
+    },
+    {
+      "album": "1989 (Taylor's Version) [Deluxe]",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 271,
+      "explicit": false,
+      "id": "0lKUBmEyQfzsQHozyeXzES",
+      "isrc": "USUG12306683",
+      "platform": "spotify",
+      "platform_track_id": "0lKUBmEyQfzsQHozyeXzES",
+      "release_date": "2023-10-27",
+      "release_year": 2023,
+      "title": "Clean (Taylor's Version)"
+    },
+    {
+      "album": "1989 (Taylor's Version)",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 271,
+      "explicit": false,
+      "id": "2ByBBvpR9b7IynvRmnG7kG",
+      "isrc": "USUG12306683",
+      "platform": "spotify",
+      "platform_track_id": "2ByBBvpR9b7IynvRmnG7kG",
+      "release_date": "2023-10-26",
+      "release_year": 2023,
+      "title": "Clean (Taylor's Version)"
+    },
+    {
+      "album": "Stoney (Deluxe)",
+      "artists": [
+        "Post Malone",
+        "Quavo"
+      ],
+      "duration_seconds": 220,
+      "explicit": true,
+      "id": "3a1lNhkSLSkpJE4MSHpDu9",
+      "isrc": "USUM71614484",
+      "platform": "spotify",
+      "platform_track_id": "3a1lNhkSLSkpJE4MSHpDu9",
+      "release_date": "2016-12-09",
+      "release_year": 2016,
+      "title": "Congratulations"
+    },
+    {
+      "album": "Lover",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 287,
+      "explicit": false,
+      "id": "12M5uqx0ZuwkpLp5rJim1a",
+      "isrc": "USUG11901479",
+      "platform": "spotify",
+      "platform_track_id": "12M5uqx0ZuwkpLp5rJim1a",
+      "release_date": "2019-08-23",
+      "release_year": 2019,
+      "title": "Cornelia Street"
+    },
+    {
+      "album": "Taylor Acoustic Swift",
+      "artists": [
+        "Acoustic Travel Girls",
+        "Acoustic Covers"
+      ],
+      "duration_seconds": 281,
+      "explicit": false,
+      "id": "2TcK9ubSnLid7DejaH0iuk",
+      "isrc": "QZPJ32525035",
+      "platform": "spotify",
+      "platform_track_id": "2TcK9ubSnLid7DejaH0iuk",
+      "release_date": "2025-12-05",
+      "release_year": 2025,
+      "title": "Cornelia Street - Acoustic Version"
+    },
+    {
+      "album": "Piano Dreamers Play Taylor Swift (Instrumental)",
+      "artists": [
+        "Piano Dreamers"
+      ],
+      "duration_seconds": 228,
+      "explicit": false,
+      "id": "5VRpfD7uYXoZp49s68cEWd",
+      "isrc": "USG7D1913910",
+      "platform": "spotify",
+      "platform_track_id": "5VRpfD7uYXoZp49s68cEWd",
+      "release_date": "2019-11-08",
+      "release_year": 2019,
+      "title": "Cornelia Street - Instrumental"
+    },
+    {
+      "album": "Cornelia Street (Live From Paris)",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 296,
+      "explicit": false,
+      "id": "3fGnrtrtL1IHSX9t4DKOYf",
+      "isrc": "USUG11904294",
+      "platform": "spotify",
+      "platform_track_id": "3fGnrtrtL1IHSX9t4DKOYf",
+      "release_date": "2020-05-18",
+      "release_year": 2020,
+      "title": "Cornelia Street - Live From Paris"
+    },
+    {
+      "album": "The Cruelest Summer",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 178,
+      "explicit": false,
+      "id": "0NQOXTDg2p7hFYlFq6tZKW",
+      "isrc": "USUG11901472",
+      "platform": "spotify",
+      "platform_track_id": "0NQOXTDg2p7hFYlFq6tZKW",
+      "release_date": "2023-10-19",
+      "release_year": 2023,
+      "title": "Cruel Summer"
+    },
+    {
+      "album": "Lover",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 178,
+      "explicit": false,
+      "id": "1BxfuPKGuaTgP7aM0Bbdwr",
+      "isrc": "USUG11901472",
+      "platform": "spotify",
+      "platform_track_id": "1BxfuPKGuaTgP7aM0Bbdwr",
+      "release_date": "2019-08-23",
+      "release_year": 2019,
+      "title": "Cruel Summer"
+    },
+    {
+      "album": "The Cruelest Summer",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 230,
+      "explicit": false,
+      "id": "6ClYMObS7f3Nn4AiZHYQt3",
+      "isrc": "USUG12305720",
+      "platform": "spotify",
+      "platform_track_id": "6ClYMObS7f3Nn4AiZHYQt3",
+      "release_date": "2023-10-19",
+      "release_year": 2023,
+      "title": "Cruel Summer - Live from TS | The Eras Tour"
+    },
+    {
+      "album": "The Cruelest Summer",
+      "artists": [
+        "Taylor Swift",
+        "LP Giobbi"
+      ],
+      "duration_seconds": 193,
+      "explicit": false,
+      "id": "0pjBqAz8GlxGlpaU4W0DxS",
+      "isrc": "USUG12305721",
+      "platform": "spotify",
+      "platform_track_id": "0pjBqAz8GlxGlpaU4W0DxS",
+      "release_date": "2023-10-19",
+      "release_year": 2023,
+      "title": "Cruel Summer - LP Giobbi Remix"
+    },
+    {
+      "album": "The Cruelest Summer",
+      "artists": [
+        "Taylor Swift",
+        "LP Giobbi"
+      ],
+      "duration_seconds": 254,
+      "explicit": false,
+      "id": "0ISHfeb30gj4CSWUZYuesj",
+      "isrc": "USUG12305724",
+      "platform": "spotify",
+      "platform_track_id": "0ISHfeb30gj4CSWUZYuesj",
+      "release_date": "2023-10-19",
+      "release_year": 2023,
+      "title": "Cruel Summer - LP Giobbi Remix - Extended Version"
+    },
+    {
+      "album": "Class of '19",
+      "artists": [
+        "Sam Smith",
+        "Normani"
+      ],
+      "duration_seconds": 171,
+      "explicit": false,
+      "id": "1k5sN8POlroK5A7JLkJbME",
+      "isrc": "GBUM71807386",
+      "platform": "spotify",
+      "platform_track_id": "1k5sN8POlroK5A7JLkJbME",
+      "release_date": "2023-11-17",
+      "release_year": 2023,
+      "title": "Dancing With A Stranger"
+    },
+    {
+      "album": "Love Goes",
+      "artists": [
+        "Sam Smith",
+        "Normani"
+      ],
+      "duration_seconds": 171,
+      "explicit": false,
+      "id": "3oAbxiCJe3vUi2ZotRcTOV",
+      "isrc": "GBUM71807386",
+      "platform": "spotify",
+      "platform_track_id": "3oAbxiCJe3vUi2ZotRcTOV",
+      "release_date": "2020-10-30",
+      "release_year": 2020,
+      "title": "Dancing With A Stranger (with Normani)"
+    },
+    {
+      "album": "Love Goes",
+      "artists": [
+        "Sam Smith",
+        "Normani"
+      ],
+      "duration_seconds": 171,
+      "explicit": false,
+      "id": "3xgT3xIlFGqZjYW9QlhJWp",
+      "isrc": "GBUM71807386",
+      "platform": "spotify",
+      "platform_track_id": "3xgT3xIlFGqZjYW9QlhJWp",
+      "release_date": "2020-10-30",
+      "release_year": 2020,
+      "title": "Dancing With A Stranger (with Normani)"
+    },
+    {
+      "album": "Dancing With A Stranger (with Normani)",
+      "artists": [
+        "Sam Smith",
+        "Normani"
+      ],
+      "duration_seconds": 171,
+      "explicit": false,
+      "id": "6Qs4SXO9dwPj5GKvVOv8Ki",
+      "isrc": "GBUM71807386",
+      "platform": "spotify",
+      "platform_track_id": "6Qs4SXO9dwPj5GKvVOv8Ki",
+      "release_date": "2019-01-11",
+      "release_year": 2019,
+      "title": "Dancing With A Stranger (with Normani)"
+    },
+    {
+      "album": "Dancing With A Stranger (With Normani) [Acoustic]",
+      "artists": [
+        "Sam Smith",
+        "Normani"
+      ],
+      "duration_seconds": 188,
+      "explicit": false,
+      "id": "29f11nLUcMYQ2Ndbnb7N0o",
+      "isrc": "GBUM71900606",
+      "platform": "spotify",
+      "platform_track_id": "29f11nLUcMYQ2Ndbnb7N0o",
+      "release_date": "2019-02-15",
+      "release_year": 2019,
+      "title": "Dancing With A Stranger (With Normani) - Acoustic"
+    },
+    {
+      "album": "Lover",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 293,
+      "explicit": false,
+      "id": "1fzAuUVbzlhZ1lJAx9PtY6",
+      "isrc": "USUG11901486",
+      "platform": "spotify",
+      "platform_track_id": "1fzAuUVbzlhZ1lJAx9PtY6",
+      "release_date": "2019-08-23",
+      "release_year": 2019,
+      "title": "Daylight"
+    },
+    {
+      "album": "Daylight (Live From Paris)",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 262,
+      "explicit": false,
+      "id": "7ryS0xBZNYjQqql34GCkDp",
+      "isrc": "USUG11904295",
+      "platform": "spotify",
+      "platform_track_id": "7ryS0xBZNYjQqql34GCkDp",
+      "release_date": "2020-05-17",
+      "release_year": 2020,
+      "title": "Daylight - Live From Paris"
+    },
+    {
+      "album": "Stoney (Deluxe)",
+      "artists": [
+        "Post Malone",
+        "Justin Bieber"
+      ],
+      "duration_seconds": 234,
+      "explicit": true,
+      "id": "0H8XeaJunhvpBdBFIYi6Sh",
+      "isrc": "USUM71608604",
+      "platform": "spotify",
+      "platform_track_id": "0H8XeaJunhvpBdBFIYi6Sh",
+      "release_date": "2016-12-09",
+      "release_year": 2016,
+      "title": "Deja Vu"
+    },
+    {
+      "album": "Stoney (Deluxe)",
+      "artists": [
+        "Post Malone",
+        "Justin Bieber"
+      ],
+      "duration_seconds": 234,
+      "explicit": false,
+      "id": "3DdmYVLrQeDCw2nHeDn3oF",
+      "isrc": "USUM71608607",
+      "platform": "spotify",
+      "platform_track_id": "3DdmYVLrQeDCw2nHeDn3oF",
+      "release_date": "2016-12-09",
+      "release_year": 2016,
+      "title": "Deja Vu"
+    },
+    {
+      "album": "Stoney (Complete Edition)",
+      "artists": [
+        "Post Malone",
+        "Justin Bieber"
+      ],
+      "duration_seconds": 234,
+      "explicit": true,
+      "id": "4uSYZikeka16UNeFPkcr8A",
+      "isrc": "USUM71608604",
+      "platform": "spotify",
+      "platform_track_id": "4uSYZikeka16UNeFPkcr8A",
+      "release_date": "2016-12-09",
+      "release_year": 2016,
+      "title": "Deja Vu"
+    },
+    {
+      "album": "Deja Vu (Originally Performed by Post Malone & Justin Bieber) [Instrumental Version]",
+      "artists": [
+        "KaraokePro"
+      ],
+      "duration_seconds": 234,
+      "explicit": false,
+      "id": "5oJ6iqMVkH9UlXT0X19DQA",
+      "isrc": "QZS1Z1610665",
+      "platform": "spotify",
+      "platform_track_id": "5oJ6iqMVkH9UlXT0X19DQA",
+      "release_date": "2016-09-28",
+      "release_year": 2016,
+      "title": "Deja Vu (Originally Performed by Post Malone & Justin Bieber) - Instrumental Version"
+    },
+    {
+      "album": "Stoney (Complete Edition)",
+      "artists": [
+        "Post Malone"
+      ],
+      "duration_seconds": 236,
+      "explicit": false,
+      "id": "4pQKjAbWS5jywKhDoz86Jw",
+      "isrc": "USUM72121903",
+      "platform": "spotify",
+      "platform_track_id": "4pQKjAbWS5jywKhDoz86Jw",
+      "release_date": "2016-12-09",
+      "release_year": 2016,
+      "title": "Deja Vu - Instrumental"
+    },
+    {
+      "album": "Happier Than Ever",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 244,
+      "explicit": false,
+      "id": "42dosBqMOdtgxKw0KRFJF0",
+      "isrc": "USUM72105922",
+      "platform": "spotify",
+      "platform_track_id": "42dosBqMOdtgxKw0KRFJF0",
+      "release_date": "2021-07-30",
+      "release_year": 2021,
+      "title": "Getting Older"
+    },
+    {
+      "album": "Happier Than Ever",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 244,
+      "explicit": false,
+      "id": "4HOryCnbme0zBnF8LWij3f",
+      "isrc": "USUM72105922",
+      "platform": "spotify",
+      "platform_track_id": "4HOryCnbme0zBnF8LWij3f",
+      "release_date": "2021-07-30",
+      "release_year": 2021,
+      "title": "Getting Older"
+    },
+    {
+      "album": "GIANTS",
+      "artists": [
+        "True Damage",
+        "Becky G",
+        "Keke Palmer",
+        "SOYEON",
+        "Duckwrth",
+        "Thutmose",
+        "League of Legends"
+      ],
+      "duration_seconds": 192,
+      "explicit": false,
+      "id": "5Eoq0zBxTqE5VntEYclSwU",
+      "isrc": "QZH6S1900251",
+      "platform": "spotify",
+      "platform_track_id": "5Eoq0zBxTqE5VntEYclSwU",
+      "release_date": "2019-11-10",
+      "release_year": 2019,
+      "title": "GIANTS"
+    },
+    {
+      "album": "Mercury - Acts 1 & 2",
+      "artists": [
+        "Imagine Dragons"
+      ],
+      "duration_seconds": 210,
+      "explicit": false,
+      "id": "5HmxrDC6RrpkCDtMYQqkqx",
+      "isrc": "USUM72111259",
+      "platform": "spotify",
+      "platform_track_id": "5HmxrDC6RrpkCDtMYQqkqx",
+      "release_date": "2022-07-01",
+      "release_year": 2022,
+      "title": "Giants"
+    },
+    {
+      "album": "Giants",
+      "artists": [
+        "Neoni"
+      ],
+      "duration_seconds": 174,
+      "explicit": false,
+      "id": "5Ya5YxjVzdLJW58bKEa4PT",
+      "isrc": "QZES91807921",
+      "platform": "spotify",
+      "platform_track_id": "5Ya5YxjVzdLJW58bKEa4PT",
+      "release_date": "2018-12-28",
+      "release_year": 2018,
+      "title": "Giants"
+    },
+    {
+      "album": "World of Warcraft: Dragonflight",
+      "artists": [
+        "David Arkenstone",
+        "World of Warcraft",
+        "Blizzard Entertainment"
+      ],
+      "duration_seconds": 262,
+      "explicit": false,
+      "id": "4cZBjKO13oxfh9CIoYiaE1",
+      "isrc": "USQ772200046",
+      "platform": "spotify",
+      "platform_track_id": "4cZBjKO13oxfh9CIoYiaE1",
+      "release_date": "2022-11-22",
+      "release_year": 2022,
+      "title": "Giants of the Span"
+    },
+    {
+      "album": "The Tribute Factory (Vol 1)",
+      "artists": [
+        "Pearly Whites Music Machine"
+      ],
+      "duration_seconds": 175,
+      "explicit": false,
+      "id": "4KFO6TVVhM4zsfEwgZYkxL",
+      "isrc": "HKC371809281",
+      "platform": "spotify",
+      "platform_track_id": "4KFO6TVVhM4zsfEwgZYkxL",
+      "release_date": "2019-07-15",
+      "release_year": 2019,
+      "title": "Goodbyes (Duet Version) (Tribute Version Originally Performed By Post Malone and Young Thug) Explicit"
+    },
+    {
+      "album": "Best Of Billboard Vol 15",
+      "artists": [
+        "DJ Spinnzter"
+      ],
+      "duration_seconds": 175,
+      "explicit": true,
+      "id": "5s3gCVnvWhIU7sAlVJOsIa",
+      "isrc": "GBJHA2055115",
+      "platform": "spotify",
+      "platform_track_id": "5s3gCVnvWhIU7sAlVJOsIa",
+      "release_date": "2020-03-25",
+      "release_year": 2020,
+      "title": "Goodbyes (Duet Version) (Vocal Tribute Version Originally Performed By Post Malone and Young Thug) Explicit"
+    },
+    {
+      "album": "The Diamond Collection (Deluxe)",
+      "artists": [
+        "Post Malone",
+        "Young Thug"
+      ],
+      "duration_seconds": 175,
+      "explicit": true,
+      "id": "0Vp4FDQy9sPUIH6xXp3FNI",
+      "isrc": "USUM71912330",
+      "platform": "spotify",
+      "platform_track_id": "0Vp4FDQy9sPUIH6xXp3FNI",
+      "release_date": "2023-04-21",
+      "release_year": 2023,
+      "title": "Goodbyes (feat. Young Thug)"
+    },
+    {
+      "album": "Hollywood's Bleeding",
+      "artists": [
+        "Post Malone",
+        "Young Thug"
+      ],
+      "duration_seconds": 175,
+      "explicit": true,
+      "id": "0t3ZvGKlmYmVsDzBJAXK8C",
+      "isrc": "USUM71912330",
+      "platform": "spotify",
+      "platform_track_id": "0t3ZvGKlmYmVsDzBJAXK8C",
+      "release_date": "2019-09-06",
+      "release_year": 2019,
+      "title": "Goodbyes (feat. Young Thug)"
+    },
+    {
+      "album": "Hollywood's Bleeding",
+      "artists": [
+        "Post Malone",
+        "Young Thug"
+      ],
+      "duration_seconds": 175,
+      "explicit": false,
+      "id": "6cIYFBwTv4JGpX7wOk5VIu",
+      "isrc": "USUM71912331",
+      "platform": "spotify",
+      "platform_track_id": "6cIYFBwTv4JGpX7wOk5VIu",
+      "release_date": "2019-09-06",
+      "release_year": 2019,
+      "title": "Goodbyes (feat. Young Thug)"
+    },
+    {
+      "album": "Shaun White Snowboarding: Official Soundtrack",
+      "artists": [
+        "The Ting Tings"
+      ],
+      "duration_seconds": 205,
+      "explicit": false,
+      "id": "3kmSzP8JUM4kUwPWbOFwqA",
+      "isrc": "GBARL0701283",
+      "platform": "spotify",
+      "platform_track_id": "3kmSzP8JUM4kUwPWbOFwqA",
+      "release_date": "2008-11-18",
+      "release_year": 2008,
+      "title": "Great DJ"
+    },
+    {
+      "album": "We Started Nothing",
+      "artists": [
+        "The Ting Tings"
+      ],
+      "duration_seconds": 203,
+      "explicit": false,
+      "id": "5Bw5d2OMSD6099BOsmEmkl",
+      "isrc": "GBARL0701283",
+      "platform": "spotify",
+      "platform_track_id": "5Bw5d2OMSD6099BOsmEmkl",
+      "release_date": "2008-05-16",
+      "release_year": 2008,
+      "title": "Great DJ"
+    },
+    {
+      "album": "We Started Nothing",
+      "artists": [
+        "The Ting Tings"
+      ],
+      "duration_seconds": 203,
+      "explicit": false,
+      "id": "6lMPQ6y52HaXkFwRSF9Kwc",
+      "isrc": "GBARL0701283",
+      "platform": "spotify",
+      "platform_track_id": "6lMPQ6y52HaXkFwRSF9Kwc",
+      "release_year": 2007,
+      "title": "Great DJ"
+    },
+    {
+      "album": "We Started Nothing",
+      "artists": [
+        "The Ting Tings"
+      ],
+      "duration_seconds": 203,
+      "explicit": false,
+      "id": "7sARA8PnjFrlTJftDoPZ7f",
+      "isrc": "GBARL0701283",
+      "platform": "spotify",
+      "platform_track_id": "7sARA8PnjFrlTJftDoPZ7f",
+      "release_date": "2008-05-16",
+      "release_year": 2008,
+      "title": "Great DJ"
+    },
+    {
+      "album": "Happier",
+      "artists": [
+        "Marshmello",
+        "Bastille"
+      ],
+      "duration_seconds": 214,
+      "explicit": false,
+      "id": "7BqHUALzNBTanL6OvsqmC1",
+      "isrc": "USUG11801651",
+      "platform": "spotify",
+      "platform_track_id": "7BqHUALzNBTanL6OvsqmC1",
+      "release_date": "2018-08-17",
+      "release_year": 2018,
+      "title": "Happier"
+    },
+    {
+      "album": "Happier (Slowed + Reverb)",
+      "artists": [
+        "Marshmello",
+        "Bastille"
+      ],
+      "duration_seconds": 214,
+      "explicit": false,
+      "id": "7HXylOKA2lvYo272HzRVgd",
+      "isrc": "USUG11801651",
+      "platform": "spotify",
+      "platform_track_id": "7HXylOKA2lvYo272HzRVgd",
+      "release_date": "2022-07-18",
+      "release_year": 2022,
+      "title": "Happier"
+    },
+    {
+      "album": "Happier (Slowed + Reverb)",
+      "artists": [
+        "Marshmello",
+        "Bastille"
+      ],
+      "duration_seconds": 241,
+      "explicit": false,
+      "id": "3aPsxMIfOgmLmQJvAaElKU",
+      "isrc": "USUG12205351",
+      "platform": "spotify",
+      "platform_track_id": "3aPsxMIfOgmLmQJvAaElKU",
+      "release_date": "2022-07-18",
+      "release_year": 2022,
+      "title": "Happier - Slowed + Reverb"
+    },
+    {
+      "album": "Happier (Slowed + Reverb)",
+      "artists": [
+        "Marshmello",
+        "Bastille"
+      ],
+      "duration_seconds": 187,
+      "explicit": false,
+      "id": "2as5BO0eobxm7Zvelm2nHN",
+      "isrc": "USUG12205353",
+      "platform": "spotify",
+      "platform_track_id": "2as5BO0eobxm7Zvelm2nHN",
+      "release_date": "2022-07-18",
+      "release_year": 2022,
+      "title": "Happier - Sped Up"
+    },
+    {
+      "album": "Happier (Stripped)",
+      "artists": [
+        "Marshmello",
+        "Bastille"
+      ],
+      "duration_seconds": 251,
+      "explicit": false,
+      "id": "0Gz1nOeTeNoMnKzb9vflds",
+      "isrc": "USUG11802372",
+      "platform": "spotify",
+      "platform_track_id": "0Gz1nOeTeNoMnKzb9vflds",
+      "release_date": "2018-09-11",
+      "release_year": 2018,
+      "title": "Happier - Stripped"
+    },
+    {
+      "album": "Happier Than Ever",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 299,
+      "explicit": true,
+      "id": "4RVwu0g32PAqgUiJoXsdF8",
+      "isrc": "USUM72105936",
+      "platform": "spotify",
+      "platform_track_id": "4RVwu0g32PAqgUiJoXsdF8",
+      "release_date": "2021-07-30",
+      "release_year": 2021,
+      "title": "Happier Than Ever"
+    },
+    {
+      "album": "Wide Open Spaces",
+      "artists": [
+        "The Chicks"
+      ],
+      "duration_seconds": 234,
+      "explicit": false,
+      "id": "2VBSOgBcnLHkfat8P2VGvf",
+      "isrc": "USSM19702919",
+      "platform": "spotify",
+      "platform_track_id": "2VBSOgBcnLHkfat8P2VGvf",
+      "release_date": "1998-01-27",
+      "release_year": 1998,
+      "title": "I Can Love You Better"
+    },
+    {
+      "album": "reputation (Big Machine Radio Release Special)",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 238,
+      "explicit": false,
+      "id": "2nOeoic483mcNOx5TFpc3L",
+      "isrc": "USCJY1750005",
+      "platform": "spotify",
+      "platform_track_id": "2nOeoic483mcNOx5TFpc3L",
+      "release_date": "2017-11-10",
+      "release_year": 2017,
+      "title": "I Did Something Bad"
+    },
+    {
+      "album": "reputation",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 238,
+      "explicit": false,
+      "id": "4svZDCRz4cJoneBpjpx8DJ",
+      "isrc": "USCJY1750005",
+      "platform": "spotify",
+      "platform_track_id": "4svZDCRz4cJoneBpjpx8DJ",
+      "release_date": "2017-11-10",
+      "release_year": 2017,
+      "title": "I Did Something Bad"
+    },
+    {
+      "album": "reputation (Big Machine Radio Release Special)",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 84,
+      "explicit": false,
+      "id": "5fUE3r8hdIUQug2028aA8F",
+      "isrc": "USCJY1831968",
+      "platform": "spotify",
+      "platform_track_id": "5fUE3r8hdIUQug2028aA8F",
+      "release_date": "2017-11-10",
+      "release_year": 2017,
+      "title": "I Did Something Bad - Commentary"
+    },
+    {
+      "album": "Taylor Swift Karaoke: reputation",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 238,
+      "explicit": false,
+      "id": "2hecdut2HWM5JMHqLTWThq",
+      "isrc": "USCJY1831783",
+      "platform": "spotify",
+      "platform_track_id": "2hecdut2HWM5JMHqLTWThq",
+      "release_date": "2018-03-09",
+      "release_year": 2018,
+      "title": "I Did Something Bad - Karaoke Version"
+    },
+    {
+      "album": "Lover: Piano Instrumentals",
+      "artists": [
+        "Minnz Piano"
+      ],
+      "duration_seconds": 250,
+      "explicit": false,
+      "id": "1ptbSMdAaV5h6my2vYjt6q",
+      "isrc": "QZPJ32221353",
+      "platform": "spotify",
+      "platform_track_id": "1ptbSMdAaV5h6my2vYjt6q",
+      "release_date": "2023-01-03",
+      "release_year": 2023,
+      "title": "I Forgot That You Existed"
+    },
+    {
+      "album": "Lover",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 171,
+      "explicit": false,
+      "id": "43rA71bccXFGD4C8GOpIlN",
+      "isrc": "USUG11901471",
+      "platform": "spotify",
+      "platform_track_id": "43rA71bccXFGD4C8GOpIlN",
+      "release_date": "2019-08-23",
+      "release_year": 2019,
+      "title": "I Forgot That You Existed"
+    },
+    {
+      "album": "Acoustic Tribute to Taylor Swift, Vol. 2 (Instrumental)",
+      "artists": [
+        "Guitar Tribute Players"
+      ],
+      "duration_seconds": 174,
+      "explicit": false,
+      "id": "54VNlYh7mtN6ZfXtz46T6e",
+      "isrc": "USG7D2016413",
+      "platform": "spotify",
+      "platform_track_id": "54VNlYh7mtN6ZfXtz46T6e",
+      "release_date": "2020-01-10",
+      "release_year": 2020,
+      "title": "I Forgot That You Existed - Instrumental"
+    },
+    {
+      "album": "Staying Alive (Original Motion Picture Soundtrack)",
+      "artists": [
+        "Bee Gees"
+      ],
+      "duration_seconds": 268,
+      "explicit": false,
+      "id": "67NmrJM7GK4krnbdSHEfvK",
+      "isrc": "USA258300020",
+      "platform": "spotify",
+      "platform_track_id": "67NmrJM7GK4krnbdSHEfvK",
+      "release_date": "1977-12-13",
+      "release_year": 1977,
+      "title": "I Love You Too Much"
+    },
+    {
+      "album": "Lover",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 173,
+      "explicit": false,
+      "id": "2YWtcWi3a83pdEg3Gif4Pd",
+      "isrc": "USUG11901476",
+      "platform": "spotify",
+      "platform_track_id": "2YWtcWi3a83pdEg3Gif4Pd",
+      "release_date": "2019-08-23",
+      "release_year": 2019,
+      "title": "I Think He Knows"
+    },
+    {
+      "album": "Piano Dreamers Play Taylor Swift (Instrumental)",
+      "artists": [
+        "Piano Dreamers"
+      ],
+      "duration_seconds": 163,
+      "explicit": false,
+      "id": "0PHboDEQrYrosocsHWP3FW",
+      "isrc": "USG7D1913915",
+      "platform": "spotify",
+      "platform_track_id": "0PHboDEQrYrosocsHWP3FW",
+      "release_date": "2019-11-08",
+      "release_year": 2019,
+      "title": "I Think He Knows - Instrumental"
+    },
+    {
+      "album": "Taylor Swift - Lover Album - Piano Instrumentals",
+      "artists": [
+        "Lily Lewis"
+      ],
+      "duration_seconds": 190,
+      "explicit": false,
+      "id": "3vgg4Xgmll4VcTGINPcjlT",
+      "isrc": "SE5XG2345510",
+      "platform": "spotify",
+      "platform_track_id": "3vgg4Xgmll4VcTGINPcjlT",
+      "release_date": "2023-08-24",
+      "release_year": 2023,
+      "title": "I Think He Knows - Piano Instrumental"
+    },
+    {
+      "album": "Staying Alive (Original Motion Picture Soundtrack)",
+      "artists": [
+        "Frank Stallone",
+        "Cynthia Rhodes"
+      ],
+      "duration_seconds": 210,
+      "explicit": false,
+      "id": "1d3JtxJGTf0Ab0bx7Gm2eQ",
+      "isrc": "USA258300110",
+      "platform": "spotify",
+      "platform_track_id": "1d3JtxJGTf0Ab0bx7Gm2eQ",
+      "release_date": "1977-12-13",
+      "release_year": 1977,
+      "title": "I'm Never Gonna Give You Up"
+    },
+    {
+      "album": "Não É Só Uma Fase",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 204,
+      "explicit": false,
+      "id": "0Yp4jwm7DllEjytVQtxIcs",
+      "isrc": "USUM71707712",
+      "platform": "spotify",
+      "platform_track_id": "0Yp4jwm7DllEjytVQtxIcs",
+      "release_date": "2023-09-15",
+      "release_year": 2023,
+      "title": "idontwannabeyouanymore"
+    },
+    {
+      "album": "Aquarius Vibe",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 204,
+      "explicit": false,
+      "id": "0eOZHnGSW52u26vswndRkn",
+      "isrc": "USUM71707712",
+      "platform": "spotify",
+      "platform_track_id": "0eOZHnGSW52u26vswndRkn",
+      "release_date": "2022-01-28",
+      "release_year": 2022,
+      "title": "idontwannabeyouanymore"
+    },
+    {
+      "album": "MSQ Performs Billie Eilish",
+      "artists": [
+        "Midnite String Quartet"
+      ],
+      "duration_seconds": 214,
+      "explicit": false,
+      "id": "2JANKz69J8MVGM76kWKsXE",
+      "isrc": "USA2P1955708",
+      "platform": "spotify",
+      "platform_track_id": "2JANKz69J8MVGM76kWKsXE",
+      "release_date": "2019-11-01",
+      "release_year": 2019,
+      "title": "idontwannabeyouanymore"
+    },
+    {
+      "album": "dont smile at me",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 204,
+      "explicit": false,
+      "id": "41zXlQxzTi6cGAjpOXyLYH",
+      "isrc": "USUM71707712",
+      "platform": "spotify",
+      "platform_track_id": "41zXlQxzTi6cGAjpOXyLYH",
+      "release_date": "2017-12-22",
+      "release_year": 2017,
+      "title": "idontwannabeyouanymore"
+    },
+    {
+      "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 156,
+      "explicit": false,
+      "id": "7qEKqBCD2vE5vIBsrUitpD",
+      "isrc": "USUM71900771",
+      "platform": "spotify",
+      "platform_track_id": "7qEKqBCD2vE5vIBsrUitpD",
+      "release_date": "2019-03-29",
+      "release_year": 2019,
+      "title": "ilomilo"
+    },
+    {
+      "album": "bandaids",
+      "artists": [
+        "keshi"
+      ],
+      "duration_seconds": 207,
+      "explicit": false,
+      "id": "3IqcBL5yjJK3ri0TGaL3MC",
+      "isrc": "USUM72003471",
+      "platform": "spotify",
+      "platform_track_id": "3IqcBL5yjJK3ri0TGaL3MC",
+      "release_date": "2020-03-24",
+      "release_year": 2020,
+      "title": "less of you"
+    },
+    {
+      "album": "Lover",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 190,
+      "explicit": false,
+      "id": "1LLXZFeAHK9R4xUramtUKw",
+      "isrc": "USUG11901481",
+      "platform": "spotify",
+      "platform_track_id": "1LLXZFeAHK9R4xUramtUKw",
+      "release_date": "2019-08-23",
+      "release_year": 2019,
+      "title": "London Boy"
+    },
+    {
+      "album": "Babies Go Taylor Swift",
+      "artists": [
+        "Sweet Little Band"
+      ],
+      "duration_seconds": 182,
+      "explicit": false,
+      "id": "3Nkd5oOE9qtQl67A8kQ0SC",
+      "isrc": "ARA821900566",
+      "platform": "spotify",
+      "platform_track_id": "3Nkd5oOE9qtQl67A8kQ0SC",
+      "release_date": "2019-10-01",
+      "release_year": 2019,
+      "title": "London Boy"
+    },
+    {
+      "album": "Lullaby Renditions of Taylor Swift",
+      "artists": [
+        "Billboard Baby Lullabies"
+      ],
+      "duration_seconds": 183,
+      "explicit": false,
+      "id": "5hfFUXnUR0wcbarGqG931q",
+      "isrc": "QZGWW2045672",
+      "platform": "spotify",
+      "platform_track_id": "5hfFUXnUR0wcbarGqG931q",
+      "release_date": "2020-02-25",
+      "release_year": 2020,
+      "title": "London Boy"
+    },
+    {
+      "album": "Taylor Swift - Lover Album - Piano Instrumentals",
+      "artists": [
+        "Lily Lewis"
+      ],
+      "duration_seconds": 203,
+      "explicit": false,
+      "id": "3SBsxOoFKgIL73J2dzHCNo",
+      "isrc": "SE5XG2345522",
+      "platform": "spotify",
+      "platform_track_id": "3SBsxOoFKgIL73J2dzHCNo",
+      "release_date": "2023-08-24",
+      "release_year": 2023,
+      "title": "London Boy - Piano Instrumental"
+    },
+    {
+      "album": "Lonely Nights",
+      "artists": [
+        "Billie Eilish",
+        "Khalid"
+      ],
+      "duration_seconds": 200,
+      "explicit": false,
+      "id": "3az62jBzapcmY6WHtgv955",
+      "isrc": "USUM71804190",
+      "platform": "spotify",
+      "platform_track_id": "3az62jBzapcmY6WHtgv955",
+      "release_date": "2021-08-11",
+      "release_year": 2021,
+      "title": "lovely"
+    },
+    {
+      "album": "Giving you all you want and more",
+      "artists": [
+        "Billie Eilish",
+        "Khalid"
+      ],
+      "duration_seconds": 200,
+      "explicit": false,
+      "id": "7b4eqsDeLUzSrGth8uB2D1",
+      "isrc": "USUM71804190",
+      "platform": "spotify",
+      "platform_track_id": "7b4eqsDeLUzSrGth8uB2D1",
+      "release_date": "2021-10-05",
+      "release_year": 2021,
+      "title": "lovely"
+    },
+    {
+      "album": "13 Reasons Why (Season 2)",
+      "artists": [
+        "Billie Eilish",
+        "Khalid"
+      ],
+      "duration_seconds": 202,
+      "explicit": false,
+      "id": "0NxgdbKwdArO2TsRDGedbg",
+      "isrc": "USUM71804190",
+      "platform": "spotify",
+      "platform_track_id": "0NxgdbKwdArO2TsRDGedbg",
+      "release_date": "2018-05-18",
+      "release_year": 2018,
+      "title": "lovely (with Khalid)"
+    },
+    {
+      "album": "lovely (with Khalid)",
+      "artists": [
+        "Billie Eilish",
+        "Khalid"
+      ],
+      "duration_seconds": 200,
+      "explicit": false,
+      "id": "0u2P5u6lvoDfwTYjAADbn4",
+      "isrc": "USUM71804190",
+      "platform": "spotify",
+      "platform_track_id": "0u2P5u6lvoDfwTYjAADbn4",
+      "release_date": "2018-04-19",
+      "release_year": 2018,
+      "title": "lovely (with Khalid)"
+    },
+    {
+      "album": "Lover",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 221,
+      "explicit": false,
+      "id": "1dGr1c8CrMLDpV6mPbImSI",
+      "isrc": "USUG11901473",
+      "platform": "spotify",
+      "platform_track_id": "1dGr1c8CrMLDpV6mPbImSI",
+      "release_date": "2019-08-23",
+      "release_year": 2019,
+      "title": "Lover"
+    },
+    {
+      "album": "Lover (Remix) [feat. Shawn Mendes]",
+      "artists": [
+        "Taylor Swift",
+        "Shawn Mendes"
+      ],
+      "duration_seconds": 221,
+      "explicit": false,
+      "id": "3i9UVldZOE0aD0JnyfAZZ0",
+      "isrc": "USUG11901492",
+      "platform": "spotify",
+      "platform_track_id": "3i9UVldZOE0aD0JnyfAZZ0",
+      "release_date": "2019-11-13",
+      "release_year": 2019,
+      "title": "Lover (Remix) [feat. Shawn Mendes]"
+    },
+    {
+      "album": "Make It Bun Dem After Hours EP",
+      "artists": [
+        "Skrillex",
+        "Damian Marley"
+      ],
+      "duration_seconds": 214,
+      "explicit": false,
+      "id": "0mlf3yOGzVnIVxjybDQL3h",
+      "isrc": "USAT21202262",
+      "platform": "spotify",
+      "platform_track_id": "0mlf3yOGzVnIVxjybDQL3h",
+      "release_date": "2012-08-28",
+      "release_year": 2012,
+      "title": "Make It Bun Dem"
+    },
+    {
+      "album": "Make It Bun Dem",
+      "artists": [
+        "Skrillex",
+        "Damian \"Jr Gong\" Marley"
+      ],
+      "duration_seconds": 214,
+      "explicit": false,
+      "id": "6AbVJjzv7thIvmMCuhZrmK",
+      "isrc": "USAT21202262",
+      "platform": "spotify",
+      "platform_track_id": "6AbVJjzv7thIvmMCuhZrmK",
+      "release_date": "2012-05-01",
+      "release_year": 2012,
+      "title": "Make It Bun Dem"
+    },
+    {
+      "album": "Make It Bun Dem (Skrillex & Damian \"Jr. Gong\" Marley Tribute)",
+      "artists": [
+        "The Dream Team"
+      ],
+      "duration_seconds": 214,
+      "explicit": false,
+      "id": "2NOJb1U3qDSO8rtVijgfTp",
+      "isrc": "USA561156634",
+      "platform": "spotify",
+      "platform_track_id": "2NOJb1U3qDSO8rtVijgfTp",
+      "release_date": "2012-05-01",
+      "release_year": 2012,
+      "title": "Make It Bun Dem (Skrillex & Damian \"Jr. Gong\" Marley Tribute)"
+    },
+    {
+      "album": "Make It Bun Dem After Hours EP",
+      "artists": [
+        "Skrillex",
+        "Damian Marley",
+        "Culprate"
+      ],
+      "duration_seconds": 234,
+      "explicit": false,
+      "id": "5bMQdlT0YVcZdBuHSUBuIr",
+      "isrc": "USAT21204046",
+      "platform": "spotify",
+      "platform_track_id": "5bMQdlT0YVcZdBuHSUBuIr",
+      "release_date": "2012-08-28",
+      "release_year": 2012,
+      "title": "Make It Bun Dem - Culprate Remix"
+    },
+    {
+      "album": "Make It Bun Dem After Hours EP",
+      "artists": [
+        "Skrillex",
+        "Damian Marley",
+        "David Heartbreak"
+      ],
+      "duration_seconds": 210,
+      "explicit": false,
+      "id": "06LS54kdAK5c8UsgEf0onB",
+      "isrc": "USAT21204048",
+      "platform": "spotify",
+      "platform_track_id": "06LS54kdAK5c8UsgEf0onB",
+      "release_date": "2012-08-28",
+      "release_year": 2012,
+      "title": "Make It Bun Dem - David Heartbreak Remix"
+    },
+    {
+      "album": "Lover",
+      "artists": [
+        "Taylor Swift",
+        "Brendon Urie",
+        "Panic! At The Disco"
+      ],
+      "duration_seconds": 193,
+      "explicit": false,
+      "id": "2Rk4JlNc2TPmZe2af99d45",
+      "isrc": "USUG11901494",
+      "platform": "spotify",
+      "platform_track_id": "2Rk4JlNc2TPmZe2af99d45",
+      "release_date": "2019-08-23",
+      "release_year": 2019,
+      "title": "ME! (feat. Brendon Urie of Panic! At The Disco)"
+    },
+    {
+      "album": "ME! (Originally Performed by Taylor Swift & Brendon Urie)",
+      "artists": [
+        "KaraokePro"
+      ],
+      "duration_seconds": 190,
+      "explicit": false,
+      "id": "0q4kBJjcsUWkwLPj5VNe2G",
+      "isrc": "USLZJ1909992",
+      "platform": "spotify",
+      "platform_track_id": "0q4kBJjcsUWkwLPj5VNe2G",
+      "release_date": "2019-05-19",
+      "release_year": 2019,
+      "title": "ME! (Originally Performed by Taylor Swift & Brendon Urie) - Karaoke Version"
+    },
+    {
+      "album": "Karaoke Picks (Vol. 72)",
+      "artists": [
+        "Hit The Button Karaoke"
+      ],
+      "duration_seconds": 192,
+      "explicit": false,
+      "id": "5nFDXqKVB8sJXfkaJx12G2",
+      "isrc": "GBRBE0794833",
+      "platform": "spotify",
+      "platform_track_id": "5nFDXqKVB8sJXfkaJx12G2",
+      "release_date": "2019-05-08",
+      "release_year": 2019,
+      "title": "Me! (Originally Performed by Taylor Swift Feat. Brendon Urie of Panic! at the Disco) - Instrumental Version"
+    },
+    {
+      "album": "Karaoke Picks (Vol. 72)",
+      "artists": [
+        "Hit The Button Karaoke"
+      ],
+      "duration_seconds": 192,
+      "explicit": false,
+      "id": "4cdj1uAlsMLysZ92cpsXBP",
+      "isrc": "GBRBE0794832",
+      "platform": "spotify",
+      "platform_track_id": "4cdj1uAlsMLysZ92cpsXBP",
+      "release_date": "2019-05-08",
+      "release_year": 2019,
+      "title": "Me! (Originally Performed by Taylor Swift Feat. Brendon Urie of Panic! at the Disco) - Karaoke Version"
+    },
+    {
+      "album": "ME! (Cover of Taylor Swift & Brendon Urie)",
+      "artists": [
+        "Big Rocks"
+      ],
+      "duration_seconds": 187,
+      "explicit": false,
+      "id": "3lqbcvaXEnCfby2W4HESQS",
+      "isrc": "AUXN21908704",
+      "platform": "spotify",
+      "platform_track_id": "3lqbcvaXEnCfby2W4HESQS",
+      "release_date": "2019-04-29",
+      "release_year": 2019,
+      "title": "ME! - Cover of Taylor Swift & Brendon Urie"
+    },
+    {
+      "album": "HIT SONGS ENGLISH VOL 12",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 180,
+      "explicit": false,
+      "id": "0JT9oyYo7YylcP2QHGfi40",
+      "isrc": "USUM71900769",
+      "platform": "spotify",
+      "platform_track_id": "0JT9oyYo7YylcP2QHGfi40",
+      "release_date": "2023-04-07",
+      "release_year": 2023,
+      "title": "my strange addiction"
+    },
+    {
+      "album": "Pop & Halloween",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 180,
+      "explicit": false,
+      "id": "1lygERUsH3obkB3bsf5Lrd",
+      "isrc": "USUM71900769",
+      "platform": "spotify",
+      "platform_track_id": "1lygERUsH3obkB3bsf5Lrd",
+      "release_date": "2022-10-14",
+      "release_year": 2022,
+      "title": "my strange addiction"
+    },
+    {
+      "album": "Taking It All For Us",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 180,
+      "explicit": false,
+      "id": "2ZZ6OLv85xW5nkqxVeRnRb",
+      "isrc": "USUM71900769",
+      "platform": "spotify",
+      "platform_track_id": "2ZZ6OLv85xW5nkqxVeRnRb",
+      "release_date": "2022-03-14",
+      "release_year": 2022,
+      "title": "my strange addiction"
+    },
+    {
+      "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 180,
+      "explicit": false,
+      "id": "3Tc57t9l2O8FwQZtQOvPXK",
+      "isrc": "USUM71900769",
+      "platform": "spotify",
+      "platform_track_id": "3Tc57t9l2O8FwQZtQOvPXK",
+      "release_date": "2019-03-29",
+      "release_year": 2019,
+      "title": "my strange addiction"
+    },
+    {
+      "album": "En audifonos: Alternativo",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 180,
+      "explicit": false,
+      "id": "3q59BWVUm7PiOW1csJVOIn",
+      "isrc": "USUM71900769",
+      "platform": "spotify",
+      "platform_track_id": "3q59BWVUm7PiOW1csJVOIn",
+      "release_date": "2023-08-24",
+      "release_year": 2023,
+      "title": "my strange addiction"
+    },
+    {
+      "album": "Hollywood's Bleeding",
+      "artists": [
+        "Post Malone"
+      ],
+      "duration_seconds": 158,
+      "explicit": false,
+      "id": "1Sg6DGutLrmuhzY1G3TOjZ",
+      "isrc": "USUM71917239",
+      "platform": "spotify",
+      "platform_track_id": "1Sg6DGutLrmuhzY1G3TOjZ",
+      "release_date": "2019-09-06",
+      "release_year": 2019,
+      "title": "Myself"
+    },
+    {
+      "album": "Hollywood's Bleeding",
+      "artists": [
+        "Post Malone"
+      ],
+      "duration_seconds": 158,
+      "explicit": true,
+      "id": "2cvOfKHOHgwQlLiuLKP2xR",
+      "isrc": "USUM71915734",
+      "platform": "spotify",
+      "platform_track_id": "2cvOfKHOHgwQlLiuLKP2xR",
+      "release_date": "2019-09-06",
+      "release_year": 2019,
+      "title": "Myself"
+    },
+    {
+      "album": "ZZang KARAOKE 2024 POP Vol.60",
+      "artists": [
+        "ZZang KARAOKE"
+      ],
+      "duration_seconds": 157,
+      "explicit": false,
+      "id": "3AitoN9iVMUFsH4dA4muXI",
+      "isrc": "KSB012307663",
+      "platform": "spotify",
+      "platform_track_id": "3AitoN9iVMUFsH4dA4muXI",
+      "release_date": "2024-03-27",
+      "release_year": 2024,
+      "title": "Myself (Originally Perfomed By Post Malone) (Instrumental Karaoke Version)"
+    },
+    {
+      "album": "The Thrill Of It All (Special Edition)",
+      "artists": [
+        "Sam Smith",
+        "Yebba"
+      ],
+      "duration_seconds": 283,
+      "explicit": false,
+      "id": "12u6WHRbM7R0HMsmuccJHB",
+      "isrc": "GBUM71703747",
+      "platform": "spotify",
+      "platform_track_id": "12u6WHRbM7R0HMsmuccJHB",
+      "release_date": "2017-11-03",
+      "release_year": 2017,
+      "title": "No Peace"
+    },
+    {
+      "album": "The Thrill Of It All",
+      "artists": [
+        "Sam Smith",
+        "Yebba"
+      ],
+      "duration_seconds": 283,
+      "explicit": false,
+      "id": "36XVUuWObkWq0RjbCnGHPC",
+      "isrc": "GBUM71703747",
+      "platform": "spotify",
+      "platform_track_id": "36XVUuWObkWq0RjbCnGHPC",
+      "release_date": "2017-11-03",
+      "release_year": 2017,
+      "title": "No Peace"
+    },
+    {
+      "album": "The Thrill Of It All (Special Edition)",
+      "artists": [
+        "Sam Smith",
+        "Yebba"
+      ],
+      "duration_seconds": 283,
+      "explicit": false,
+      "id": "5ZX1X9Rl4zbx1Wwyn3idVD",
+      "isrc": "GBUM71703747",
+      "platform": "spotify",
+      "platform_track_id": "5ZX1X9Rl4zbx1Wwyn3idVD",
+      "release_date": "2017-11-03",
+      "release_year": 2017,
+      "title": "No Peace"
+    },
+    {
+      "album": "Easy Sunny Morning",
+      "artists": [
+        "Sam Smith",
+        "Yebba"
+      ],
+      "duration_seconds": 290,
+      "explicit": false,
+      "id": "66xpfgJ3jgDIlnLNNszZga",
+      "isrc": "GBUM71703747",
+      "platform": "spotify",
+      "platform_track_id": "66xpfgJ3jgDIlnLNNszZga",
+      "release_date": "2018-03-09",
+      "release_year": 2018,
+      "title": "No Peace"
+    },
+    {
+      "album": "The Thrill Of It All",
+      "artists": [
+        "Sam Smith",
+        "Yebba"
+      ],
+      "duration_seconds": 283,
+      "explicit": false,
+      "id": "6aNvUp4LTtWaEcmO0uuNRZ",
+      "isrc": "GBUM71703747",
+      "platform": "spotify",
+      "platform_track_id": "6aNvUp4LTtWaEcmO0uuNRZ",
+      "release_date": "2017-11-03",
+      "release_year": 2017,
+      "title": "No Peace"
+    },
+    {
+      "album": "Ocean Eyes",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 201,
+      "explicit": false,
+      "id": "2uIX8YMNjGMD7441kqyyNU",
+      "isrc": "US23A1500056",
+      "platform": "spotify",
+      "platform_track_id": "2uIX8YMNjGMD7441kqyyNU",
+      "release_date": "2016-11-18",
+      "release_year": 2016,
+      "title": "ocean eyes"
+    },
+    {
+      "album": "7",
+      "artists": [
+        "Lil Nas X"
+      ],
+      "duration_seconds": 113,
+      "explicit": false,
+      "id": "0F7FA14euOIX8KcbEturGH",
+      "isrc": "USSM11901941",
+      "platform": "spotify",
+      "platform_track_id": "0F7FA14euOIX8KcbEturGH",
+      "release_date": "2019-06-21",
+      "release_year": 2019,
+      "title": "Old Town Road"
+    },
+    {
+      "album": "7",
+      "artists": [
+        "Lil Nas X",
+        "Billy Ray Cyrus"
+      ],
+      "duration_seconds": 157,
+      "explicit": false,
+      "id": "2YpeDb67231RjR0MgVLzsG",
+      "isrc": "USSM11902498",
+      "platform": "spotify",
+      "platform_track_id": "2YpeDb67231RjR0MgVLzsG",
+      "release_date": "2019-06-21",
+      "release_year": 2019,
+      "title": "Old Town Road (feat. Billy Ray Cyrus) - Remix"
+    },
+    {
+      "album": "Old Town Road (feat. RM of BTS) [Seoul Town Road Remix]",
+      "artists": [
+        "Lil Nas X",
+        "RM",
+        "BTS"
+      ],
+      "duration_seconds": 114,
+      "explicit": false,
+      "id": "6woeVu3fVMflqen1t4N6pg",
+      "isrc": "USSM11904830",
+      "platform": "spotify",
+      "platform_track_id": "6woeVu3fVMflqen1t4N6pg",
+      "release_date": "2019-07-24",
+      "release_year": 2019,
+      "title": "Old Town Road (feat. RM of BTS) - Seoul Town Road Remix"
+    },
+    {
+      "album": "Old Town Road (Diplo Remix)",
+      "artists": [
+        "Lil Nas X",
+        "Billy Ray Cyrus",
+        "Diplo"
+      ],
+      "duration_seconds": 204,
+      "explicit": false,
+      "id": "3kgKVcBpBGuSeaEC0AZGlb",
+      "isrc": "USSM11902898",
+      "platform": "spotify",
+      "platform_track_id": "3kgKVcBpBGuSeaEC0AZGlb",
+      "release_date": "2019-04-29",
+      "release_year": 2019,
+      "title": "Old Town Road - Diplo Remix"
+    },
+    {
+      "album": "Old Town Road (Remix)",
+      "artists": [
+        "Lil Nas X",
+        "Billy Ray Cyrus",
+        "Mason Ramsey",
+        "Young Thug"
+      ],
+      "duration_seconds": 171,
+      "explicit": false,
+      "id": "6jmZlyf9DxcIoRrjw02YXm",
+      "isrc": "USSM11904496",
+      "platform": "spotify",
+      "platform_track_id": "6jmZlyf9DxcIoRrjw02YXm",
+      "release_date": "2019-07-12",
+      "release_year": 2019,
+      "title": "Old Town Road - Remix"
+    },
+    {
+      "album": "Lover",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 222,
+      "explicit": false,
+      "id": "4y5bvROuBDPr5fuwXbIBZR",
+      "isrc": "USUG11901478",
+      "platform": "spotify",
+      "platform_track_id": "4y5bvROuBDPr5fuwXbIBZR",
+      "release_date": "2019-08-23",
+      "release_year": 2019,
+      "title": "Paper Rings"
+    },
+    {
+      "album": "Papillon",
+      "artists": [
+        "Jackson Wang"
+      ],
+      "duration_seconds": 195,
+      "explicit": false,
+      "id": "1ImwMUhS1m9POYVOriEfTh",
+      "isrc": "HKC371701533",
+      "platform": "spotify",
+      "platform_track_id": "1ImwMUhS1m9POYVOriEfTh",
+      "release_date": "2017-08-26",
+      "release_year": 2017,
+      "title": "Papillon"
+    },
+    {
+      "album": "Vibe Presents: Urban Asia, Vol. 1",
+      "artists": [
+        "Jackson Wang"
+      ],
+      "duration_seconds": 195,
+      "explicit": false,
+      "id": "2EINMztYG92apnhyiGudHt",
+      "isrc": "GBKPL1804806",
+      "platform": "spotify",
+      "platform_track_id": "2EINMztYG92apnhyiGudHt",
+      "release_date": "2018-05-04",
+      "release_year": 2018,
+      "title": "Papillon"
+    },
+    {
+      "album": "中国有嘻哈 第11期 (Live)",
+      "artists": [
+        "Jackson Wang",
+        "GAI周延"
+      ],
+      "duration_seconds": 174,
+      "explicit": false,
+      "id": "2fRqUQMNWVuYIdJ742LErb",
+      "isrc": "HKG732577696",
+      "platform": "spotify",
+      "platform_track_id": "2fRqUQMNWVuYIdJ742LErb",
+      "release_date": "2017-09-02",
+      "release_year": 2017,
+      "title": "Papillon - Live"
+    },
+    {
+      "album": "披荆斩棘的哥哥 (第十二期 Live)",
+      "artists": [
+        "刘迦",
+        "李铢衔",
+        "李承铉",
+        "张云龙"
+      ],
+      "duration_seconds": 245,
+      "explicit": false,
+      "id": "4D7kDBdet2FiJpoeoHtnJx",
+      "isrc": "FR96X2224134",
+      "platform": "spotify",
+      "platform_track_id": "4D7kDBdet2FiJpoeoHtnJx",
+      "release_date": "2022-05-01",
+      "release_year": 2022,
+      "title": "Papillon - Live"
+    },
+    {
+      "album": "Papillon-Postlude of The Rookies (BOYTOY remix)",
+      "artists": [
+        "Jackson Wang"
+      ],
+      "duration_seconds": 219,
+      "explicit": false,
+      "id": "4MTAG5idymDZB1kmvDtfwc",
+      "isrc": "TWAE31901292",
+      "platform": "spotify",
+      "platform_track_id": "4MTAG5idymDZB1kmvDtfwc",
+      "release_date": "2019-07-05",
+      "release_year": 2019,
+      "title": "Papillon-Postlude of The Rookies - BOYTOY remix"
+    },
+    {
+      "album": "Six Feet Under",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 190,
+      "explicit": false,
+      "id": "2VlLbhGLVJgdOW7kKdWWFc",
+      "isrc": "TCACP1646299",
+      "platform": "spotify",
+      "platform_track_id": "2VlLbhGLVJgdOW7kKdWWFc",
+      "release_date": "2016-11-17",
+      "release_year": 2016,
+      "title": "Six Feet Under"
+    },
+    {
+      "album": "Breakup Songs",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 190,
+      "explicit": false,
+      "id": "37hSLIyZ2YBADdtX0Zr4JS",
+      "isrc": "TCACP1646299",
+      "platform": "spotify",
+      "platform_track_id": "37hSLIyZ2YBADdtX0Zr4JS",
+      "release_date": "2019-06-21",
+      "release_year": 2019,
+      "title": "Six Feet Under"
+    },
+    {
+      "album": "Six Feet Under (The Remixes)",
+      "artists": [
+        "Billie Eilish",
+        "Aire Atlantica"
+      ],
+      "duration_seconds": 222,
+      "explicit": false,
+      "id": "75WGjm9867pcRxGwiLRwK8",
+      "isrc": "USUM71700466",
+      "platform": "spotify",
+      "platform_track_id": "75WGjm9867pcRxGwiLRwK8",
+      "release_date": "2017-02-03",
+      "release_year": 2017,
+      "title": "Six Feet Under - Aire Atlantica Remix"
+    },
+    {
+      "album": "Six Feet Under (The Remixes)",
+      "artists": [
+        "Billie Eilish",
+        "BLU J"
+      ],
+      "duration_seconds": 216,
+      "explicit": false,
+      "id": "4D5sitThGoz0RnMsFdFUuz",
+      "isrc": "USUM71700465",
+      "platform": "spotify",
+      "platform_track_id": "4D5sitThGoz0RnMsFdFUuz",
+      "release_date": "2017-02-03",
+      "release_year": 2017,
+      "title": "Six Feet Under - BLU J Remix"
+    },
+    {
+      "album": "Six Feet Under (The Remixes)",
+      "artists": [
+        "Billie Eilish",
+        "Jerry Folk"
+      ],
+      "duration_seconds": 201,
+      "explicit": false,
+      "id": "58nxGpcCfNDiqmFXklOslz",
+      "isrc": "USUM71700468",
+      "platform": "spotify",
+      "platform_track_id": "58nxGpcCfNDiqmFXklOslz",
+      "release_date": "2017-02-03",
+      "release_year": 2017,
+      "title": "Six Feet Under - Jerry Folk Remix"
+    },
+    {
+      "album": "THE TORTURED POETS DEPARTMENT: THE ANTHOLOGY",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 263,
+      "explicit": false,
+      "id": "7wAkQFShJ27V8362MqevQr",
+      "isrc": "USUG12401032",
+      "platform": "spotify",
+      "platform_track_id": "7wAkQFShJ27V8362MqevQr",
+      "release_date": "2024-04-19",
+      "release_year": 2024,
+      "title": "So Long, London"
+    },
+    {
+      "album": "Acoustic Tribute to Taylor Swift, Vol. 2 (Instrumental)",
+      "artists": [
+        "Guitar Tribute Players"
+      ],
+      "duration_seconds": 179,
+      "explicit": false,
+      "id": "1FhobP3P80CpvF9xrV20bX",
+      "isrc": "USG7D2016414",
+      "platform": "spotify",
+      "platform_track_id": "1FhobP3P80CpvF9xrV20bX",
+      "release_date": "2020-01-10",
+      "release_year": 2020,
+      "title": "Soon You'll Get Better - Instrumental"
+    },
+    {
+      "album": "Lover",
+      "artists": [
+        "Taylor Swift",
+        "The Chicks"
+      ],
+      "duration_seconds": 202,
+      "explicit": false,
+      "id": "4AYtqFyFbX0Xkc2wtcygTr",
+      "isrc": "USUG11901482",
+      "platform": "spotify",
+      "platform_track_id": "4AYtqFyFbX0Xkc2wtcygTr",
+      "release_date": "2019-08-23",
+      "release_year": 2019,
+      "title": "Soon You’ll Get Better (feat. The Chicks)"
+    },
+    {
+      "album": "How Can You Mend A Broken Heart",
+      "artists": [
+        "Bee Gees"
+      ],
+      "duration_seconds": 285,
+      "explicit": false,
+      "id": "5ubvP9oKmxLUVq506fgLhk",
+      "isrc": "USRH10721057",
+      "platform": "spotify",
+      "platform_track_id": "5ubvP9oKmxLUVq506fgLhk",
+      "release_date": "2020-12-11",
+      "release_year": 2020,
+      "title": "Stayin Alive"
+    },
+    {
+      "album": "Staying Alive (Original Motion Picture Soundtrack)",
+      "artists": [
+        "Bee Gees"
+      ],
+      "duration_seconds": 93,
+      "explicit": false,
+      "id": "4UDmDIqJIbrW0hMBQMFOsM",
+      "isrc": "GBA077700130",
+      "platform": "spotify",
+      "platform_track_id": "4UDmDIqJIbrW0hMBQMFOsM",
+      "release_date": "1977-12-13",
+      "release_year": 1977,
+      "title": "Stayin' Alive"
+    },
+    {
+      "album": "Greatest",
+      "artists": [
+        "Bee Gees"
+      ],
+      "duration_seconds": 285,
+      "explicit": false,
+      "id": "3mRM4NM8iO7UBqrSigCQFH",
+      "isrc": "NLF057790034",
+      "platform": "spotify",
+      "platform_track_id": "3mRM4NM8iO7UBqrSigCQFH",
+      "release_date": "1979-01-01",
+      "release_year": 1979,
+      "title": "Stayin' Alive - From \"Saturday Night Fever\" Soundtrack"
+    },
+    {
+      "album": "Spider-Man: Into the Spider-Verse (Deluxe Edition / Soundtrack From & Inspired By The Motion Picture)",
+      "artists": [
+        "Post Malone",
+        "Swae Lee",
+        "Nicky Jam",
+        "Prince Royce",
+        "G.O.K.B."
+      ],
+      "duration_seconds": 210,
+      "explicit": false,
+      "id": "0wt9RjddODlWDetpuaXfRK",
+      "isrc": "USUM71902679",
+      "platform": "spotify",
+      "platform_track_id": "0wt9RjddODlWDetpuaXfRK",
+      "release_date": "2019-02-22",
+      "release_year": 2019,
+      "title": "Sunflower (Remix) [with Swae Lee, Nicky Jam, and Prince Royce]"
+    },
+    {
+      "album": "Hollywood's Bleeding",
+      "artists": [
+        "Post Malone",
+        "Swae Lee"
+      ],
+      "duration_seconds": 158,
+      "explicit": false,
+      "id": "0RiRZpuVRbi7oqRdSMwhQY",
+      "isrc": "USUM71814888",
+      "platform": "spotify",
+      "platform_track_id": "0RiRZpuVRbi7oqRdSMwhQY",
+      "release_date": "2019-09-06",
+      "release_year": 2019,
+      "title": "Sunflower - Spider-Man: Into the Spider-Verse"
+    },
+    {
+      "album": "Spider-Man: Into the Spider-Verse (Soundtrack From & Inspired by the Motion Picture)",
+      "artists": [
+        "Post Malone",
+        "Swae Lee"
+      ],
+      "duration_seconds": 158,
+      "explicit": false,
+      "id": "3KkXRkHbMCARz0aVfEt68P",
+      "isrc": "USUM71814888",
+      "platform": "spotify",
+      "platform_track_id": "3KkXRkHbMCARz0aVfEt68P",
+      "release_date": "2018-12-14",
+      "release_year": 2018,
+      "title": "Sunflower - Spider-Man: Into the Spider-Verse"
+    },
+    {
+      "album": "Hollywood's Bleeding",
+      "artists": [
+        "Post Malone",
+        "Swae Lee"
+      ],
+      "duration_seconds": 158,
+      "explicit": false,
+      "id": "6nY9ga57plhBYQnZX0Oqe8",
+      "isrc": "USUM71814888",
+      "platform": "spotify",
+      "platform_track_id": "6nY9ga57plhBYQnZX0Oqe8",
+      "release_date": "2019-09-06",
+      "release_year": 2019,
+      "title": "Sunflower - Spider-Man: Into the Spider-Verse"
+    },
+    {
+      "album": "Spider-Man: Into the Spider-Verse (Deluxe Edition / Soundtrack From & Inspired By The Motion Picture)",
+      "artists": [
+        "Post Malone",
+        "Swae Lee"
+      ],
+      "duration_seconds": 158,
+      "explicit": false,
+      "id": "7dbka99KTWke5o9hRp0JoB",
+      "isrc": "USUM71814888",
+      "platform": "spotify",
+      "platform_track_id": "7dbka99KTWke5o9hRp0JoB",
+      "release_date": "2019-02-22",
+      "release_year": 2019,
+      "title": "Sunflower - Spider-Man: Into the Spider-Verse"
+    },
+    {
+      "album": "The Diamond Collection (Deluxe)",
+      "artists": [
+        "Post Malone",
+        "Ozzy Osbourne",
+        "Travis Scott"
+      ],
+      "duration_seconds": 230,
+      "explicit": false,
+      "id": "0F1Q86bN53DpDPodt5VYNs",
+      "isrc": "USUM71915731",
+      "platform": "spotify",
+      "platform_track_id": "0F1Q86bN53DpDPodt5VYNs",
+      "release_date": "2023-04-21",
+      "release_year": 2023,
+      "title": "Take What You Want (feat. Ozzy Osbourne & Travis Scott)"
+    },
+    {
+      "album": "The Diamond Collection (Deluxe)",
+      "artists": [
+        "Post Malone",
+        "Ozzy Osbourne",
+        "Travis Scott"
+      ],
+      "duration_seconds": 230,
+      "explicit": false,
+      "id": "3Ztd0aLLuWq5hDpGGpFJu2",
+      "isrc": "USUM71915731",
+      "platform": "spotify",
+      "platform_track_id": "3Ztd0aLLuWq5hDpGGpFJu2",
+      "release_date": "2023-04-21",
+      "release_year": 2023,
+      "title": "Take What You Want (feat. Ozzy Osbourne & Travis Scott)"
+    },
+    {
+      "album": "Ordinary Man",
+      "artists": [
+        "Post Malone",
+        "Ozzy Osbourne",
+        "Travis Scott"
+      ],
+      "duration_seconds": 231,
+      "explicit": false,
+      "id": "3k4QmEFuzlnhgxT3qstcir",
+      "isrc": "USUM71915731",
+      "platform": "spotify",
+      "platform_track_id": "3k4QmEFuzlnhgxT3qstcir",
+      "release_date": "2020-02-21",
+      "release_year": 2020,
+      "title": "Take What You Want (feat. Ozzy Osbourne & Travis Scott)"
+    },
+    {
+      "album": "Hollywood's Bleeding",
+      "artists": [
+        "Post Malone",
+        "Ozzy Osbourne",
+        "Travis Scott"
+      ],
+      "duration_seconds": 230,
+      "explicit": false,
+      "id": "3sORDiSRTAlxecx5xJAqc8",
+      "isrc": "USUM71915731",
+      "platform": "spotify",
+      "platform_track_id": "3sORDiSRTAlxecx5xJAqc8",
+      "release_date": "2019-09-06",
+      "release_year": 2019,
+      "title": "Take What You Want (feat. Ozzy Osbourne & Travis Scott)"
+    },
+    {
+      "album": "Hollywood's Bleeding",
+      "artists": [
+        "Post Malone",
+        "Ozzy Osbourne",
+        "Travis Scott"
+      ],
+      "duration_seconds": 230,
+      "explicit": false,
+      "id": "7CZyCXKG6d5ALeq41sLzbw",
+      "isrc": "USUM71915731",
+      "platform": "spotify",
+      "platform_track_id": "7CZyCXKG6d5ALeq41sLzbw",
+      "release_date": "2019-09-06",
+      "release_year": 2019,
+      "title": "Take What You Want (feat. Ozzy Osbourne & Travis Scott)"
+    },
+    {
+      "album": "Taylor Swift - Lover - Piano Covers",
+      "artists": [
+        "Piano Covers"
+      ],
+      "duration_seconds": 315,
+      "explicit": false,
+      "id": "7Msl0fS6gN1jAc0qC24e8l",
+      "isrc": "SE5XG2306298",
+      "platform": "spotify",
+      "platform_track_id": "7Msl0fS6gN1jAc0qC24e8l",
+      "release_date": "2023-08-22",
+      "release_year": 2023,
+      "title": "Taylor Swift - Cornelia Street"
+    },
+    {
+      "album": "Taylor Swift - Lover - Piano Covers",
+      "artists": [
+        "Piano Covers"
+      ],
+      "duration_seconds": 275,
+      "explicit": false,
+      "id": "5DgpQX24vNcLH8ZbHLa0x7",
+      "isrc": "SE5XG2346140",
+      "platform": "spotify",
+      "platform_track_id": "5DgpQX24vNcLH8ZbHLa0x7",
+      "release_date": "2023-08-22",
+      "release_year": 2023,
+      "title": "Taylor Swift - Daylight"
+    },
+    {
+      "album": "Taylor Swift - Lover - Piano Covers",
+      "artists": [
+        "Piano Covers"
+      ],
+      "duration_seconds": 201,
+      "explicit": false,
+      "id": "2bzjmzlPxb18nAFXllD0Kp",
+      "isrc": "SE5XG2306290",
+      "platform": "spotify",
+      "platform_track_id": "2bzjmzlPxb18nAFXllD0Kp",
+      "release_date": "2023-08-22",
+      "release_year": 2023,
+      "title": "Taylor Swift - I Forgot That You Existed"
+    },
+    {
+      "album": "Taylor Swift - Lover - Piano Covers",
+      "artists": [
+        "Piano Covers"
+      ],
+      "duration_seconds": 190,
+      "explicit": false,
+      "id": "4FYvZrRFsIRwl4iEGA7FUs",
+      "isrc": "SE5XG2306295",
+      "platform": "spotify",
+      "platform_track_id": "4FYvZrRFsIRwl4iEGA7FUs",
+      "release_date": "2023-08-22",
+      "release_year": 2023,
+      "title": "Taylor Swift - I Think He Knows"
+    },
+    {
+      "album": "Taylor Swift - Lover - Piano Covers",
+      "artists": [
+        "Piano Covers"
+      ],
+      "duration_seconds": 233,
+      "explicit": false,
+      "id": "32qFdxTWVItJs0pXdxdEx2",
+      "isrc": "SE5XG2306297",
+      "platform": "spotify",
+      "platform_track_id": "32qFdxTWVItJs0pXdxdEx2",
+      "release_date": "2023-08-22",
+      "release_year": 2023,
+      "title": "Taylor Swift - Paper Rings"
+    },
+    {
+      "album": "Taylor Swift - Lover - Piano Covers",
+      "artists": [
+        "Piano Covers"
+      ],
+      "duration_seconds": 221,
+      "explicit": false,
+      "id": "7Er3fmsTQK2YwOnhjxeZdC",
+      "isrc": "SE5XG2346134",
+      "platform": "spotify",
+      "platform_track_id": "7Er3fmsTQK2YwOnhjxeZdC",
+      "release_date": "2023-08-22",
+      "release_year": 2023,
+      "title": "Taylor Swift - Soon You’ll Get Better"
+    },
+    {
+      "album": "Taylor Swift - Lover - Piano Covers",
+      "artists": [
+        "Piano Covers"
+      ],
+      "duration_seconds": 230,
+      "explicit": false,
+      "id": "1OTAomfOVm8FqdeblAAr2l",
+      "isrc": "SE5XG2306294",
+      "platform": "spotify",
+      "platform_track_id": "1OTAomfOVm8FqdeblAAr2l",
+      "release_date": "2023-08-22",
+      "release_year": 2023,
+      "title": "Taylor Swift - The Archer"
+    },
+    {
+      "album": "THE TORTURED POETS DEPARTMENT: THE ANTHOLOGY",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 197,
+      "explicit": false,
+      "id": "1tuNqJOtRQVHvONR8Lg3MZ",
+      "isrc": "USUG12401042",
+      "platform": "spotify",
+      "platform_track_id": "1tuNqJOtRQVHvONR8Lg3MZ",
+      "release_date": "2024-04-19",
+      "release_year": 2024,
+      "title": "The Alchemy"
+    },
+    {
+      "album": "Lover",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 211,
+      "explicit": false,
+      "id": "3pHkh7d0lzM2AldUtz2x37",
+      "isrc": "USUG11901475",
+      "platform": "spotify",
+      "platform_track_id": "3pHkh7d0lzM2AldUtz2x37",
+      "release_date": "2019-08-23",
+      "release_year": 2019,
+      "title": "The Archer"
+    },
+    {
+      "album": "The Archer (Live From Paris)",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 211,
+      "explicit": false,
+      "id": "2fgiBCtbWo8pijF6M7pN1i",
+      "isrc": "USUG11904299",
+      "platform": "spotify",
+      "platform_track_id": "2fgiBCtbWo8pijF6M7pN1i",
+      "release_date": "2020-05-17",
+      "release_year": 2020,
+      "title": "The Archer - Live From Paris"
+    },
+    {
+      "album": "Tales of Olden, Vol. 2",
+      "artists": [
+        "Ian Fontova"
+      ],
+      "duration_seconds": 146,
+      "explicit": false,
+      "id": "5fY2P5HbQ5ACvbjugYOUQD",
+      "isrc": "QZWFJ2309150",
+      "platform": "spotify",
+      "platform_track_id": "5fY2P5HbQ5ACvbjugYOUQD",
+      "release_date": "2024-02-08",
+      "release_year": 2024,
+      "title": "The Giants Path"
+    },
+    {
+      "album": "Lover",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 190,
+      "explicit": false,
+      "id": "3RauEVgRgj1IuWdJ9fDs70",
+      "isrc": "USUG11901474",
+      "platform": "spotify",
+      "platform_track_id": "3RauEVgRgj1IuWdJ9fDs70",
+      "release_date": "2019-08-23",
+      "release_year": 2019,
+      "title": "The Man"
+    },
+    {
+      "album": "Glas",
+      "artists": [
+        "Nina Chuba"
+      ],
+      "duration_seconds": 183,
+      "explicit": false,
+      "id": "4SamJ1uIL2OzAFgDGdnhx0",
+      "isrc": "DEE862201573",
+      "platform": "spotify",
+      "platform_track_id": "4SamJ1uIL2OzAFgDGdnhx0",
+      "release_date": "2023-02-24",
+      "release_year": 2023,
+      "title": "Tinnitus"
+    },
+    {
+      "album": "Guitar Songs",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 281,
+      "explicit": false,
+      "id": "3GYlZ7tbxLOxe6ewMNVTkw",
+      "isrc": "USUM72213724",
+      "platform": "spotify",
+      "platform_track_id": "3GYlZ7tbxLOxe6ewMNVTkw",
+      "release_date": "2022-07-21",
+      "release_year": 2022,
+      "title": "TV"
+    },
+    {
+      "album": "Monsoon Love Vol 15",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 178,
+      "explicit": false,
+      "id": "44cdkV6hHvUOZDt57CU6zV",
+      "isrc": "USUM71706941",
+      "platform": "spotify",
+      "platform_track_id": "44cdkV6hHvUOZDt57CU6zV",
+      "release_date": "2023-07-04",
+      "release_year": 2023,
+      "title": "watch"
+    },
+    {
+      "album": "sad songs 2021: crying and depressing",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 178,
+      "explicit": false,
+      "id": "5kt8OmPpJuB7Ilx0DKQMXw",
+      "isrc": "USUM71706941",
+      "platform": "spotify",
+      "platform_track_id": "5kt8OmPpJuB7Ilx0DKQMXw",
+      "release_date": "2021-12-10",
+      "release_year": 2021,
+      "title": "watch"
+    },
+    {
+      "album": "dont smile at me",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 178,
+      "explicit": false,
+      "id": "7eB1V5LvAdxCc7brfGhRRo",
+      "isrc": "USUM71706941",
+      "platform": "spotify",
+      "platform_track_id": "7eB1V5LvAdxCc7brfGhRRo",
+      "release_date": "2017-12-22",
+      "release_year": 2017,
+      "title": "watch"
+    },
+    {
+      "album": "Live from Andel Sound (Live Session)",
+      "artists": [
+        "Bea.K"
+      ],
+      "duration_seconds": 162,
+      "explicit": false,
+      "id": "0ooA5D8iugSftj4B4TnyHD",
+      "isrc": "CZA162600013",
+      "platform": "spotify",
+      "platform_track_id": "0ooA5D8iugSftj4B4TnyHD",
+      "release_date": "2026-02-06",
+      "release_year": 2026,
+      "title": "Watch - Billie Eilish Cover"
+    },
+    {
+      "album": "WHEN I WAS OLDER (Music Inspired By The Film ROMA)",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 271,
+      "explicit": false,
+      "id": "7tGEAA1f8MydT7eVbbO9Zy",
+      "isrc": "USUM71900059",
+      "platform": "spotify",
+      "platform_track_id": "7tGEAA1f8MydT7eVbbO9Zy",
+      "release_date": "2019-01-09",
+      "release_year": 2019,
+      "title": "WHEN I WAS OLDER - Music Inspired By The Film ROMA"
+    },
+    {
+      "album": "When I Was with You",
+      "artists": [
+        "Billie Shaw"
+      ],
+      "duration_seconds": 215,
+      "explicit": false,
+      "id": "4tA3hYu9h9amO7uSatS3Bu",
+      "isrc": "SE69N2508111",
+      "platform": "spotify",
+      "platform_track_id": "4tA3hYu9h9amO7uSatS3Bu",
+      "release_date": "2026-03-27",
+      "release_year": 2026,
+      "title": "When I Was With You"
+    },
+    {
+      "album": "Sad Love Songs 2022",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 200,
+      "explicit": false,
+      "id": "1KVF2bYLxTVuR4lnuSvCgn",
+      "isrc": "USUM71815958",
+      "platform": "spotify",
+      "platform_track_id": "1KVF2bYLxTVuR4lnuSvCgn",
+      "release_date": "2022-10-07",
+      "release_year": 2022,
+      "title": "when the party's over"
+    },
+    {
+      "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 196,
+      "explicit": false,
+      "id": "43zdsphuZLzwA9k4DJhU0I",
+      "isrc": "USUM71815958",
+      "platform": "spotify",
+      "platform_track_id": "43zdsphuZLzwA9k4DJhU0I",
+      "release_date": "2019-03-29",
+      "release_year": 2019,
+      "title": "when the party's over"
+    },
+    {
+      "album": "Sunset Vibes",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 200,
+      "explicit": false,
+      "id": "5nuYb0qvMQ0o2GD2H5tjfJ",
+      "isrc": "USUM71815958",
+      "platform": "spotify",
+      "platform_track_id": "5nuYb0qvMQ0o2GD2H5tjfJ",
+      "release_date": "2021-10-08",
+      "release_year": 2021,
+      "title": "when the party's over"
+    },
+    {
+      "album": "evermore",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 215,
+      "explicit": false,
+      "id": "0lx2cLdOt3piJbcaXIV74f",
+      "isrc": "USUG12004699",
+      "platform": "spotify",
+      "platform_track_id": "0lx2cLdOt3piJbcaXIV74f",
+      "release_date": "2020-12-11",
+      "release_year": 2020,
+      "title": "willow"
+    },
+    {
+      "album": "Best Of Billboard Vol 23",
+      "artists": [
+        "DJ Spinnzter"
+      ],
+      "duration_seconds": 149,
+      "explicit": true,
+      "id": "47UItOIAi9GjmDmPK4v2Xx",
+      "isrc": "GBJHA2029405",
+      "platform": "spotify",
+      "platform_track_id": "47UItOIAi9GjmDmPK4v2Xx",
+      "release_date": "2020-03-26",
+      "release_year": 2020,
+      "title": "Wow (Vocal Tribute Version Originally Performed By Post Malone) Explicit"
+    },
+    {
+      "album": "Hollywood's Bleeding",
+      "artists": [
+        "Post Malone"
+      ],
+      "duration_seconds": 150,
+      "explicit": false,
+      "id": "0aMiATaLkj7ffT4W9Ng0TM",
+      "isrc": "USUM71822643",
+      "platform": "spotify",
+      "platform_track_id": "0aMiATaLkj7ffT4W9Ng0TM",
+      "release_date": "2019-09-06",
+      "release_year": 2019,
+      "title": "Wow."
+    },
+    {
+      "album": "Hollywood's Bleeding",
+      "artists": [
+        "Post Malone"
+      ],
+      "duration_seconds": 150,
+      "explicit": true,
+      "id": "7xQAfvXzm3AkraOtGPWIZg",
+      "isrc": "USUM71822626",
+      "platform": "spotify",
+      "platform_track_id": "7xQAfvXzm3AkraOtGPWIZg",
+      "release_date": "2019-09-06",
+      "release_year": 2019,
+      "title": "Wow."
+    },
+    {
+      "album": "Wow. (Instrumental)",
+      "artists": [
+        "Post Malone"
+      ],
+      "duration_seconds": 149,
+      "explicit": false,
+      "id": "1reWqUNMwp5ciYLIufmWLI",
+      "isrc": "USUM71904524",
+      "platform": "spotify",
+      "platform_track_id": "1reWqUNMwp5ciYLIufmWLI",
+      "release_date": "2019-03-14",
+      "release_year": 2019,
+      "title": "Wow. - Instrumental"
+    },
+    {
+      "album": "Wow. (Remix)",
+      "artists": [
+        "Post Malone",
+        "Roddy Ricch",
+        "Tyga"
+      ],
+      "duration_seconds": 170,
+      "explicit": true,
+      "id": "0fcq51a3gOI6gPvzc0YLsk",
+      "isrc": "USUM71904477",
+      "platform": "spotify",
+      "platform_track_id": "0fcq51a3gOI6gPvzc0YLsk",
+      "release_date": "2019-03-15",
+      "release_year": 2019,
+      "title": "Wow. - Remix"
+    },
+    {
+      "album": "Lullaby Renditions of Taylor Swift, Vol. 2",
+      "artists": [
+        "Rockabye Baby!"
+      ],
+      "duration_seconds": 169,
+      "explicit": false,
+      "id": "6BgdJrbmJGazzo9X1VXVMa",
+      "isrc": "USEWC2408102",
+      "platform": "spotify",
+      "platform_track_id": "6BgdJrbmJGazzo9X1VXVMa",
+      "release_date": "2024-09-13",
+      "release_year": 2024,
+      "title": "You Need To Calm Down"
+    },
+    {
+      "album": "Lover",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 171,
+      "explicit": false,
+      "id": "6RRNNciQGZEXnqk8SQ9yv5",
+      "isrc": "USUG11901470",
+      "platform": "spotify",
+      "platform_track_id": "6RRNNciQGZEXnqk8SQ9yv5",
+      "release_date": "2019-08-23",
+      "release_year": 2019,
+      "title": "You Need To Calm Down"
+    },
+    {
+      "album": "You Need To Calm Down (Clean Bandit Remix)",
+      "artists": [
+        "Taylor Swift",
+        "Clean Bandit"
+      ],
+      "duration_seconds": 153,
+      "explicit": false,
+      "id": "7Bjf96uNizpvXLvNyOJpst",
+      "isrc": "USUG11901489",
+      "platform": "spotify",
+      "platform_track_id": "7Bjf96uNizpvXLvNyOJpst",
+      "release_date": "2019-08-20",
+      "release_year": 2019,
+      "title": "You Need To Calm Down - Clean Bandit Remix"
+    },
+    {
+      "album": "You Need To Calm Down (Live From Paris)",
+      "artists": [
+        "Taylor Swift"
+      ],
+      "duration_seconds": 204,
+      "explicit": false,
+      "id": "36a08nLG1xazGaaVKK0vv7",
+      "isrc": "USUG11904300",
+      "platform": "spotify",
+      "platform_track_id": "36a08nLG1xazGaaVKK0vv7",
+      "release_date": "2020-05-17",
+      "release_year": 2020,
+      "title": "You Need To Calm Down - Live From Paris"
+    },
+    {
+      "album": "Gaming Bangers",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 181,
+      "explicit": false,
+      "id": "05qQaGirs2YCDthu97MzqW",
+      "isrc": "USUM71810049",
+      "platform": "spotify",
+      "platform_track_id": "05qQaGirs2YCDthu97MzqW",
+      "release_date": "2021-10-18",
+      "release_year": 2021,
+      "title": "you should see me in a crown"
+    },
+    {
+      "album": "Eclectic Dining",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 181,
+      "explicit": false,
+      "id": "2vx7DrazOCbpEB7G0TtxlS",
+      "isrc": "USUM71810049",
+      "platform": "spotify",
+      "platform_track_id": "2vx7DrazOCbpEB7G0TtxlS",
+      "release_date": "2018-08-03",
+      "release_year": 2018,
+      "title": "you should see me in a crown"
+    },
+    {
+      "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 181,
+      "explicit": false,
+      "id": "3XF5xLJHOQQRbWya6hBp7d",
+      "isrc": "USUM71810049",
+      "platform": "spotify",
+      "platform_track_id": "3XF5xLJHOQQRbWya6hBp7d",
+      "release_date": "2019-03-29",
+      "release_year": 2019,
+      "title": "you should see me in a crown"
+    },
+    {
+      "album": "songs that you feel powerful",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 181,
+      "explicit": false,
+      "id": "40pIV0DXh492G9ojegGrVi",
+      "isrc": "USUM71810049",
+      "platform": "spotify",
+      "platform_track_id": "40pIV0DXh492G9ojegGrVi",
+      "release_date": "2021-08-20",
+      "release_year": 2021,
+      "title": "you should see me in a crown"
+    },
+    {
+      "album": "Party People",
+      "artists": [
+        "Billie Eilish"
+      ],
+      "duration_seconds": 181,
+      "explicit": false,
+      "id": "4yYTomApIVF3Qh47ddAlTJ",
+      "isrc": "USUM71810049",
+      "platform": "spotify",
+      "platform_track_id": "4yYTomApIVF3Qh47ddAlTJ",
+      "release_date": "2021-08-18",
+      "release_year": 2021,
+      "title": "you should see me in a crown"
+    },
+    {
+      "album": "家",
+      "artists": [
+        "羅大佑"
+      ],
+      "duration_seconds": 308,
+      "explicit": false,
+      "id": "6fPlIM0ZayAZAKX9X6yEds",
+      "isrc": "TWAW18400002",
+      "platform": "spotify",
+      "platform_track_id": "6fPlIM0ZayAZAKX9X6yEds",
+      "release_date": "1984-10-18",
+      "release_year": 1984,
+      "title": "家(I)"
+    },
+    {
+      "album": "2002年的第一场雪",
+      "artists": [
+        "刀郎"
+      ],
+      "duration_seconds": 197,
+      "explicit": false,
+      "id": "5qmKShKnD9DcYJXjJ3js7a",
+      "isrc": "US39N2203584",
+      "platform": "spotify",
+      "platform_track_id": "5qmKShKnD9DcYJXjJ3js7a",
+      "release_date": "2004-01-06",
+      "release_year": 2004,
+      "title": "情人"
+    },
+    {
+      "album": "重生 (敬拜讚美專輯)",
+      "artists": [
+        "鹹蛋音樂事工"
+      ],
+      "duration_seconds": 253,
+      "explicit": false,
+      "id": "5FYNbFIi7YB7NNjQN7j0uU",
+      "isrc": "FRX202400034",
+      "platform": "spotify",
+      "platform_track_id": "5FYNbFIi7YB7NNjQN7j0uU",
+      "release_date": "2020-04-06",
+      "release_year": 2020,
+      "title": "浮沉"
+    },
+    {
+      "album": "浮沉的兄弟",
+      "artists": [
+        "戎祥"
+      ],
+      "duration_seconds": 189,
+      "explicit": false,
+      "id": "2swlqV6gVKvq1FJvdxHnDs",
+      "isrc": "HKG732555158",
+      "platform": "spotify",
+      "platform_track_id": "2swlqV6gVKvq1FJvdxHnDs",
+      "release_date": "2012-10-09",
+      "release_year": 2012,
+      "title": "浮沉的兄弟"
+    },
+    {
+      "album": "浮沉的兄弟",
+      "artists": [
+        "金久哲",
+        "李理"
+      ],
+      "duration_seconds": 192,
+      "explicit": false,
+      "id": "5Aj1IYTUNvWKoUcQVrzHUd",
+      "isrc": "HKG732019584",
+      "platform": "spotify",
+      "platform_track_id": "5Aj1IYTUNvWKoUcQVrzHUd",
+      "release_date": "2018-03-29",
+      "release_year": 2018,
+      "title": "浮沉的兄弟"
+    },
+    {
+      "album": "科幻小说",
+      "artists": [
+        "法老"
+      ],
+      "duration_seconds": 223,
+      "explicit": true,
+      "id": "7h86mQOnKhYZ2BmV7D1bCu",
+      "isrc": "FRX762006607",
+      "platform": "spotify",
+      "platform_track_id": "7h86mQOnKhYZ2BmV7D1bCu",
+      "release_date": "2020-10-22",
+      "release_year": 2020,
+      "title": "百变酒精"
+    },
+    {
+      "album": "知道",
+      "artists": [
+        "宋冬野"
+      ],
+      "duration_seconds": 333,
+      "explicit": false,
+      "id": "4vL0joYyvRuORpsdW4V1Nc",
+      "isrc": "CNZ681800083",
+      "platform": "spotify",
+      "platform_track_id": "4vL0joYyvRuORpsdW4V1Nc",
+      "release_date": "2018-10-29",
+      "release_year": 2018,
+      "title": "知道"
+    },
+    {
+      "album": "恰恰与精选 经典金曲 时代名曲重温, Vol. 4",
+      "artists": [
+        "韩宝仪"
+      ],
+      "duration_seconds": 156,
+      "explicit": false,
+      "id": "0ne1YD1DVd7seJR4Eu4QQC",
+      "isrc": "MYFR11411214",
+      "platform": "spotify",
+      "platform_track_id": "0ne1YD1DVd7seJR4Eu4QQC",
+      "release_date": "2001-12-31",
+      "release_year": 2001,
+      "title": "知道不知道"
+    },
+    {
+      "album": "大國咖",
+      "artists": [
+        "Rene Liu"
+      ],
+      "duration_seconds": 225,
+      "explicit": false,
+      "id": "1z613CzKX2m4zRlyAaRr37",
+      "isrc": "TWE810401012",
+      "platform": "spotify",
+      "platform_track_id": "1z613CzKX2m4zRlyAaRr37",
+      "release_date": "2020-06-17",
+      "release_year": 2020,
+      "title": "知道不知道"
+    },
+    {
+      "album": "知道你很美",
+      "artists": [
+        "李梅"
+      ],
+      "duration_seconds": 264,
+      "explicit": false,
+      "id": "0RUc4jBCZkDfe3kK1OE0lG",
+      "isrc": "FRX282232510",
+      "platform": "spotify",
+      "platform_track_id": "0RUc4jBCZkDfe3kK1OE0lG",
+      "release_date": "2022-07-07",
+      "release_year": 2022,
+      "title": "知道你很美"
+    },
+    {
+      "album": "永恆的珍",
+      "artists": [
+        "Alan Tam"
+      ],
+      "duration_seconds": 271,
+      "explicit": false,
+      "id": "1MNnznCs9bkLFpqq2FJ1ND",
+      "isrc": "HKC339600020",
+      "platform": "spotify",
+      "platform_track_id": "1MNnznCs9bkLFpqq2FJ1ND",
+      "release_date": "1997-01-01",
+      "release_year": 1997,
+      "title": "知道又如何"
+    },
+    {
+      "album": "星子和玫瑰",
+      "artists": [
+        "沈木"
+      ],
+      "duration_seconds": 193,
+      "explicit": false,
+      "id": "3hJCC2EnhuuafeIsqZZvnT",
+      "isrc": "QZV2N2225619",
+      "platform": "spotify",
+      "platform_track_id": "3hJCC2EnhuuafeIsqZZvnT",
+      "release_date": "2024-09-05",
+      "release_year": 2024,
+      "title": "美人"
+    },
+    {
+      "album": "美人吟 (完整版)",
+      "artists": [
+        "王韵"
+      ],
+      "duration_seconds": 268,
+      "explicit": false,
+      "id": "7veUX7zXIiRRq6EG6X8UNm",
+      "isrc": "FRX452074951",
+      "platform": "spotify",
+      "platform_track_id": "7veUX7zXIiRRq6EG6X8UNm",
+      "release_date": "2020-04-01",
+      "release_year": 2020,
+      "title": "美人吟 - 完整版"
+    },
+    {
+      "album": "第二天堂",
+      "artists": [
+        "JJ Lin"
+      ],
+      "duration_seconds": 252,
+      "explicit": false,
+      "id": "2ahydS3UcOoAF2usK3I1ph",
+      "isrc": "TWB670401212",
+      "platform": "spotify",
+      "platform_track_id": "2ahydS3UcOoAF2usK3I1ph",
+      "release_date": "2004-06-04",
+      "release_year": 2004,
+      "title": "美人魚"
+    },
+    {
+      "album": "哎呦，不錯哦",
+      "artists": [
+        "Jay Chou"
+      ],
+      "duration_seconds": 220,
+      "explicit": false,
+      "id": "3krUUimH5bhHGQ6DIA39Jn",
+      "isrc": "TWK971401111",
+      "platform": "spotify",
+      "platform_track_id": "3krUUimH5bhHGQ6DIA39Jn",
+      "release_date": "2014-12-26",
+      "release_year": 2014,
+      "title": "美人魚"
+    }
+  ]
+}
