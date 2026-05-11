@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import json
 
-import pytest
-
 from playlist_porter.config import (
     DEFAULT_SPOTIFY_SCOPES,
     SpotifyConfig,
@@ -42,7 +40,6 @@ def test_spotify_config_loads_env_placeholders_without_credentials(tmp_path, mon
     assert config.spotify.redirect_uri == "http://127.0.0.1:8080/callback"
     assert config.spotify.scopes == ("playlist-read-private", "playlist-modify-private")
     assert config.spotify.cache_path == tmp_path / "state" / "spotify-token-cache"
-    assert config.spotify.auth_mode == "client_credentials"
 
 
 def test_spotify_config_from_env_uses_default_scopes(monkeypatch) -> None:
@@ -55,14 +52,13 @@ def test_spotify_config_from_env_uses_default_scopes(monkeypatch) -> None:
 
     assert config.missing_credentials() == ()
     assert config.scopes == DEFAULT_SPOTIFY_SCOPES
-    assert config.auth_mode == "client_credentials"
 
 
 def test_default_config_uses_spotify_scope_environment_placeholder() -> None:
     payload = default_config_payload()
 
     assert payload["spotify"]["scopes"] == "${SPOTIFY_SCOPES}"
-    assert payload["spotify"]["auth_mode"] == "client_credentials"
+    assert "auth_mode" not in payload["spotify"]
     assert payload["qqmusic"]["allow_anonymous_read"] is True
 
 
@@ -124,34 +120,7 @@ def test_unset_spotify_scope_placeholder_uses_default_scopes(tmp_path, monkeypat
     assert config.spotify.scopes == DEFAULT_SPOTIFY_SCOPES
 
 
-def test_spotify_config_loads_client_credentials_auth_mode(tmp_path) -> None:
-    config_path = tmp_path / "porter.json"
-    config_path.write_text(
-        json.dumps(
-            {
-                "database_path": "state/playlist.sqlite",
-                "mock": {
-                    "source_playlists_path": "fixtures/playlists.json",
-                    "destination_catalog_path": "fixtures/catalog.json",
-                },
-                "spotify": {
-                    "client_id": "client-id",
-                    "client_secret": "client-secret",
-                    "auth_mode": "client_credentials",
-                },
-            }
-        ),
-        encoding="utf-8",
-    )
-
-    config = load_config(config_path)
-
-    assert config.spotify is not None
-    assert config.spotify.auth_mode == "client_credentials"
-    assert config.spotify.missing_client_credentials() == ()
-
-
-def test_spotify_config_loads_oauth_auth_mode(tmp_path) -> None:
+def test_spotify_config_ignores_extra_spotify_keys(tmp_path) -> None:
     config_path = tmp_path / "porter.json"
     config_path.write_text(
         json.dumps(
@@ -165,7 +134,7 @@ def test_spotify_config_loads_oauth_auth_mode(tmp_path) -> None:
                     "client_id": "client-id",
                     "client_secret": "client-secret",
                     "redirect_uri": "http://127.0.0.1:8080/callback",
-                    "auth_mode": "oauth",
+                    "unused": "ignored",
                 },
             }
         ),
@@ -175,40 +144,4 @@ def test_spotify_config_loads_oauth_auth_mode(tmp_path) -> None:
     config = load_config(config_path)
 
     assert config.spotify is not None
-    assert config.spotify.auth_mode == "oauth"
     assert config.spotify.missing_credentials() == ()
-
-
-def test_spotify_config_rejects_auto_auth_mode(tmp_path) -> None:
-    config_path = tmp_path / "porter.json"
-    config_path.write_text(
-        json.dumps(
-            {
-                "database_path": "state/playlist.sqlite",
-                "mock": {
-                    "source_playlists_path": "fixtures/playlists.json",
-                    "destination_catalog_path": "fixtures/catalog.json",
-                },
-                "spotify": {
-                    "client_id": "client-id",
-                    "client_secret": "client-secret",
-                    "auth_mode": "auto",
-                },
-            }
-        ),
-        encoding="utf-8",
-    )
-
-    with pytest.raises(
-        ValueError,
-        match="spotify auth_mode must be client_credentials or oauth",
-    ):
-        load_config(config_path)
-
-
-def test_spotify_config_constructor_rejects_auto_auth_mode() -> None:
-    with pytest.raises(
-        ValueError,
-        match="spotify auth_mode must be client_credentials or oauth",
-    ):
-        SpotifyConfig(auth_mode="auto")

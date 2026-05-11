@@ -11,7 +11,7 @@ import requests
 from rapidfuzz import fuzz
 from spotipy import Spotify
 from spotipy.exceptions import SpotifyException, SpotifyOauthError
-from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
+from spotipy.oauth2 import SpotifyOAuth
 
 from playlist_porter.config import SpotifyConfig
 from playlist_porter.matching.status import UnavailableReason
@@ -30,15 +30,6 @@ from playlist_porter.rate_limit import (
 )
 
 SPOTIFY_BATCH_LIMIT = 100
-SPOTIFY_PLAYLIST_READ_OAUTH_MESSAGE = (
-    'Spotify playlist reads require OAuth. Set spotify.auth_mode to "oauth", '
-    "configure SPOTIFY_REDIRECT_URI, then rerun. Spotify currently requires "
-    "user authorization to read playlist items, including public playlist item lists."
-)
-SPOTIFY_WRITE_OAUTH_MESSAGE = (
-    'Spotify write operations require OAuth. Set spotify.auth_mode to "oauth", '
-    "configure SPOTIFY_REDIRECT_URI, then rerun or resume with the existing run id."
-)
 
 
 class SpotifyAdapter(BasePlatform):
@@ -69,25 +60,9 @@ class SpotifyAdapter(BasePlatform):
         )
 
     def authenticate(self) -> None:
-        """Create a Spotipy client using OAuth or Client Credentials auth."""
+        """Create a Spotipy client using OAuth."""
 
         if self._client is not None:
-            self._authenticated = True
-            return
-
-        if self.config.auth_mode == "client_credentials":
-            missing = self.config.missing_client_credentials()
-            if missing:
-                missing_text = ", ".join(missing)
-                raise AuthenticationFailure(
-                    f"missing Spotify Client Credentials configuration: {missing_text}"
-                )
-            auth_manager = SpotifyClientCredentials(
-                client_id=self.config.client_id,
-                client_secret=self.config.client_secret,
-            )
-            self._client = _spotify_client(auth_manager)
-            self._auth_kind = "client_credentials"
             self._authenticated = True
             return
 
@@ -115,8 +90,6 @@ class SpotifyAdapter(BasePlatform):
     def get_playlist(self, playlist_id_or_url: str) -> Playlist:
         """Fetch a Spotify playlist and convert all track pages to internal models."""
 
-        if self.config.auth_mode != "oauth" and self._auth_kind != "injected":
-            raise AuthenticationFailure(SPOTIFY_PLAYLIST_READ_OAUTH_MESSAGE)
         client = self._client_or_raise()
         playlist_id = _playlist_id_from_input(playlist_id_or_url)
         playlist_payload = self._call(
@@ -257,8 +230,6 @@ class SpotifyAdapter(BasePlatform):
         return self._client
 
     def _write_client_or_raise(self) -> Any:
-        if self.config.auth_mode != "oauth":
-            raise AuthenticationFailure(SPOTIFY_WRITE_OAUTH_MESSAGE)
         client = self._client_or_raise()
         return client
 
@@ -449,7 +420,5 @@ def _optional_text(value: Any) -> str | None:
 
 __all__ = [
     "SPOTIFY_BATCH_LIMIT",
-    "SPOTIFY_PLAYLIST_READ_OAUTH_MESSAGE",
-    "SPOTIFY_WRITE_OAUTH_MESSAGE",
     "SpotifyAdapter",
 ]

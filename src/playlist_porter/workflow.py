@@ -22,11 +22,7 @@ from playlist_porter.persistence.repositories import (
 from playlist_porter.platforms.base import BasePlatform
 from playlist_porter.platforms.mock import MockAdapter
 from playlist_porter.platforms.qqmusic import QQMusicAdapter, QQMusicConfig
-from playlist_porter.platforms.spotify import (
-    SPOTIFY_PLAYLIST_READ_OAUTH_MESSAGE,
-    SPOTIFY_WRITE_OAUTH_MESSAGE,
-    SpotifyAdapter,
-)
+from playlist_porter.platforms.spotify import SpotifyAdapter
 
 WRITABLE_AUTO_STATUSES = {
     MatchStatus.ISRC_EXACT,
@@ -712,24 +708,23 @@ def _credential_issues(
     if isinstance(adapter, SpotifyAdapter):
         if getattr(adapter, "_client", None) is not None:
             return []
-        if require_write and adapter.config.auth_mode != "oauth":
-            return [SPOTIFY_WRITE_OAUTH_MESSAGE]
-        if require_playlist_read and adapter.config.auth_mode != "oauth":
-            return [SPOTIFY_PLAYLIST_READ_OAUTH_MESSAGE]
-        if adapter.config.auth_mode == "oauth":
-            missing = adapter.config.missing_credentials()
-            if not missing:
-                return []
+        missing = adapter.config.missing_credentials()
+        if not missing:
+            return []
+        if require_write:
             return [
-                "Spotify OAuth credentials are missing: "
+                "Spotify OAuth credentials are required for write operations: "
                 + ", ".join(f"SPOTIFY_{field.upper()}" for field in missing)
             ]
-        missing = adapter.config.missing_client_credentials()
-        if missing:
+        if require_playlist_read:
             return [
-                "Spotify Client Credentials are missing: "
+                "Spotify OAuth credentials are required for playlist reads: "
                 + ", ".join(f"SPOTIFY_{field.upper()}" for field in missing)
             ]
+        return [
+            "Spotify OAuth credentials are missing: "
+            + ", ".join(f"SPOTIFY_{field.upper()}" for field in missing)
+        ]
     if isinstance(adapter, QQMusicAdapter):
         if getattr(adapter, "_client", None) is not None:
             return []

@@ -6,7 +6,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from playlist_porter.platforms.qqmusic import QQMusicConfig
 
@@ -28,11 +28,6 @@ class SpotifyConfig:
     scopes: tuple[str, ...] = DEFAULT_SPOTIFY_SCOPES
     cache_path: Path | None = None
     create_public_playlists: bool = False
-    auth_mode: Literal["oauth", "client_credentials"] = "client_credentials"
-
-    def __post_init__(self) -> None:
-        if self.auth_mode not in {"oauth", "client_credentials"}:
-            raise ValueError("spotify auth_mode must be client_credentials or oauth")
 
     @classmethod
     def from_env(cls) -> SpotifyConfig:
@@ -71,16 +66,6 @@ class SpotifyConfig:
             missing.append("redirect_uri")
         return tuple(missing)
 
-    def missing_client_credentials(self) -> tuple[str, ...]:
-        """Return Spotify Client Credentials fields that are not configured."""
-
-        missing: list[str] = []
-        if not self.client_id:
-            missing.append("client_id")
-        if not self.client_secret:
-            missing.append("client_secret")
-        return tuple(missing)
-
 
 @dataclass(frozen=True)
 class PorterConfig:
@@ -113,7 +98,6 @@ def default_config_payload() -> dict[str, Any]:
             "scopes": "${SPOTIFY_SCOPES}",
             "cache_path": str(_default_spotify_cache_path()),
             "create_public_playlists": False,
-            "auth_mode": "client_credentials",
         },
         "qqmusic": {
             "credential_path": "${QQMUSIC_CREDENTIAL_PATH}",
@@ -200,7 +184,6 @@ def _load_spotify_config(base_dir: Path, payload: dict[str, Any]) -> SpotifyConf
             else _default_spotify_cache_path()
         ),
         create_public_playlists=bool(payload.get("create_public_playlists", False)),
-        auth_mode=_spotify_auth_mode(payload.get("auth_mode", "client_credentials")),
     )
 
 
@@ -219,13 +202,6 @@ def _load_qqmusic_config(base_dir: Path, payload: dict[str, Any]) -> QQMusicConf
         supports_add_tracks=bool(payload.get("supports_add_tracks", True)),
         allow_anonymous_read=bool(payload.get("allow_anonymous_read", True)),
     )
-
-
-def _spotify_auth_mode(value: Any) -> Literal["oauth", "client_credentials"]:
-    text = _optional_text(_expand_env(value)) or "client_credentials"
-    if text not in {"oauth", "client_credentials"}:
-        raise ValueError("spotify auth_mode must be client_credentials or oauth")
-    return text
 
 
 def _expand_env(value: Any) -> Any:
