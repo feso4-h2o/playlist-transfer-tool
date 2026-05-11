@@ -65,7 +65,7 @@ the values there. Credentials are read from the process environment, not from
 `playlist-porter.json`. For local runs, prefer loading `.env` through `uv`:
 
 ```powershell
-uv run --env-file .env playlist-porter transfer --config playlist-porter.json
+uv run --env-file .env playlist-porter match --config playlist-porter.json
 ```
 
 Spotify fields:
@@ -104,17 +104,17 @@ uv run playlist-porter dry-run --config playlist-porter.json --source-playlist s
 The command prints a run ID and records match decisions in
 `state/playlist-porter.sqlite`.
 
-You can run the newer direction-aware command against the same mock data:
+You can run the newer direction-aware matching command against the same mock data:
 
 ```powershell
-uv run playlist-porter transfer --config playlist-porter.json --source-platform mock --destination-platform mock --source-playlist sample-mixed --dry-run
+uv run playlist-porter match --config playlist-porter.json --source-platform mock --destination-platform mock --source-playlist sample-mixed
 ```
 
-If those values are configured under `commands.transfer`, this can be shortened
+If those values are configured under `commands.match`, this can be shortened
 to:
 
 ```powershell
-uv run playlist-porter transfer --config playlist-porter.json
+uv run playlist-porter match --config playlist-porter.json
 ```
 
 ## Review
@@ -140,43 +140,39 @@ uv run playlist-porter review --db state/playlist-porter.sqlite --run-id <run-id
 Accepted review overrides are stored in SQLite and reused when executing the
 same run.
 
-## Execute
+## Write
 
-Mock write execution writes approved destination IDs to `state/mock-writes.json`:
-
-```powershell
-uv run playlist-porter execute --config playlist-porter.json --run-id <run-id> --create-playlist "Sample Copy"
-```
-
-For real platform writes, execute a reviewed dry-run with the `transfer` command:
+Write approved matches from an existing reviewed run:
 
 ```powershell
-uv run playlist-porter transfer --config playlist-porter.json --destination-platform spotify --run-id <run-id> --write --create-playlist "QQ Music Copy"
+uv run playlist-porter write --config playlist-porter.json --destination-platform spotify --run-id <run-id> --create-playlist "QQ Music Copy"
 ```
 
 Only `isrc_exact`, `metadata_high_confidence`, and user-approved matches are
 written. Medium-confidence, needs-review, rejected, and not-found tracks are
 skipped.
 
-Resume an interrupted mock write:
+Mock writes use the same command with `--destination-platform mock` and write
+approved destination IDs to `state/mock-writes.json`.
 
 ```powershell
-uv run playlist-porter resume --config playlist-porter.json --run-id <run-id>
+uv run playlist-porter write --config playlist-porter.json --destination-platform mock --run-id <run-id> --create-playlist "Sample Copy"
 ```
 
-Resume a real destination write by rerunning the `transfer --run-id ... --write`
-command with the same destination platform and playlist target.
+Resume an interrupted write by rerunning `write` with the same run ID,
+destination platform, and playlist target.
 
 ## Reports
 
-Dry-runs and direction-aware transfers export deterministic reports to the
-configured report directory:
+Match and write commands export reports under the configured report directory:
 
-- `transfer-summary.json` and `transfer-summary.csv`: aggregate metrics from
-  persisted transfer state.
-- `unavailable-tracks.json` and `unavailable-tracks.csv`: not-found,
-  unresolved, and rejected tracks with attempted queries, top alternates,
-  confidence scores, and reason codes.
+- `transfer-summary-<HHMMSS>.json` and `transfer-summary-<HHMMSS>.csv`:
+  aggregate metrics from persisted transfer state.
+- `unavailable-tracks-<HHMMSS>.json` and `unavailable-tracks-<HHMMSS>.csv`:
+  not-found, unresolved, and rejected tracks with attempted queries, top
+  alternates, confidence scores, and reason codes.
+
+Reports are grouped by short run ID, for example `reports/767cbfe5/`.
 
 Export reports again for an existing run:
 
