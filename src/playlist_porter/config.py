@@ -68,19 +68,15 @@ class SpotifyConfig:
 
 
 @dataclass(frozen=True)
-class TransferCommandConfig:
-    """Optional defaults for the direction-aware transfer command."""
+class MatchCommandConfig:
+    """Optional defaults for the matching command."""
 
     source_platform: str | None = None
     destination_platform: str | None = None
     source_playlist: str | None = None
-    dry_run: bool | None = None
     restart: bool | None = None
     database_path: Path | None = None
     output_dir: Path | None = None
-    run_id: str | None = None
-    destination_playlist_id: str | None = None
-    create_playlist: str | None = None
 
 
 @dataclass(frozen=True)
@@ -93,21 +89,15 @@ class ReviewCommandConfig:
 
 
 @dataclass(frozen=True)
-class ExecuteCommandConfig:
-    """Optional defaults for mock write execution."""
+class WriteCommandConfig:
+    """Optional defaults for reviewed transfer writes."""
 
+    destination_platform: str | None = None
     database_path: Path | None = None
     run_id: str | None = None
+    output_dir: Path | None = None
     destination_playlist_id: str | None = None
     create_playlist: str | None = None
-
-
-@dataclass(frozen=True)
-class ResumeCommandConfig:
-    """Optional defaults for mock write resume."""
-
-    database_path: Path | None = None
-    run_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -124,10 +114,9 @@ class ExportReportCommandConfig:
 class CommandConfig:
     """Optional CLI command defaults loaded from local config."""
 
-    transfer: TransferCommandConfig = field(default_factory=TransferCommandConfig)
+    match: MatchCommandConfig = field(default_factory=MatchCommandConfig)
     review: ReviewCommandConfig = field(default_factory=ReviewCommandConfig)
-    execute: ExecuteCommandConfig = field(default_factory=ExecuteCommandConfig)
-    resume: ResumeCommandConfig = field(default_factory=ResumeCommandConfig)
+    write: WriteCommandConfig = field(default_factory=WriteCommandConfig)
     export_report: ExportReportCommandConfig = field(default_factory=ExportReportCommandConfig)
 
 
@@ -167,11 +156,10 @@ def default_config_payload() -> dict[str, Any]:
             "allow_anonymous_read": True,
         },
         "commands": {
-            "transfer": {
+            "match": {
                 "source_platform": "spotify",
                 "destination_platform": "mock",
                 "source_playlist": "",
-                "dry_run": True,
                 "restart": False,
                 "output_dir": "reports",
             },
@@ -179,15 +167,13 @@ def default_config_payload() -> dict[str, Any]:
                 "database_path": "state/playlist-porter.sqlite",
                 "run_id": "",
             },
-            "execute": {
+            "write": {
+                "destination_platform": "mock",
                 "database_path": "state/playlist-porter.sqlite",
                 "run_id": "",
+                "output_dir": "reports",
                 "destination_playlist_id": "",
                 "create_playlist": "",
-            },
-            "resume": {
-                "database_path": "state/playlist-porter.sqlite",
-                "run_id": "",
             },
             "export_report": {
                 "database_path": "state/playlist-porter.sqlite",
@@ -296,31 +282,25 @@ def _load_qqmusic_config(base_dir: Path, payload: dict[str, Any]) -> QQMusicConf
 
 
 def _load_command_config(base_dir: Path, payload: dict[str, Any]) -> CommandConfig:
-    transfer_payload = payload.get("transfer", {})
+    match_payload = payload.get("match", {})
     review_payload = payload.get("review", {})
-    execute_payload = payload.get("execute", {})
-    resume_payload = payload.get("resume", {})
+    write_payload = payload.get("write", {})
     export_payload = payload.get("export_report", {})
     return CommandConfig(
-        transfer=(
-            _load_transfer_command_config(base_dir, transfer_payload)
-            if isinstance(transfer_payload, dict)
-            else TransferCommandConfig()
+        match=(
+            _load_match_command_config(base_dir, match_payload)
+            if isinstance(match_payload, dict)
+            else MatchCommandConfig()
         ),
         review=(
             _load_review_command_config(base_dir, review_payload)
             if isinstance(review_payload, dict)
             else ReviewCommandConfig()
         ),
-        execute=(
-            _load_execute_command_config(base_dir, execute_payload)
-            if isinstance(execute_payload, dict)
-            else ExecuteCommandConfig()
-        ),
-        resume=(
-            _load_resume_command_config(base_dir, resume_payload)
-            if isinstance(resume_payload, dict)
-            else ResumeCommandConfig()
+        write=(
+            _load_write_command_config(base_dir, write_payload)
+            if isinstance(write_payload, dict)
+            else WriteCommandConfig()
         ),
         export_report=(
             _load_export_report_command_config(base_dir, export_payload)
@@ -330,21 +310,17 @@ def _load_command_config(base_dir: Path, payload: dict[str, Any]) -> CommandConf
     )
 
 
-def _load_transfer_command_config(
+def _load_match_command_config(
     base_dir: Path,
     payload: dict[str, Any],
-) -> TransferCommandConfig:
-    return TransferCommandConfig(
+) -> MatchCommandConfig:
+    return MatchCommandConfig(
         source_platform=_optional_text(payload.get("source_platform")),
         destination_platform=_optional_text(payload.get("destination_platform")),
         source_playlist=_optional_text(payload.get("source_playlist")),
-        dry_run=_optional_bool(payload.get("dry_run")),
         restart=_optional_bool(payload.get("restart")),
         database_path=_optional_path(base_dir, payload.get("database_path")),
         output_dir=_optional_path(base_dir, payload.get("output_dir")),
-        run_id=_optional_text(payload.get("run_id")),
-        destination_playlist_id=_optional_text(payload.get("destination_playlist_id")),
-        create_playlist=_optional_text(payload.get("create_playlist")),
     )
 
 
@@ -360,25 +336,17 @@ def _load_review_command_config(
     )
 
 
-def _load_execute_command_config(
+def _load_write_command_config(
     base_dir: Path,
     payload: dict[str, Any],
-) -> ExecuteCommandConfig:
-    return ExecuteCommandConfig(
+) -> WriteCommandConfig:
+    return WriteCommandConfig(
+        destination_platform=_optional_text(payload.get("destination_platform")),
         database_path=_optional_path(base_dir, payload.get("database_path")),
         run_id=_optional_text(payload.get("run_id")),
+        output_dir=_optional_path(base_dir, payload.get("output_dir")),
         destination_playlist_id=_optional_text(payload.get("destination_playlist_id")),
         create_playlist=_optional_text(payload.get("create_playlist")),
-    )
-
-
-def _load_resume_command_config(
-    base_dir: Path,
-    payload: dict[str, Any],
-) -> ResumeCommandConfig:
-    return ResumeCommandConfig(
-        database_path=_optional_path(base_dir, payload.get("database_path")),
-        run_id=_optional_text(payload.get("run_id")),
     )
 
 
@@ -460,14 +428,13 @@ def _default_spotify_cache_path() -> Path:
 __all__ = [
     "CommandConfig",
     "DEFAULT_SPOTIFY_SCOPES",
-    "ExecuteCommandConfig",
     "ExportReportCommandConfig",
+    "MatchCommandConfig",
     "PorterConfig",
     "QQMusicConfig",
-    "ResumeCommandConfig",
     "ReviewCommandConfig",
     "SpotifyConfig",
-    "TransferCommandConfig",
+    "WriteCommandConfig",
     "default_config_payload",
     "load_config",
     "write_default_config",

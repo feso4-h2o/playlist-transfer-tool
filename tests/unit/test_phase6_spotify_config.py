@@ -72,7 +72,11 @@ def test_default_config_keeps_credentials_out_of_platform_blocks() -> None:
     assert "credential" not in payload["qqmusic"]
     assert "user_id" not in payload["qqmusic"]
     assert payload["qqmusic"]["allow_anonymous_read"] is True
-    assert payload["commands"]["transfer"]["dry_run"] is True
+    assert "transfer" not in payload["commands"]
+    assert "execute" not in payload["commands"]
+    assert "resume" not in payload["commands"]
+    assert "dry_run" not in payload["commands"]["match"]
+    assert payload["commands"]["write"]["destination_platform"] == "mock"
     assert payload["commands"]["export_report"]["format"] == "both"
 
 
@@ -206,14 +210,19 @@ def test_command_defaults_load_and_resolve_paths(tmp_path) -> None:
                     "destination_catalog_path": "fixtures/catalog.json",
                 },
                 "commands": {
-                    "transfer": {
+                    "match": {
                         "source_platform": "spotify",
                         "destination_platform": "mock",
                         "source_playlist": "playlist-url",
-                        "dry_run": False,
                         "restart": True,
                         "database_path": "state/transfer.sqlite",
                         "output_dir": "reports/spotify-test",
+                    },
+                    "write": {
+                        "destination_platform": "spotify",
+                        "database_path": "state/write.sqlite",
+                        "run_id": "write-run",
+                        "output_dir": "reports/write",
                         "destination_playlist_id": "dest",
                         "create_playlist": "Copy",
                     },
@@ -236,15 +245,18 @@ def test_command_defaults_load_and_resolve_paths(tmp_path) -> None:
 
     config = load_config(config_path)
 
-    assert config.commands.transfer.source_platform == "spotify"
-    assert config.commands.transfer.destination_platform == "mock"
-    assert config.commands.transfer.source_playlist == "playlist-url"
-    assert config.commands.transfer.dry_run is False
-    assert config.commands.transfer.restart is True
-    assert config.commands.transfer.database_path == tmp_path / "state" / "transfer.sqlite"
-    assert config.commands.transfer.output_dir == tmp_path / "reports" / "spotify-test"
-    assert config.commands.transfer.destination_playlist_id == "dest"
-    assert config.commands.transfer.create_playlist == "Copy"
+    assert config.commands.match.source_platform == "spotify"
+    assert config.commands.match.destination_platform == "mock"
+    assert config.commands.match.source_playlist == "playlist-url"
+    assert config.commands.match.restart is True
+    assert config.commands.match.database_path == tmp_path / "state" / "transfer.sqlite"
+    assert config.commands.match.output_dir == tmp_path / "reports" / "spotify-test"
+    assert config.commands.write.destination_platform == "spotify"
+    assert config.commands.write.database_path == tmp_path / "state" / "write.sqlite"
+    assert config.commands.write.run_id == "write-run"
+    assert config.commands.write.output_dir == tmp_path / "reports" / "write"
+    assert config.commands.write.destination_playlist_id == "dest"
+    assert config.commands.write.create_playlist == "Copy"
     assert config.commands.review.database_path == tmp_path / "state" / "review.sqlite"
     assert config.commands.review.run_id == "review-run"
     assert config.commands.review.candidate_rank == 2
