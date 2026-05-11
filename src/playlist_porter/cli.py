@@ -24,7 +24,6 @@ from playlist_porter.review.terminal import (
 from playlist_porter.workflow import (
     PreflightError,
     dry_run_mock_transfer,
-    execute_mock_transfer,
     execute_transfer_run,
     run_transfer,
 )
@@ -47,31 +46,25 @@ def build_parser() -> argparse.ArgumentParser:
     dry_run_parser.add_argument("--db")
     dry_run_parser.add_argument("--restart", action="store_true")
 
-    transfer_parser = subparsers.add_parser(
-        "transfer",
-        help="run a direction-aware transfer dry-run or write execution",
+    match_parser = subparsers.add_parser(
+        "match",
+        help="read a source playlist and persist destination match candidates",
     )
-    _add_config_argument(transfer_parser)
-    transfer_parser.add_argument(
+    _add_config_argument(match_parser)
+    match_parser.add_argument(
         "--source-platform",
         choices=["mock", "spotify", "qqmusic"],
     )
-    transfer_parser.add_argument(
+    match_parser.add_argument(
         "--destination-platform",
         choices=["mock", "spotify", "qqmusic"],
     )
-    transfer_parser.add_argument("--source-playlist")
-    transfer_parser.add_argument("--run-id")
-    transfer_parser.add_argument("--db")
-    transfer_parser.add_argument("--output-dir")
-    restart_mode = transfer_parser.add_mutually_exclusive_group()
+    match_parser.add_argument("--source-playlist")
+    match_parser.add_argument("--db")
+    match_parser.add_argument("--output-dir")
+    restart_mode = match_parser.add_mutually_exclusive_group()
     restart_mode.add_argument("--restart", dest="restart", action="store_true", default=None)
     restart_mode.add_argument("--no-restart", dest="restart", action="store_false")
-    transfer_parser.add_argument("--destination-playlist-id")
-    transfer_parser.add_argument("--create-playlist")
-    mode = transfer_parser.add_mutually_exclusive_group()
-    mode.add_argument("--dry-run", dest="dry_run", action="store_true", default=None)
-    mode.add_argument("--write", dest="dry_run", action="store_false")
 
     review_parser = subparsers.add_parser("review", help="review persisted uncertain matches")
     review_parser.add_argument("--config")
@@ -81,17 +74,17 @@ def build_parser() -> argparse.ArgumentParser:
     review_parser.add_argument("--action", choices=["accept", "reject", "skip"])
     review_parser.add_argument("--candidate-rank", type=int)
 
-    execute_parser = subparsers.add_parser("execute", help="write approved mock tracks")
-    _add_config_argument(execute_parser)
-    execute_parser.add_argument("--run-id")
-    execute_parser.add_argument("--db")
-    execute_parser.add_argument("--destination-playlist-id")
-    execute_parser.add_argument("--create-playlist")
-
-    resume_parser = subparsers.add_parser("resume", help="continue approved mock writes")
-    _add_config_argument(resume_parser)
-    resume_parser.add_argument("--run-id")
-    resume_parser.add_argument("--db")
+    write_parser = subparsers.add_parser("write", help="write approved matches from a reviewed run")
+    _add_config_argument(write_parser)
+    write_parser.add_argument(
+        "--destination-platform",
+        choices=["mock", "spotify", "qqmusic"],
+    )
+    write_parser.add_argument("--run-id")
+    write_parser.add_argument("--db")
+    write_parser.add_argument("--output-dir")
+    write_parser.add_argument("--destination-playlist-id")
+    write_parser.add_argument("--create-playlist")
 
     export_parser = subparsers.add_parser("export-report", help="export transfer reports")
     export_parser.add_argument("--config")
@@ -123,7 +116,8 @@ def main(argv: list[str] | None = None) -> int:
 def _main(argv: list[str] | None = None) -> int:
     """Run a parsed CLI command."""
 
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
     if args.command == "init-config":
         path = write_default_config(args.path, force=args.force)
         print(f"wrote config: {path}")
@@ -138,62 +132,38 @@ def _main(argv: list[str] | None = None) -> int:
         )
         print(f"run id: {result.transfer_run_id}")
         return 0
-    if args.command == "transfer":
+    if args.command == "match":
         config = load_config(args.config)
-        defaults = config.commands.transfer
-        transfer_run_id = _coalesce(args.run_id, defaults.run_id)
+        defaults = config.commands.match
+        source_platform = _resolve_platform(
+            _coalesce(args.source_platform, defaults.source_platform),
+            setting="match.source_platform",
+            flag="--source-platform",
+        )
         destination_platform = _resolve_platform(
             _coalesce(args.destination_platform, defaults.destination_platform),
-            setting="transfer.destination_platform",
+            setting="match.destination_platform",
             flag="--destination-platform",
         )
-        dry_run = _coalesce(args.dry_run, defaults.dry_run, True)
         database_path = _coalesce(args.db, defaults.database_path)
         output_dir = _coalesce(args.output_dir, defaults.output_dir)
-        destination_playlist_id = _coalesce(
-            args.destination_playlist_id,
-            defaults.destination_playlist_id,
+        source_playlist = _required(
+            _coalesce(args.source_playlist, defaults.source_playlist),
+            setting="match.source_playlist",
+            flag="--source-playlist",
         )
-        create_playlist_name = _coalesce(args.create_playlist, defaults.create_playlist)
-        if transfer_run_id:
-            if dry_run:
-                raise SystemExit("--run-id can only be used with --write")
-            result = execute_transfer_run(
-                config,
-                destination_platform=destination_platform,
-                transfer_run_id=transfer_run_id,
-                database_path=database_path,
-                output_dir=output_dir,
-                destination_playlist_id=destination_playlist_id,
-                create_playlist_name=create_playlist_name,
-            )
-        else:
-            source_platform = _resolve_platform(
-                _coalesce(args.source_platform, defaults.source_platform),
-                setting="transfer.source_platform",
-                flag="--source-platform",
-            )
-            source_playlist = _required(
-                _coalesce(args.source_playlist, defaults.source_playlist),
-                setting="transfer.source_playlist",
-                flag="--source-playlist",
-            )
-            result = run_transfer(
-                config,
-                source_platform=source_platform,
-                destination_platform=destination_platform,
-                source_playlist_id=source_playlist,
-                dry_run=dry_run,
-                database_path=database_path,
-                output_dir=output_dir,
-                restart=_coalesce(args.restart, defaults.restart, False),
-                destination_playlist_id=destination_playlist_id,
-                create_playlist_name=create_playlist_name,
-            )
+        result = run_transfer(
+            config,
+            source_platform=source_platform,
+            destination_platform=destination_platform,
+            source_playlist_id=source_playlist,
+            dry_run=True,
+            database_path=database_path,
+            output_dir=output_dir,
+            restart=_coalesce(args.restart, defaults.restart, False),
+        )
         print(f"run id: {result.transfer_run_id}")
-        print(f"mode: {'dry-run' if result.dry_run else 'write'}")
-        if result.destination_playlist_id:
-            print(f"destination playlist: {result.destination_playlist_id}")
+        print("mode: match")
         print(f"written: {result.written_count}; skipped: {result.skipped_count}")
         for path in result.report_paths:
             print(f"wrote report: {path}")
@@ -238,42 +208,37 @@ def _main(argv: list[str] | None = None) -> int:
             saved_count = run_interactive_review(repository, run_id)
             print(f"saved review updates: {saved_count}")
         return 0
-    if args.command == "execute":
+    if args.command == "write":
         config = load_config(args.config)
-        defaults = config.commands.execute
+        defaults = config.commands.write
+        destination_platform = _resolve_platform(
+            _coalesce(args.destination_platform, defaults.destination_platform),
+            setting="write.destination_platform",
+            flag="--destination-platform",
+        )
         run_id = _required(
             _coalesce(args.run_id, defaults.run_id),
-            setting="execute.run_id",
+            setting="write.run_id",
             flag="--run-id",
         )
-        result = execute_mock_transfer(
+        result = execute_transfer_run(
             config,
+            destination_platform=destination_platform,
             transfer_run_id=run_id,
             database_path=_coalesce(args.db, defaults.database_path),
+            output_dir=_coalesce(args.output_dir, defaults.output_dir),
             destination_playlist_id=_coalesce(
                 args.destination_playlist_id,
                 defaults.destination_playlist_id,
             ),
             create_playlist_name=_coalesce(args.create_playlist, defaults.create_playlist),
         )
+        print(f"run id: {result.transfer_run_id}")
+        print("mode: write")
         print(f"destination playlist: {result.destination_playlist_id}")
-        print(f"written: {result.attempted_count}; skipped: {result.skipped_count}")
-        return 0
-    if args.command == "resume":
-        config = load_config(args.config)
-        defaults = config.commands.resume
-        run_id = _required(
-            _coalesce(args.run_id, defaults.run_id),
-            setting="resume.run_id",
-            flag="--run-id",
-        )
-        result = execute_mock_transfer(
-            config,
-            transfer_run_id=run_id,
-            database_path=_coalesce(args.db, defaults.database_path),
-        )
-        print(f"destination playlist: {result.destination_playlist_id}")
-        print(f"written: {result.attempted_count}; skipped: {result.skipped_count}")
+        print(f"written: {result.written_count}; skipped: {result.skipped_count}")
+        for path in result.report_paths:
+            print(f"wrote report: {path}")
         return 0
     if args.command == "export-report":
         config = _load_optional_config(args.config)

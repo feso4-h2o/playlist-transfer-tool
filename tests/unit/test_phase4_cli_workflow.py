@@ -1,14 +1,16 @@
 import csv
 import json
 
-from playlist_porter.cli import main
+import pytest
+
+from playlist_porter.cli import build_parser, main
 from playlist_porter.config import PorterConfig
 from playlist_porter.matching.status import MatchStatus
 from playlist_porter.persistence import exports as exports_module
 from playlist_porter.persistence.exports import build_unavailable_rows
 from playlist_porter.persistence.repositories import TransferRepository
 from playlist_porter.rate_limit import AuthenticationFailure
-from playlist_porter.workflow import dry_run_mock_transfer, execute_mock_transfer
+from playlist_porter.workflow import dry_run_mock_transfer
 
 
 def _write_json(path, payload) -> None:
@@ -301,7 +303,7 @@ def test_cli_prints_operational_errors_without_traceback(tmp_path, monkeypatch, 
 
     exit_code = main(
         [
-            "transfer",
+            "match",
             "--config",
             str(config_path),
             "--source-platform",
@@ -310,7 +312,6 @@ def test_cli_prints_operational_errors_without_traceback(tmp_path, monkeypatch, 
             "mock",
             "--source-playlist",
             "source-playlist",
-            "--dry-run",
         ]
     )
 
@@ -320,7 +321,7 @@ def test_cli_prints_operational_errors_without_traceback(tmp_path, monkeypatch, 
     assert "Traceback" not in captured.err
 
 
-def test_transfer_uses_config_defaults_when_cli_args_are_omitted(tmp_path) -> None:
+def test_match_uses_config_defaults_when_cli_args_are_omitted(tmp_path) -> None:
     config_path, database_path, _, reports_path = _config_file(
         tmp_path,
         playlist_tracks=[
@@ -340,28 +341,27 @@ def test_transfer_uses_config_defaults_when_cli_args_are_omitted(tmp_path) -> No
             }
         ],
         commands={
-            "transfer": {
+            "match": {
                 "source_platform": "mock",
                 "destination_platform": "mock",
                 "source_playlist": "source-playlist",
-                "dry_run": True,
                 "restart": False,
-                "output_dir": "reports/config-transfer",
+                "output_dir": "reports/config-match",
             }
         },
     )
 
-    exit_code = main(["transfer", "--config", str(config_path)])
+    exit_code = main(["match", "--config", str(config_path)])
 
     repo = TransferRepository(database_path)
     run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
     assert exit_code == 0
     assert run_id is not None
-    report_dir = reports_path.parent / "reports" / "config-transfer" / run_id[:8]
+    report_dir = reports_path.parent / "reports" / "config-match" / run_id[:8]
     assert list(report_dir.glob("transfer-summary-*.json"))
 
 
-def test_transfer_cli_args_override_config_defaults(tmp_path) -> None:
+def test_match_cli_args_override_config_defaults(tmp_path) -> None:
     config_path, database_path, _, _ = _config_file(
         tmp_path,
         playlist_tracks=[
@@ -381,11 +381,10 @@ def test_transfer_cli_args_override_config_defaults(tmp_path) -> None:
             }
         ],
         commands={
-            "transfer": {
+            "match": {
                 "source_platform": "spotify",
                 "destination_platform": "spotify",
                 "source_playlist": "wrong-playlist",
-                "dry_run": False,
                 "restart": True,
             }
         },
@@ -393,7 +392,7 @@ def test_transfer_cli_args_override_config_defaults(tmp_path) -> None:
 
     exit_code = main(
         [
-            "transfer",
+            "match",
             "--config",
             str(config_path),
             "--source-platform",
@@ -402,7 +401,6 @@ def test_transfer_cli_args_override_config_defaults(tmp_path) -> None:
             "mock",
             "--source-playlist",
             "source-playlist",
-            "--dry-run",
             "--no-restart",
         ]
     )
@@ -412,7 +410,57 @@ def test_transfer_cli_args_override_config_defaults(tmp_path) -> None:
     assert repo.find_run_id("mock|mock|source-playlist||dry-run") is not None
 
 
-def test_execute_and_resume_skip_recorded_duplicate_destination_writes(tmp_path) -> None:
+def test_removed_write_commands_are_not_parser_choices(capsys) -> None:
+    parser = build_parser()
+    command_action = next(action for action in parser._actions if action.dest == "command")
+
+    assert {"transfer", "execute", "resume"}.isdisjoint(command_action.choices)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main(["hello"])
+
+    captured = capsys.readouterr()
+    assert exc_info.value.code == 2
+    assert "invalid choice: 'hello'" in captured.err
+    assert "transfer" not in captured.err
+    assert "execute" not in captured.err
+    assert "resume" not in captured.err
+
+
+def test_match_requires_source_playlist_from_config_or_cli(tmp_path) -> None:
+    config_path, _, _, _ = _config_file(
+        tmp_path,
+        playlist_tracks=[],
+        catalog_tracks=[],
+        commands={
+            "match": {
+                "source_platform": "mock",
+                "destination_platform": "mock",
+            }
+        },
+    )
+
+    with pytest.raises(SystemExit, match="match.source_playlist is required"):
+        main(["match", "--config", str(config_path)])
+
+
+def test_write_requires_run_id_from_config_or_cli(tmp_path) -> None:
+    config_path, _, _, _ = _config_file(
+        tmp_path,
+        playlist_tracks=[],
+        catalog_tracks=[],
+        commands={
+            "write": {
+                "destination_platform": "mock",
+            }
+        },
+    )
+
+    with pytest.raises(SystemExit, match="write.run_id is required"):
+        main(["write", "--config", str(config_path)])
+
+
+def test_write_skips_recorded_duplicate_destination_writes(tmp_path) -> None:
     config_path, database_path, writes_path, _ = _config_file(
         tmp_path,
         playlist_tracks=[
@@ -447,34 +495,41 @@ def test_execute_and_resume_skip_recorded_duplicate_destination_writes(tmp_path)
     )
     dry_run = dry_run_mock_transfer(config, source_playlist_id="source-playlist")
 
-    first_execute = execute_mock_transfer(
-        config,
-        transfer_run_id=dry_run.transfer_run_id,
-        create_playlist_name="Copied",
-    )
-    resume = main(
+    first_write = main(
         [
-            "resume",
+            "write",
             "--config",
             str(config_path),
             "--run-id",
             dry_run.transfer_run_id,
+            "--destination-platform",
+            "mock",
+            "--create-playlist",
+            "Copied",
+        ]
+    )
+    second_write = main(
+        [
+            "write",
+            "--config",
+            str(config_path),
+            "--run-id",
+            dry_run.transfer_run_id,
+            "--destination-platform",
+            "mock",
         ]
     )
 
     writes = json.loads(writes_path.read_text(encoding="utf-8"))
-    assert first_execute.attempted_count == 2
-    assert resume == 0
-    assert writes[first_execute.destination_playlist_id]["track_ids"] == [
-        "dest-shared",
-        "dest-shared",
-    ]
+    assert first_write == 0
+    assert second_write == 0
+    assert list(writes.values())[0]["track_ids"] == ["dest-shared", "dest-shared"]
     assert TransferRepository(database_path).load_metrics(
         dry_run.transfer_run_id
     ).write_success_count == 2
 
 
-def test_execute_and_resume_use_configured_run_defaults(tmp_path) -> None:
+def test_write_uses_configured_run_defaults(tmp_path) -> None:
     config_path, database_path, writes_path, _ = _config_file(
         tmp_path,
         playlist_tracks=[
@@ -504,26 +559,24 @@ def test_execute_and_resume_use_configured_run_defaults(tmp_path) -> None:
     dry_run = dry_run_mock_transfer(config, source_playlist_id="source-playlist")
     payload = json.loads(config_path.read_text(encoding="utf-8"))
     payload["commands"] = {
-        "execute": {
+        "write": {
+            "destination_platform": "mock",
             "run_id": dry_run.transfer_run_id,
             "create_playlist": "Copied",
-        },
-        "resume": {
-            "run_id": dry_run.transfer_run_id,
         },
     }
     _write_json(config_path, payload)
 
-    execute = main(["execute", "--config", str(config_path)])
-    resume = main(["resume", "--config", str(config_path)])
+    write = main(["write", "--config", str(config_path)])
+    rerun = main(["write", "--config", str(config_path)])
 
     writes = json.loads(writes_path.read_text(encoding="utf-8"))
-    assert execute == 0
-    assert resume == 0
+    assert write == 0
+    assert rerun == 0
     assert list(writes.values())[0]["track_ids"] == ["dest-1"]
 
 
-def test_execute_persists_supplied_destination_playlist_for_resume(tmp_path) -> None:
+def test_write_persists_supplied_destination_playlist_for_rerun(tmp_path) -> None:
     config_path, database_path, writes_path, _ = _config_file(
         tmp_path,
         playlist_tracks=[
@@ -552,23 +605,34 @@ def test_execute_persists_supplied_destination_playlist_for_resume(tmp_path) -> 
     )
     dry_run = dry_run_mock_transfer(config, source_playlist_id="source-playlist")
 
-    execute_mock_transfer(
-        config,
-        transfer_run_id=dry_run.transfer_run_id,
-        destination_playlist_id="existing-playlist",
-    )
-    resume = main(
+    first_write = main(
         [
-            "resume",
+            "write",
             "--config",
             str(config_path),
             "--run-id",
             dry_run.transfer_run_id,
+            "--destination-platform",
+            "mock",
+            "--destination-playlist-id",
+            "existing-playlist",
+        ]
+    )
+    second_write = main(
+        [
+            "write",
+            "--config",
+            str(config_path),
+            "--run-id",
+            dry_run.transfer_run_id,
+            "--destination-platform",
+            "mock",
         ]
     )
 
     writes = json.loads(writes_path.read_text(encoding="utf-8"))
-    assert resume == 0
+    assert first_write == 0
+    assert second_write == 0
     assert TransferRepository(database_path).load_run(
         dry_run.transfer_run_id
     ).destination_playlist_id == "existing-playlist"

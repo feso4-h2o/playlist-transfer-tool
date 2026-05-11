@@ -508,7 +508,7 @@ def _execute_transfer_writes(
     ):
         raise ValueError(
             "transfer run already targets destination playlist "
-            f"{run_record.destination_playlist_id}; restart the transfer to use "
+            f"{run_record.destination_playlist_id}; start a new match run to use "
             f"{destination_playlist_id}"
         )
 
@@ -518,7 +518,7 @@ def _execute_transfer_writes(
     if destination_id is None:
         destination_id = destination.create_playlist(
             create_playlist_name or f"{run_record.source_playlist_name or 'Playlist'} Copy",
-            "Created by playlist-porter transfer execution",
+            "Created by playlist-porter write",
         )
         repository.update_destination_playlist_id(transfer_run_id, destination_id)
 
