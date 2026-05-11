@@ -210,6 +210,27 @@ def test_qqmusic_adapter_fetches_playlist_through_rate_policy() -> None:
     assert playlist.tracks[0].platform_track_id == "1:0"
 
 
+def test_qqmusic_adapter_allows_anonymous_playlist_reads() -> None:
+    client = FakeQQMusicClient(
+        playlist_payload={
+            "info": {"id": 12345, "title": "åŽè¯­æ”¶è—"},
+            "songs": [song_payload(id=1)],
+        },
+        validate_error=LoginExpiredError("cookie expired"),
+    )
+    adapter = QQMusicAdapter(
+        config=QQMusicConfig(page_size=50),
+        client=client,
+        rate_limit_policy=qq_policy(),
+    )
+
+    adapter.authenticate()
+    playlist = adapter.get_playlist("12345")
+
+    assert adapter.authenticated is True
+    assert playlist.platform_playlist_id == "12345"
+
+
 @pytest.mark.parametrize(
     "playlist_value",
     [
@@ -279,6 +300,26 @@ def test_qqmusic_adapter_search_retries_transient_failures() -> None:
     assert candidates[0].evidence["qqmusic_capability"] == "search_by_type"
 
 
+def test_qqmusic_adapter_allows_anonymous_search_after_authenticate() -> None:
+    class AnonymousSearchClient(FakeQQMusicClient):
+        def search_tracks(self, query: str, *, limit: int) -> dict:
+            del query
+            assert limit == 2
+            self.search_calls += 1
+            return self.search_payload
+
+    client = AnonymousSearchClient(
+        search_payload={"song": [song_payload(id=1), song_payload(id=2, title="æ™´å¤©")]},
+        validate_error=LoginExpiredError("cookie expired"),
+    )
+    adapter = QQMusicAdapter(client=client, rate_limit_policy=qq_policy())
+
+    adapter.authenticate()
+    candidates = adapter.search_tracks("ä¸ƒé‡Œé¦™ å‘¨æ°ä¼¦", limit=2)
+
+    assert [candidate.rank for candidate in candidates] == [1, 2]
+
+
 def test_qqmusic_adapter_classifies_raw_network_errors_before_retry() -> None:
     client = FakeQQMusicClient(
         search_payload={"song": [song_payload(id=1)]},
@@ -295,6 +336,7 @@ def test_qqmusic_adapter_classifies_raw_network_errors_before_retry() -> None:
 
 def test_qqmusic_auth_failure_is_non_retryable() -> None:
     adapter = QQMusicAdapter(
+        config=QQMusicConfig(credential_payload={"uin": "12345"}),
         client=FakeQQMusicClient(validate_error=LoginExpiredError("cookie expired")),
         rate_limit_policy=qq_policy(),
     )

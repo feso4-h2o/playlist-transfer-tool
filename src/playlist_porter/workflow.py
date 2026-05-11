@@ -334,9 +334,12 @@ def validate_transfer_preflight(
     if not dry_run and not destination.capabilities.supports_write:
         issues.append(f"{destination.platform_name} cannot write destination playlists")
 
-    issues.extend(_credential_issues(source))
-    if destination is not source:
-        issues.extend(_credential_issues(destination))
+    issues.extend(_credential_issues(source, require_write=False, require_playlist_read=True))
+    if destination is source:
+        if not dry_run:
+            issues.extend(_credential_issues(destination, require_write=True))
+    else:
+        issues.extend(_credential_issues(destination, require_write=not dry_run))
 
     issues.extend(_writable_path_issues(database_path, label="database path"))
     issues.extend(
@@ -362,7 +365,7 @@ def validate_execute_preflight(
     issues: list[str] = []
     if not destination.capabilities.supports_write:
         issues.append(f"{destination.platform_name} cannot write destination playlists")
-    issues.extend(_credential_issues(destination))
+    issues.extend(_credential_issues(destination, require_write=True))
     issues.extend(_writable_path_issues(database_path, label="database path"))
     issues.extend(
         _writable_path_issues(output_dir, label="report output directory", directory=True)
@@ -696,16 +699,42 @@ def _record_first_incomplete_write_failure(
             return
 
 
-def _credential_issues(adapter: BasePlatform) -> list[str]:
+def _credential_issues(
+    adapter: BasePlatform,
+    *,
+    require_write: bool,
+    require_playlist_read: bool = False,
+) -> list[str]:
     if isinstance(adapter, SpotifyAdapter):
+        if getattr(adapter, "_client", None) is not None:
+            return []
         missing = adapter.config.missing_credentials()
-        if missing and getattr(adapter, "_client", None) is None:
+        if not missing:
+            return []
+        if require_write:
             return [
-                "Spotify credentials are missing: "
+                "Spotify OAuth credentials are required for write operations: "
                 + ", ".join(f"SPOTIFY_{field.upper()}" for field in missing)
             ]
+        if require_playlist_read:
+            return [
+                "Spotify OAuth credentials are required for playlist reads: "
+                + ", ".join(f"SPOTIFY_{field.upper()}" for field in missing)
+            ]
+        return [
+            "Spotify OAuth credentials are missing: "
+            + ", ".join(f"SPOTIFY_{field.upper()}" for field in missing)
+        ]
     if isinstance(adapter, QQMusicAdapter):
         if getattr(adapter, "_client", None) is not None:
+            return []
+        if not require_write and adapter.config.allow_anonymous_read:
+            if adapter.config.credential_path is None:
+                return []
+            try:
+                adapter.config.load_credential_payload()
+            except FileNotFoundError as exc:
+                return [f"QQ Music credential file is missing: {exc.filename}"]
             return []
         try:
             credential_payload = adapter.config.load_credential_payload()

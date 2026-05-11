@@ -10,7 +10,7 @@ from uuid import NAMESPACE_URL, uuid5
 import requests
 from rapidfuzz import fuzz
 from spotipy import Spotify
-from spotipy.exceptions import SpotifyException
+from spotipy.exceptions import SpotifyException, SpotifyOauthError
 from spotipy.oauth2 import SpotifyOAuth
 
 from playlist_porter.config import SpotifyConfig
@@ -54,20 +54,21 @@ class SpotifyAdapter(BasePlatform):
         self.config = config or SpotifyConfig.from_env()
         self._client = client
         self._authenticated = client is not None
+        self._auth_kind = "injected" if client is not None else "none"
         self.rate_limit_policy = rate_limit_policy or SpotifyRateLimitPolicy(
             limiter=RollingWindowLimiter(max_requests=90),
         )
 
     def authenticate(self) -> None:
-        """Create a Spotipy client using OAuth credentials."""
+        """Create a Spotipy client using OAuth."""
 
         if self._client is not None:
             self._authenticated = True
             return
 
-        missing = self.config.missing_credentials()
-        if missing:
-            missing_text = ", ".join(missing)
+        missing_oauth = self.config.missing_credentials()
+        if missing_oauth:
+            missing_text = ", ".join(missing_oauth)
             raise AuthenticationFailure(
                 f"missing Spotify OAuth configuration: {missing_text}"
             )
@@ -82,7 +83,8 @@ class SpotifyAdapter(BasePlatform):
             cache_path=str(cache_path),
             open_browser=False,
         )
-        self._client = Spotify(auth_manager=auth_manager)
+        self._client = _spotify_client(auth_manager)
+        self._auth_kind = "oauth"
         self._authenticated = True
 
     def get_playlist(self, playlist_id_or_url: str) -> Playlist:
@@ -97,11 +99,11 @@ class SpotifyAdapter(BasePlatform):
                 fields="id,name,description,owner(id),external_urls",
             ),
         )
-        tracks = [
-            _track_from_spotify_payload(item["track"], position=position)
-            for position, item in enumerate(self._iter_playlist_items(playlist_id))
-            if _is_playable_track_item(item)
-        ]
+        tracks = []
+        for position, item in enumerate(self._iter_playlist_items(playlist_id)):
+            track_payload = _playlist_item_track_payload(item)
+            if track_payload is not None:
+                tracks.append(_track_from_spotify_payload(track_payload, position=position))
 
         return Playlist(
             name=playlist_payload["name"],
@@ -152,7 +154,7 @@ class SpotifyAdapter(BasePlatform):
     def create_playlist(self, name: str, description: str | None = None) -> str:
         """Create a Spotify playlist for the authenticated user."""
 
-        client = self._client_or_raise()
+        client = self._write_client_or_raise()
         user_payload = self._call("spotify current user", client.current_user)
         playlist_payload = self._call(
             "spotify create playlist",
@@ -168,7 +170,7 @@ class SpotifyAdapter(BasePlatform):
     def add_tracks(self, playlist_id: str, track_ids: list[str]) -> None:
         """Append Spotify tracks in API-sized batches."""
 
-        client = self._client_or_raise()
+        client = self._write_client_or_raise()
         for batch in _batched(track_ids, SPOTIFY_BATCH_LIMIT):
             uris = [_spotify_track_uri(track_id) for track_id in batch]
             self._call(
@@ -227,6 +229,10 @@ class SpotifyAdapter(BasePlatform):
             raise AuthenticationFailure("Spotify client is not authenticated")
         return self._client
 
+    def _write_client_or_raise(self) -> Any:
+        client = self._client_or_raise()
+        return client
+
     def _call(self, operation_name: str, operation: Callable[[], Any]) -> Any:
         return self.rate_limit_policy.execute(
             operation_name,
@@ -237,10 +243,24 @@ class SpotifyAdapter(BasePlatform):
 def _invoke_spotify_operation(operation: Callable[[], Any]) -> Any:
     try:
         return operation()
+    except SpotifyOauthError as exc:
+        raise AuthenticationFailure(
+            "Spotify OAuth authorization failed. When prompted for the redirected URL, "
+            "paste the full callback URL from the browser, including the '?code=...' "
+            f"query string. Original error: {exc}"
+        ) from exc
     except SpotifyException as exc:
         raise _spotify_policy_error(exc) from exc
     except requests.RequestException as exc:
         raise TransientNetworkError(str(exc)) from exc
+
+
+def _spotify_client(auth_manager: Any) -> Spotify:
+    return Spotify(
+        auth_manager=auth_manager,
+        retries=0,
+        status_retries=0,
+    )
 
 
 def _spotify_policy_error(exc: SpotifyException) -> Exception:
@@ -304,12 +324,26 @@ def _playlist_id_from_input(value: str) -> str:
 
 
 def _is_playable_track_item(item: dict[str, Any]) -> bool:
-    track = item.get("track")
+    track = _playlist_item_track_payload(item)
     return (
         isinstance(track, dict)
         and track.get("type", "track") == "track"
         and bool(track.get("id"))
     )
+
+
+def _playlist_item_track_payload(item: dict[str, Any]) -> dict[str, Any] | None:
+    """Return track payload from Spotify's legacy or current playlist item shape."""
+
+    for key in ("track", "item"):
+        payload = item.get(key)
+        if (
+            isinstance(payload, dict)
+            and payload.get("type", "track") == "track"
+            and payload.get("id")
+        ):
+            return payload
+    return None
 
 
 def _track_from_spotify_payload(
@@ -384,4 +418,7 @@ def _optional_text(value: Any) -> str | None:
     return text or None
 
 
-__all__ = ["SPOTIFY_BATCH_LIMIT", "SpotifyAdapter"]
+__all__ = [
+    "SPOTIFY_BATCH_LIMIT",
+    "SpotifyAdapter",
+]

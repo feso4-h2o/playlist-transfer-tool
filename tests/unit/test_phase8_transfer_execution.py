@@ -9,6 +9,7 @@ from playlist_porter.models import Playlist, TrackCandidate, UniversalTrack
 from playlist_porter.persistence.repositories import TransferRepository
 from playlist_porter.platforms.base import BasePlatform, PlatformCapabilities
 from playlist_porter.platforms.mock import MockAdapter
+from playlist_porter.platforms.qqmusic import QQMusicAdapter, QQMusicConfig
 from playlist_porter.platforms.spotify import SpotifyAdapter
 from playlist_porter.workflow import (
     PreflightError,
@@ -379,9 +380,153 @@ def test_phase8_preflight_reports_missing_spotify_credentials(tmp_path) -> None:
 
     assert result.ok is False
     assert result.issues == (
-        "Spotify credentials are missing: SPOTIFY_CLIENT_ID, "
-        "SPOTIFY_CLIENT_SECRET, SPOTIFY_REDIRECT_URI",
+        (
+            "Spotify OAuth credentials are missing: "
+            "SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, SPOTIFY_REDIRECT_URI"
+        ),
     )
+
+
+def test_phase8_preflight_requires_spotify_oauth_for_dry_run_search(tmp_path) -> None:
+    source = MockAdapter(
+        playlists={"source-playlist": Playlist(name="Source", tracks=[])},
+        catalog=[],
+    )
+    destination = SpotifyAdapter(SpotifyConfig(client_id="client-id", client_secret="secret"))
+
+    result = validate_transfer_preflight(
+        source,
+        destination,
+        dry_run=True,
+        database_path=tmp_path / "transfer.sqlite",
+        output_dir=tmp_path / "reports",
+    )
+
+    assert result.ok is False
+    assert result.issues == (
+        "Spotify OAuth credentials are missing: SPOTIFY_REDIRECT_URI",
+    )
+
+
+def test_phase8_preflight_requires_spotify_oauth_for_source_playlist_read(tmp_path) -> None:
+    source = SpotifyAdapter(SpotifyConfig(client_id="client-id", client_secret="secret"))
+    destination = MockAdapter(
+        playlists={"unused": Playlist(name="Unused", tracks=[])},
+        catalog=[],
+    )
+
+    result = validate_transfer_preflight(
+        source,
+        destination,
+        dry_run=True,
+        database_path=tmp_path / "transfer.sqlite",
+        output_dir=tmp_path / "reports",
+    )
+
+    assert result.ok is False
+    assert result.issues == (
+        "Spotify OAuth credentials are required for playlist reads: SPOTIFY_REDIRECT_URI",
+    )
+
+
+def test_phase8_preflight_allows_spotify_oauth_for_source_playlist_read(tmp_path) -> None:
+    source = SpotifyAdapter(
+        SpotifyConfig(
+            client_id="client-id",
+            client_secret="secret",
+            redirect_uri="http://127.0.0.1:8888/callback",
+        )
+    )
+    destination = MockAdapter(
+        playlists={"unused": Playlist(name="Unused", tracks=[])},
+        catalog=[],
+    )
+
+    result = validate_transfer_preflight(
+        source,
+        destination,
+        dry_run=True,
+        database_path=tmp_path / "transfer.sqlite",
+        output_dir=tmp_path / "reports",
+    )
+
+    assert result.ok is True
+
+
+def test_phase8_preflight_requires_spotify_oauth_for_write(tmp_path) -> None:
+    source = MockAdapter(
+        playlists={"source-playlist": Playlist(name="Source", tracks=[])},
+        catalog=[],
+    )
+    destination = SpotifyAdapter(SpotifyConfig(client_id="client-id", client_secret="secret"))
+
+    result = validate_transfer_preflight(
+        source,
+        destination,
+        dry_run=False,
+        database_path=tmp_path / "transfer.sqlite",
+        output_dir=tmp_path / "reports",
+    )
+
+    assert result.ok is False
+    assert result.issues == (
+        "Spotify OAuth credentials are required for write operations: SPOTIFY_REDIRECT_URI",
+    )
+
+
+def test_phase8_preflight_allows_spotify_oauth_for_write(tmp_path) -> None:
+    source = MockAdapter(
+        playlists={"source-playlist": Playlist(name="Source", tracks=[])},
+        catalog=[],
+    )
+    destination = SpotifyAdapter(
+        SpotifyConfig(
+            client_id="client-id",
+            client_secret="secret",
+            redirect_uri="http://127.0.0.1:8888/callback",
+        )
+    )
+
+    result = validate_transfer_preflight(
+        source,
+        destination,
+        dry_run=False,
+        database_path=tmp_path / "transfer.sqlite",
+        output_dir=tmp_path / "reports",
+    )
+
+    assert result.ok is True
+
+
+def test_phase8_preflight_allows_qqmusic_anonymous_dry_run(tmp_path) -> None:
+    source = StaticSourceAdapter()
+    destination = QQMusicAdapter(config=QQMusicConfig())
+
+    result = validate_transfer_preflight(
+        source,
+        destination,
+        dry_run=True,
+        database_path=tmp_path / "transfer.sqlite",
+        output_dir=tmp_path / "reports",
+    )
+
+    assert result.ok is True
+
+
+def test_phase8_preflight_requires_qqmusic_credentials_for_write(tmp_path) -> None:
+    source = StaticSourceAdapter()
+    destination = QQMusicAdapter(config=QQMusicConfig())
+
+    result = validate_transfer_preflight(
+        source,
+        destination,
+        dry_run=False,
+        database_path=tmp_path / "transfer.sqlite",
+        output_dir=tmp_path / "reports",
+    )
+
+    assert result.ok is False
+    assert result.issues == ("QQ Music credentials are missing: configure qqmusic.credential_path",)
 
 
 class StaticSourceAdapter(BasePlatform):

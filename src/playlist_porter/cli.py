@@ -9,12 +9,20 @@ from playlist_porter import __version__
 from playlist_porter.config import load_config, write_default_config
 from playlist_porter.persistence.exports import export_reports
 from playlist_porter.persistence.repositories import TransferRepository
+from playlist_porter.rate_limit import (
+    AuthenticationFailure,
+    RateLimitExceeded,
+    TemporaryServerError,
+    TransientNetworkError,
+    ValidationFailure,
+)
 from playlist_porter.review.terminal import (
     ReviewUpdate,
     apply_review_update,
     run_interactive_review,
 )
 from playlist_porter.workflow import (
+    PreflightError,
     dry_run_mock_transfer,
     execute_mock_transfer,
     execute_transfer_run,
@@ -93,6 +101,24 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     """Run the CLI."""
+
+    try:
+        return _main(argv)
+    except (
+        AuthenticationFailure,
+        PreflightError,
+        RateLimitExceeded,
+        TemporaryServerError,
+        TransientNetworkError,
+        ValidationFailure,
+        ValueError,
+    ) as exc:
+        print(exc)
+        return 1
+
+
+def _main(argv: list[str] | None = None) -> int:
+    """Run a parsed CLI command."""
 
     args = build_parser().parse_args(argv)
     if args.command == "init-config":

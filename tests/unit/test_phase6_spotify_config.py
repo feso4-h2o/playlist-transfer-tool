@@ -58,6 +58,8 @@ def test_default_config_uses_spotify_scope_environment_placeholder() -> None:
     payload = default_config_payload()
 
     assert payload["spotify"]["scopes"] == "${SPOTIFY_SCOPES}"
+    assert "auth_mode" not in payload["spotify"]
+    assert payload["qqmusic"]["allow_anonymous_read"] is True
 
 
 def test_spotify_config_expands_scope_environment_placeholder(tmp_path, monkeypatch) -> None:
@@ -116,3 +118,30 @@ def test_unset_spotify_scope_placeholder_uses_default_scopes(tmp_path, monkeypat
 
     assert config.spotify is not None
     assert config.spotify.scopes == DEFAULT_SPOTIFY_SCOPES
+
+
+def test_spotify_config_ignores_extra_spotify_keys(tmp_path) -> None:
+    config_path = tmp_path / "porter.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "database_path": "state/playlist.sqlite",
+                "mock": {
+                    "source_playlists_path": "fixtures/playlists.json",
+                    "destination_catalog_path": "fixtures/catalog.json",
+                },
+                "spotify": {
+                    "client_id": "client-id",
+                    "client_secret": "client-secret",
+                    "redirect_uri": "http://127.0.0.1:8080/callback",
+                    "unused": "ignored",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.spotify is not None
+    assert config.spotify.missing_credentials() == ()

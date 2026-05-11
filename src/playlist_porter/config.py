@@ -20,7 +20,7 @@ DEFAULT_SPOTIFY_SCOPES = (
 
 @dataclass(frozen=True)
 class SpotifyConfig:
-    """Local Spotify OAuth settings."""
+    """Local Spotify authentication settings."""
 
     client_id: str | None = None
     client_secret: str | None = None
@@ -105,6 +105,7 @@ def default_config_payload() -> dict[str, Any]:
             "page_size": 100,
             "supports_create_playlist": True,
             "supports_add_tracks": True,
+            "allow_anonymous_read": True,
         },
     }
 
@@ -199,6 +200,7 @@ def _load_qqmusic_config(base_dir: Path, payload: dict[str, Any]) -> QQMusicConf
         page_size=int(payload.get("page_size", 100)),
         supports_create_playlist=bool(payload.get("supports_create_playlist", True)),
         supports_add_tracks=bool(payload.get("supports_add_tracks", True)),
+        allow_anonymous_read=bool(payload.get("allow_anonymous_read", True)),
     )
 
 
