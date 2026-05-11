@@ -106,7 +106,7 @@ def create_platform_adapter(config: PorterConfig, platform: PlatformName) -> Bas
     if platform == "spotify":
         return SpotifyAdapter(config.spotify or SpotifyConfig.from_env())
     if platform == "qqmusic":
-        return QQMusicAdapter(config=config.qqmusic or QQMusicConfig())
+        return QQMusicAdapter(config=config.qqmusic or QQMusicConfig.from_env())
     raise ValueError(f"unsupported platform: {platform}")
 
 
@@ -741,7 +741,7 @@ def _credential_issues(
         except FileNotFoundError as exc:
             return [f"QQ Music credential file is missing: {exc.filename}"]
         if credential_payload is None:
-            return ["QQ Music credentials are missing: configure qqmusic.credential_path"]
+            return ["QQ Music credentials are missing: QQMUSIC_CREDENTIAL_PATH"]
     return []
 
 

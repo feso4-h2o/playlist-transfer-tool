@@ -526,7 +526,7 @@ def test_phase8_preflight_requires_qqmusic_credentials_for_write(tmp_path) -> No
     )
 
     assert result.ok is False
-    assert result.issues == ("QQ Music credentials are missing: configure qqmusic.credential_path",)
+    assert result.issues == ("QQ Music credentials are missing: QQMUSIC_CREDENTIAL_PATH",)
 
 
 class StaticSourceAdapter(BasePlatform):

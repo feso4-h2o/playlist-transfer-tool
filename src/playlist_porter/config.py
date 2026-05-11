@@ -157,16 +157,10 @@ def default_config_payload() -> dict[str, Any]:
             "writes_path": "state/mock-writes.json",
         },
         "spotify": {
-            "client_id": "${SPOTIFY_CLIENT_ID}",
-            "client_secret": "${SPOTIFY_CLIENT_SECRET}",
-            "redirect_uri": "http://127.0.0.1:8080/callback",
-            "scopes": "${SPOTIFY_SCOPES}",
             "cache_path": str(_default_spotify_cache_path()),
             "create_public_playlists": False,
         },
         "qqmusic": {
-            "credential_path": "${QQMUSIC_CREDENTIAL_PATH}",
-            "user_id": "${QQMUSIC_USER_ID}",
             "page_size": 100,
             "supports_create_playlist": True,
             "supports_add_tracks": True,
@@ -272,13 +266,13 @@ def _resolve_path(base_dir: Path, value: str | Path) -> Path:
 
 
 def _load_spotify_config(base_dir: Path, payload: dict[str, Any]) -> SpotifyConfig:
-    scopes = _parse_scopes(_expand_env(payload.get("scopes")))
-    cache_path_value = _expand_env(payload.get("cache_path"))
+    env_config = SpotifyConfig.from_env()
+    cache_path_value = _optional_text(_expand_env(payload.get("cache_path")))
     return SpotifyConfig(
-        client_id=_optional_text(_expand_env(payload.get("client_id"))),
-        client_secret=_optional_text(_expand_env(payload.get("client_secret"))),
-        redirect_uri=_optional_text(_expand_env(payload.get("redirect_uri"))),
-        scopes=scopes or DEFAULT_SPOTIFY_SCOPES,
+        client_id=env_config.client_id,
+        client_secret=env_config.client_secret,
+        redirect_uri=env_config.redirect_uri,
+        scopes=env_config.scopes,
         cache_path=(
             _resolve_path(base_dir, cache_path_value)
             if cache_path_value is not None
@@ -289,15 +283,11 @@ def _load_spotify_config(base_dir: Path, payload: dict[str, Any]) -> SpotifyConf
 
 
 def _load_qqmusic_config(base_dir: Path, payload: dict[str, Any]) -> QQMusicConfig:
-    credential_path_value = _optional_text(_expand_env(payload.get("credential_path")))
+    del base_dir
+    env_config = QQMusicConfig.from_env()
     return QQMusicConfig(
-        credential_payload=payload.get("credential"),
-        credential_path=(
-            _resolve_path(base_dir, credential_path_value)
-            if credential_path_value is not None
-            else None
-        ),
-        user_id=_optional_text(_expand_env(payload.get("user_id"))),
+        credential_path=env_config.credential_path,
+        user_id=env_config.user_id,
         page_size=int(payload.get("page_size", 100)),
         supports_create_playlist=bool(payload.get("supports_create_playlist", True)),
         supports_add_tracks=bool(payload.get("supports_add_tracks", True)),
