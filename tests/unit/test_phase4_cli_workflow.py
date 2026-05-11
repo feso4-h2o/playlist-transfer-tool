@@ -4,6 +4,7 @@ import json
 from playlist_porter.cli import main
 from playlist_porter.config import PorterConfig
 from playlist_porter.matching.status import MatchStatus
+from playlist_porter.persistence import exports as exports_module
 from playlist_porter.persistence.exports import build_unavailable_rows
 from playlist_porter.persistence.repositories import TransferRepository
 from playlist_porter.rate_limit import AuthenticationFailure
@@ -353,9 +354,11 @@ def test_transfer_uses_config_defaults_when_cli_args_are_omitted(tmp_path) -> No
     exit_code = main(["transfer", "--config", str(config_path)])
 
     repo = TransferRepository(database_path)
+    run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
     assert exit_code == 0
-    assert repo.find_run_id("mock|mock|source-playlist||dry-run") is not None
-    assert (reports_path.parent / "reports" / "config-transfer" / "transfer-summary.json").exists()
+    assert run_id is not None
+    report_dir = reports_path.parent / "reports" / "config-transfer" / run_id[:8]
+    assert list(report_dir.glob("transfer-summary-*.json"))
 
 
 def test_transfer_cli_args_override_config_defaults(tmp_path) -> None:
@@ -595,8 +598,11 @@ def test_export_reports_include_expected_columns_and_region_reason(tmp_path) -> 
     )
 
     rows = build_unavailable_rows(repo, run_id)
-    csv_rows = list(csv.DictReader((reports_path / "unavailable-tracks.csv").open()))
-    json_rows = json.loads((reports_path / "unavailable-tracks.json").read_text())
+    report_dir = reports_path / run_id[:8]
+    csv_path = next(report_dir.glob("unavailable-tracks-*.csv"))
+    json_path = next(report_dir.glob("unavailable-tracks-*.json"))
+    csv_rows = list(csv.DictReader(csv_path.open()))
+    json_rows = json.loads(json_path.read_text())
     assert exit_code == 0
     assert "region_unavailable" in {
         reason for row in rows for reason in row["reason_codes"].split(";")
@@ -645,4 +651,47 @@ def test_review_and_export_report_use_config_defaults(tmp_path) -> None:
 
     assert review == 0
     assert export == 0
-    assert (reports_path.parent / "reports" / "config-export" / "unavailable-tracks.json").exists()
+    report_dir = reports_path.parent / "reports" / "config-export" / run_id[:8]
+    assert list(report_dir.glob("unavailable-tracks-*.json"))
+
+
+def test_export_reports_do_not_overwrite_same_second_snapshot(tmp_path, monkeypatch) -> None:
+    config_path, database_path, _, reports_path = _phase4_fixture(tmp_path)
+    main(["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"])
+    repo = TransferRepository(database_path)
+    run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
+    assert run_id is not None
+    monkeypatch.setattr(exports_module, "_short_timestamp", lambda: "143022")
+
+    first = main(
+        [
+            "export-report",
+            "--db",
+            str(database_path),
+            "--run-id",
+            run_id,
+            "--output-dir",
+            str(reports_path),
+            "--format",
+            "json",
+        ]
+    )
+    second = main(
+        [
+            "export-report",
+            "--db",
+            str(database_path),
+            "--run-id",
+            run_id,
+            "--output-dir",
+            str(reports_path),
+            "--format",
+            "json",
+        ]
+    )
+
+    report_dir = reports_path / run_id[:8]
+    assert first == 0
+    assert second == 0
+    assert (report_dir / "transfer-summary-143022.json").exists()
+    assert (report_dir / "transfer-summary-143022-2.json").exists()

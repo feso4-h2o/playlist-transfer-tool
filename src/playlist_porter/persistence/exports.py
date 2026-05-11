@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -50,15 +51,19 @@ def export_reports(
 ) -> list[Path]:
     """Export summary and unavailable reports and return written paths."""
 
-    output_path = Path(output_dir)
+    if output_format not in {"csv", "json", "both"}:
+        raise ValueError("output_format must be csv, json, or both")
+
+    output_path = Path(output_dir) / _short_run_id(transfer_run_id)
     output_path.mkdir(parents=True, exist_ok=True)
     summary = build_summary(repository, transfer_run_id)
     unavailable_rows = build_unavailable_rows(repository, transfer_run_id)
+    paths = _report_paths(output_path, output_format, _short_timestamp())
 
     written: list[Path] = []
     if output_format in {"json", "both"}:
-        summary_path = output_path / "transfer-summary.json"
-        unavailable_path = output_path / "unavailable-tracks.json"
+        summary_path = paths["summary_json"]
+        unavailable_path = paths["unavailable_json"]
         summary_path.write_text(
             json.dumps(summary, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
@@ -69,13 +74,11 @@ def export_reports(
         )
         written.extend([summary_path, unavailable_path])
     if output_format in {"csv", "both"}:
-        summary_path = output_path / "transfer-summary.csv"
-        unavailable_path = output_path / "unavailable-tracks.csv"
+        summary_path = paths["summary_csv"]
+        unavailable_path = paths["unavailable_csv"]
         _write_csv(summary_path, SUMMARY_FIELDS, [summary])
         _write_csv(unavailable_path, UNAVAILABLE_FIELDS, unavailable_rows)
         written.extend([summary_path, unavailable_path])
-    if output_format not in {"csv", "json", "both"}:
-        raise ValueError("output_format must be csv, json, or both")
     return written
 
 
@@ -187,6 +190,43 @@ def _write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, Any]]) ->
         writer.writeheader()
         for row in rows:
             writer.writerow({field: _csv_value(row.get(field)) for field in fieldnames})
+
+
+def _report_paths(output_path: Path, output_format: str, timestamp: str) -> dict[str, Path]:
+    suffix = timestamp
+    counter = 2
+    paths = _paths_for_suffix(output_path, suffix)
+    while _has_existing_batch_file(paths):
+        suffix = f"{timestamp}-{counter}"
+        counter += 1
+        paths = _paths_for_suffix(output_path, suffix)
+
+    if output_format == "json":
+        return {key: value for key, value in paths.items() if key.endswith("_json")}
+    if output_format == "csv":
+        return {key: value for key, value in paths.items() if key.endswith("_csv")}
+    return paths
+
+
+def _paths_for_suffix(output_path: Path, suffix: str) -> dict[str, Path]:
+    return {
+        "summary_json": output_path / f"transfer-summary-{suffix}.json",
+        "unavailable_json": output_path / f"unavailable-tracks-{suffix}.json",
+        "summary_csv": output_path / f"transfer-summary-{suffix}.csv",
+        "unavailable_csv": output_path / f"unavailable-tracks-{suffix}.csv",
+    }
+
+
+def _has_existing_batch_file(paths: dict[str, Path]) -> bool:
+    return any(path.exists() for path in paths.values())
+
+
+def _short_run_id(transfer_run_id: str) -> str:
+    return transfer_run_id[:8]
+
+
+def _short_timestamp() -> str:
+    return datetime.now().strftime("%H%M%S")
 
 
 def _csv_value(value: Any) -> Any:
