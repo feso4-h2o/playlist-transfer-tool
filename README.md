@@ -61,8 +61,12 @@ under `fixtures/`, stores SQLite state under `state/`, and writes reports under
 `reports/`. Those local runtime outputs are ignored by Git.
 
 Copy `.env.example` to your local environment manager or shell profile and set
-the values there. The CLI expands environment variables referenced in the JSON
-config, but it does not load `.env` files by itself.
+the values there. Credentials are read from the process environment, not from
+`playlist-porter.json`. For local runs, prefer loading `.env` through `uv`:
+
+```powershell
+uv run --env-file .env playlist-porter transfer --config playlist-porter.json
+```
 
 Spotify fields:
 
@@ -83,6 +87,10 @@ QQ Music fields:
 Do not commit OAuth tokens, QQ Music cookies, credential JSON, SQLite databases,
 or generated reports.
 
+The generated config also includes optional `commands` defaults. Values in that
+section let you shorten repeated commands, and explicit CLI arguments still
+override the configured defaults.
+
 ## Mock Dry-Run
 
 The repository includes credential-free fixtures so a new checkout can exercise
@@ -102,12 +110,25 @@ You can run the newer direction-aware command against the same mock data:
 uv run playlist-porter transfer --config playlist-porter.json --source-platform mock --destination-platform mock --source-playlist sample-mixed --dry-run
 ```
 
+If those values are configured under `commands.transfer`, this can be shortened
+to:
+
+```powershell
+uv run playlist-porter transfer --config playlist-porter.json
+```
+
 ## Review
 
 Review uncertain matches after a dry-run:
 
 ```powershell
 uv run playlist-porter review --db state/playlist-porter.sqlite --run-id <run-id>
+```
+
+If `commands.review` supplies the database path and run ID:
+
+```powershell
+uv run playlist-porter review --config playlist-porter.json
 ```
 
 For non-interactive updates, pass a source track UUID from the review output:
@@ -161,6 +182,13 @@ Export reports again for an existing run:
 
 ```powershell
 uv run playlist-porter export-report --db state/playlist-porter.sqlite --run-id <run-id> --output-dir reports --format both
+```
+
+If `commands.export_report` supplies the database path, run ID, output
+directory, and format:
+
+```powershell
+uv run playlist-porter export-report --config playlist-porter.json
 ```
 
 ## Development
