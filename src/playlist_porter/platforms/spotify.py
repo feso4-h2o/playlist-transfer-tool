@@ -155,11 +155,9 @@ class SpotifyAdapter(BasePlatform):
         """Create a Spotify playlist for the authenticated user."""
 
         client = self._write_client_or_raise()
-        user_payload = self._call("spotify current user", client.current_user)
         playlist_payload = self._call(
             "spotify create playlist",
-            lambda: client.user_playlist_create(
-                user_payload["id"],
+            lambda: client.current_user_playlist_create(
                 name,
                 public=self.config.create_public_playlists,
                 description=description or "",
