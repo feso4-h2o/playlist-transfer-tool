@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -68,6 +68,59 @@ class SpotifyConfig:
 
 
 @dataclass(frozen=True)
+class MatchCommandConfig:
+    """Optional defaults for the matching command."""
+
+    source_platform: str | None = None
+    destination_platform: str | None = None
+    source_playlist: str | None = None
+    restart: bool | None = None
+    database_path: Path | None = None
+    output_dir: Path | None = None
+
+
+@dataclass(frozen=True)
+class ReviewCommandConfig:
+    """Optional defaults for persisted match review."""
+
+    database_path: Path | None = None
+    run_id: str | None = None
+    candidate_rank: int | None = None
+
+
+@dataclass(frozen=True)
+class WriteCommandConfig:
+    """Optional defaults for reviewed transfer writes."""
+
+    destination_platform: str | None = None
+    database_path: Path | None = None
+    run_id: str | None = None
+    output_dir: Path | None = None
+    destination_playlist_id: str | None = None
+    create_playlist: str | None = None
+
+
+@dataclass(frozen=True)
+class ExportReportCommandConfig:
+    """Optional defaults for report export."""
+
+    database_path: Path | None = None
+    run_id: str | None = None
+    output_dir: Path | None = None
+    output_format: str | None = None
+
+
+@dataclass(frozen=True)
+class CommandConfig:
+    """Optional CLI command defaults loaded from local config."""
+
+    match: MatchCommandConfig = field(default_factory=MatchCommandConfig)
+    review: ReviewCommandConfig = field(default_factory=ReviewCommandConfig)
+    write: WriteCommandConfig = field(default_factory=WriteCommandConfig)
+    export_report: ExportReportCommandConfig = field(default_factory=ExportReportCommandConfig)
+
+
+@dataclass(frozen=True)
 class PorterConfig:
     """Resolved configuration for CLI transfer workflows."""
 
@@ -78,6 +131,7 @@ class PorterConfig:
     mock_writes_path: Path | None = None
     spotify: SpotifyConfig | None = None
     qqmusic: QQMusicConfig | None = None
+    commands: CommandConfig = field(default_factory=CommandConfig)
 
 
 def default_config_payload() -> dict[str, Any]:
@@ -92,20 +146,41 @@ def default_config_payload() -> dict[str, Any]:
             "writes_path": "state/mock-writes.json",
         },
         "spotify": {
-            "client_id": "${SPOTIFY_CLIENT_ID}",
-            "client_secret": "${SPOTIFY_CLIENT_SECRET}",
-            "redirect_uri": "http://127.0.0.1:8080/callback",
-            "scopes": "${SPOTIFY_SCOPES}",
             "cache_path": str(_default_spotify_cache_path()),
             "create_public_playlists": False,
         },
         "qqmusic": {
-            "credential_path": "${QQMUSIC_CREDENTIAL_PATH}",
-            "user_id": "${QQMUSIC_USER_ID}",
             "page_size": 100,
             "supports_create_playlist": True,
             "supports_add_tracks": True,
             "allow_anonymous_read": True,
+        },
+        "commands": {
+            "match": {
+                "source_platform": "spotify",
+                "destination_platform": "mock",
+                "source_playlist": "",
+                "restart": False,
+                "output_dir": "reports",
+            },
+            "review": {
+                "database_path": "state/playlist-porter.sqlite",
+                "run_id": "",
+            },
+            "write": {
+                "destination_platform": "mock",
+                "database_path": "state/playlist-porter.sqlite",
+                "run_id": "",
+                "output_dir": "reports",
+                "destination_playlist_id": "",
+                "create_playlist": "",
+            },
+            "export_report": {
+                "database_path": "state/playlist-porter.sqlite",
+                "run_id": "",
+                "output_dir": "reports",
+                "format": "both",
+            },
         },
     }
 
@@ -133,6 +208,7 @@ def load_config(path: str | Path) -> PorterConfig:
     mock_payload = payload.get("mock", {})
     spotify_payload = payload.get("spotify")
     qqmusic_payload = payload.get("qqmusic")
+    commands_payload = payload.get("commands")
 
     return PorterConfig(
         database_path=_resolve_path(base_dir, payload["database_path"]),
@@ -160,6 +236,11 @@ def load_config(path: str | Path) -> PorterConfig:
             if isinstance(qqmusic_payload, dict)
             else None
         ),
+        commands=(
+            _load_command_config(base_dir, commands_payload)
+            if isinstance(commands_payload, dict)
+            else CommandConfig()
+        ),
     )
 
 
@@ -171,13 +252,13 @@ def _resolve_path(base_dir: Path, value: str | Path) -> Path:
 
 
 def _load_spotify_config(base_dir: Path, payload: dict[str, Any]) -> SpotifyConfig:
-    scopes = _parse_scopes(_expand_env(payload.get("scopes")))
-    cache_path_value = _expand_env(payload.get("cache_path"))
+    env_config = SpotifyConfig.from_env()
+    cache_path_value = _optional_text(_expand_env(payload.get("cache_path")))
     return SpotifyConfig(
-        client_id=_optional_text(_expand_env(payload.get("client_id"))),
-        client_secret=_optional_text(_expand_env(payload.get("client_secret"))),
-        redirect_uri=_optional_text(_expand_env(payload.get("redirect_uri"))),
-        scopes=scopes or DEFAULT_SPOTIFY_SCOPES,
+        client_id=env_config.client_id,
+        client_secret=env_config.client_secret,
+        redirect_uri=env_config.redirect_uri,
+        scopes=env_config.scopes,
         cache_path=(
             _resolve_path(base_dir, cache_path_value)
             if cache_path_value is not None
@@ -188,19 +269,96 @@ def _load_spotify_config(base_dir: Path, payload: dict[str, Any]) -> SpotifyConf
 
 
 def _load_qqmusic_config(base_dir: Path, payload: dict[str, Any]) -> QQMusicConfig:
-    credential_path_value = _optional_text(_expand_env(payload.get("credential_path")))
+    del base_dir
+    env_config = QQMusicConfig.from_env()
     return QQMusicConfig(
-        credential_payload=payload.get("credential"),
-        credential_path=(
-            _resolve_path(base_dir, credential_path_value)
-            if credential_path_value is not None
-            else None
-        ),
-        user_id=_optional_text(_expand_env(payload.get("user_id"))),
+        credential_path=env_config.credential_path,
+        user_id=env_config.user_id,
         page_size=int(payload.get("page_size", 100)),
         supports_create_playlist=bool(payload.get("supports_create_playlist", True)),
         supports_add_tracks=bool(payload.get("supports_add_tracks", True)),
         allow_anonymous_read=bool(payload.get("allow_anonymous_read", True)),
+    )
+
+
+def _load_command_config(base_dir: Path, payload: dict[str, Any]) -> CommandConfig:
+    match_payload = payload.get("match", {})
+    review_payload = payload.get("review", {})
+    write_payload = payload.get("write", {})
+    export_payload = payload.get("export_report", {})
+    return CommandConfig(
+        match=(
+            _load_match_command_config(base_dir, match_payload)
+            if isinstance(match_payload, dict)
+            else MatchCommandConfig()
+        ),
+        review=(
+            _load_review_command_config(base_dir, review_payload)
+            if isinstance(review_payload, dict)
+            else ReviewCommandConfig()
+        ),
+        write=(
+            _load_write_command_config(base_dir, write_payload)
+            if isinstance(write_payload, dict)
+            else WriteCommandConfig()
+        ),
+        export_report=(
+            _load_export_report_command_config(base_dir, export_payload)
+            if isinstance(export_payload, dict)
+            else ExportReportCommandConfig()
+        ),
+    )
+
+
+def _load_match_command_config(
+    base_dir: Path,
+    payload: dict[str, Any],
+) -> MatchCommandConfig:
+    return MatchCommandConfig(
+        source_platform=_optional_text(payload.get("source_platform")),
+        destination_platform=_optional_text(payload.get("destination_platform")),
+        source_playlist=_optional_text(payload.get("source_playlist")),
+        restart=_optional_bool(payload.get("restart")),
+        database_path=_optional_path(base_dir, payload.get("database_path")),
+        output_dir=_optional_path(base_dir, payload.get("output_dir")),
+    )
+
+
+def _load_review_command_config(
+    base_dir: Path,
+    payload: dict[str, Any],
+) -> ReviewCommandConfig:
+    candidate_rank = payload.get("candidate_rank")
+    return ReviewCommandConfig(
+        database_path=_optional_path(base_dir, payload.get("database_path")),
+        run_id=_optional_text(payload.get("run_id")),
+        candidate_rank=int(candidate_rank) if candidate_rank is not None else None,
+    )
+
+
+def _load_write_command_config(
+    base_dir: Path,
+    payload: dict[str, Any],
+) -> WriteCommandConfig:
+    return WriteCommandConfig(
+        destination_platform=_optional_text(payload.get("destination_platform")),
+        database_path=_optional_path(base_dir, payload.get("database_path")),
+        run_id=_optional_text(payload.get("run_id")),
+        output_dir=_optional_path(base_dir, payload.get("output_dir")),
+        destination_playlist_id=_optional_text(payload.get("destination_playlist_id")),
+        create_playlist=_optional_text(payload.get("create_playlist")),
+    )
+
+
+def _load_export_report_command_config(
+    base_dir: Path,
+    payload: dict[str, Any],
+) -> ExportReportCommandConfig:
+    return ExportReportCommandConfig(
+        database_path=_optional_path(base_dir, payload.get("database_path")),
+        run_id=_optional_text(payload.get("run_id")),
+        output_dir=_optional_path(base_dir, payload.get("output_dir")),
+        output_format=_optional_text(payload.get("format")),
     )
 
 
@@ -237,6 +395,29 @@ def _optional_text(value: Any) -> str | None:
     return text or None
 
 
+def _optional_bool(value: Any) -> bool | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        text = value.strip().casefold()
+        if not text:
+            return None
+        if text in {"1", "true", "yes", "on"}:
+            return True
+        if text in {"0", "false", "no", "off"}:
+            return False
+    return bool(value)
+
+
+def _optional_path(base_dir: Path, value: Any) -> Path | None:
+    text = _optional_text(value)
+    if text is None:
+        return None
+    return _resolve_path(base_dir, text)
+
+
 def _default_spotify_cache_path() -> Path:
     local_app_data = os.getenv("LOCALAPPDATA")
     if local_app_data:
@@ -245,10 +426,15 @@ def _default_spotify_cache_path() -> Path:
 
 
 __all__ = [
+    "CommandConfig",
     "DEFAULT_SPOTIFY_SCOPES",
+    "ExportReportCommandConfig",
+    "MatchCommandConfig",
     "PorterConfig",
     "QQMusicConfig",
+    "ReviewCommandConfig",
     "SpotifyConfig",
+    "WriteCommandConfig",
     "default_config_payload",
     "load_config",
     "write_default_config",

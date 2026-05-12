@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
@@ -58,6 +59,16 @@ class QQMusicConfig:
     supports_create_playlist: bool = True
     supports_add_tracks: bool = True
     allow_anonymous_read: bool = True
+
+    @classmethod
+    def from_env(cls) -> QQMusicConfig:
+        """Build QQ Music credential inputs from environment variables."""
+
+        credential_path = _optional_text(os.getenv("QQMUSIC_CREDENTIAL_PATH"))
+        return cls(
+            credential_path=Path(credential_path) if credential_path is not None else None,
+            user_id=_optional_text(os.getenv("QQMUSIC_USER_ID")),
+        )
 
     @classmethod
     def from_json(cls, path: str | Path) -> QQMusicConfig:
@@ -187,7 +198,7 @@ class QQMusicAdapter(BasePlatform):
         client_factory: Callable[[Mapping[str, Any] | None], Any] | None = None,
         rate_limit_policy: QQMusicRateLimitPolicy | None = None,
     ) -> None:
-        self.config = config or QQMusicConfig()
+        self.config = config or QQMusicConfig.from_env()
         self.capabilities = PlatformCapabilities(
             supports_read=True,
             supports_search=True,

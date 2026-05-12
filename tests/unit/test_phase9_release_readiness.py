@@ -28,5 +28,6 @@ def test_tracked_mock_fixtures_support_credential_free_dry_run(tmp_path) -> None
     assert result.metrics.status_counts[MatchStatus.ISRC_EXACT.value] == 1
     assert result.metrics.status_counts[MatchStatus.NEEDS_REVIEW.value] == 1
     assert result.metrics.status_counts[MatchStatus.NOT_FOUND.value] == 2
-    assert (config.report_output_dir / "transfer-summary.json").exists()
-    assert (config.report_output_dir / "unavailable-tracks.csv").exists()
+    report_dir = config.report_output_dir / result.transfer_run_id[:8]
+    assert list(report_dir.glob("transfer-summary-*.json"))
+    assert list(report_dir.glob("unavailable-tracks-*.csv"))

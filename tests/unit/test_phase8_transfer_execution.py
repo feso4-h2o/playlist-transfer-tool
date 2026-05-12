@@ -104,11 +104,19 @@ def test_phase8_mock_dry_run_exports_summary_matching_metrics(tmp_path) -> None:
         dry_run=True,
     )
 
-    summary = json.loads((config.report_output_dir / "transfer-summary.json").read_text())
-    unavailable = json.loads((config.report_output_dir / "unavailable-tracks.json").read_text())
+    summary_path = next(
+        path for path in result.report_paths if path.name.startswith("transfer-summary-")
+    )
+    unavailable_path = next(
+        path for path in result.report_paths if path.name.startswith("unavailable-tracks-")
+    )
+    summary = json.loads(summary_path.read_text())
+    unavailable = json.loads(unavailable_path.read_text())
 
     assert result.dry_run is True
     assert result.written_count == 0
+    assert summary_path.parent == config.report_output_dir / result.transfer_run_id[:8]
+    assert unavailable_path.parent == config.report_output_dir / result.transfer_run_id[:8]
     assert result.metrics.source_track_count == 3
     assert summary["transfer_run_id"] == result.transfer_run_id
     assert summary["source_track_count"] == result.metrics.source_track_count
@@ -526,7 +534,7 @@ def test_phase8_preflight_requires_qqmusic_credentials_for_write(tmp_path) -> No
     )
 
     assert result.ok is False
-    assert result.issues == ("QQ Music credentials are missing: configure qqmusic.credential_path",)
+    assert result.issues == ("QQ Music credentials are missing: QQMUSIC_CREDENTIAL_PATH",)
 
 
 class StaticSourceAdapter(BasePlatform):

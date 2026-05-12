@@ -106,7 +106,7 @@ def create_platform_adapter(config: PorterConfig, platform: PlatformName) -> Bas
     if platform == "spotify":
         return SpotifyAdapter(config.spotify or SpotifyConfig.from_env())
     if platform == "qqmusic":
-        return QQMusicAdapter(config=config.qqmusic or QQMusicConfig())
+        return QQMusicAdapter(config=config.qqmusic or QQMusicConfig.from_env())
     raise ValueError(f"unsupported platform: {platform}")
 
 
@@ -508,7 +508,7 @@ def _execute_transfer_writes(
     ):
         raise ValueError(
             "transfer run already targets destination playlist "
-            f"{run_record.destination_playlist_id}; restart the transfer to use "
+            f"{run_record.destination_playlist_id}; start a new match run to use "
             f"{destination_playlist_id}"
         )
 
@@ -518,7 +518,7 @@ def _execute_transfer_writes(
     if destination_id is None:
         destination_id = destination.create_playlist(
             create_playlist_name or f"{run_record.source_playlist_name or 'Playlist'} Copy",
-            "Created by playlist-porter transfer execution",
+            "Created by playlist-porter write",
         )
         repository.update_destination_playlist_id(transfer_run_id, destination_id)
 
@@ -741,7 +741,7 @@ def _credential_issues(
         except FileNotFoundError as exc:
             return [f"QQ Music credential file is missing: {exc.filename}"]
         if credential_payload is None:
-            return ["QQ Music credentials are missing: configure qqmusic.credential_path"]
+            return ["QQ Music credentials are missing: QQMUSIC_CREDENTIAL_PATH"]
     return []
 
 
