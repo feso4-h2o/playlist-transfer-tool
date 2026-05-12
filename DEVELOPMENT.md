@@ -29,19 +29,21 @@ Apply safe Ruff fixes:
 uv run ruff check . --fix
 ```
 
-## Mock Transfer Smoke Test
+## Mock Workflow Smoke Test
 
-The tracked `fixtures/` files allow a credential-free local transfer preview:
+The tracked `fixtures/` files allow a credential-free local matching preview:
 
 ```powershell
 uv run playlist-porter init-config --path playlist-porter.json
-uv run playlist-porter transfer --config playlist-porter.json --source-platform mock --destination-platform mock --source-playlist sample-mixed --dry-run
+uv run playlist-porter match --config playlist-porter.json --source-platform mock --destination-platform mock --source-playlist sample-mixed --restart
 ```
 
-To exercise the mock write path:
+To exercise the mock write path after reviewing a run, use the run id printed
+by `match`:
 
 ```powershell
-uv run playlist-porter transfer --config playlist-porter.json --source-platform mock --destination-platform mock --source-playlist sample-mixed --write --create-playlist "Sample Copy"
+uv run playlist-porter review --config playlist-porter.json --run-id <run-id>
+uv run playlist-porter write --config playlist-porter.json --destination-platform mock --run-id <run-id> --create-playlist "Sample Copy"
 ```
 
 Local state is written under `state/` and reports under `reports/`.
