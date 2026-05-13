@@ -1,8 +1,11 @@
+import asyncio
+
 import pytest
 
 from playlist_porter.platforms.base import PlatformCapabilities
 from playlist_porter.platforms.qqmusic import (
     QQMusicAdapter,
+    QQMusicClientFacade,
     QQMusicConfig,
     QQMusicWriteUnsupported,
     playlist_from_qqmusic_payload,
@@ -282,6 +285,19 @@ def test_qqmusic_adapter_fetches_all_playlist_pages_from_client_payload() -> Non
     playlist = adapter.get_playlist("12345")
 
     assert [track.title for track in playlist.tracks] == ["第一页", "第二页"]
+
+
+def test_qqmusic_client_facade_reuses_event_loop_between_calls() -> None:
+    facade = QQMusicClientFacade.__new__(QQMusicClientFacade)
+    facade._loop = None
+
+    async def loop_id() -> int:
+        return id(asyncio.get_running_loop())
+
+    first_loop_id = facade._run_async(loop_id())
+    second_loop_id = facade._run_async(loop_id())
+
+    assert second_loop_id == first_loop_id
 
 
 def test_qqmusic_adapter_search_retries_transient_failures() -> None:

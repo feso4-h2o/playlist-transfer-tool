@@ -120,6 +120,7 @@ class QQMusicClientFacade:
         )
         self._client = Client(credential=credential, max_concurrency=max_concurrency)
         self._credential = credential
+        self._loop: asyncio.AbstractEventLoop | None = None
 
     def validate_session(self) -> None:
         """Validate that the configured QQ Music credential is usable."""
@@ -176,12 +177,13 @@ class QQMusicClientFacade:
     def _execute(self, request: Any) -> Any:
         return self._run_async(self._client.execute(request))
 
-    @staticmethod
-    def _run_async(awaitable: Any) -> Any:
+    def _run_async(self, awaitable: Any) -> Any:
         try:
             asyncio.get_running_loop()
         except RuntimeError:
-            return asyncio.run(awaitable)
+            if self._loop is None or self._loop.is_closed():
+                self._loop = asyncio.new_event_loop()
+            return self._loop.run_until_complete(awaitable)
         raise QQMusicAdapterError("QQ Music adapter cannot run inside an active event loop")
 
 
