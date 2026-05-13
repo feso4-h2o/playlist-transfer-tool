@@ -223,7 +223,6 @@ __marimo__/
 
 # Coding agent related
 .agents/
-AGENTS.md
 
 # Playlist Porter local runtime outputs and secrets
 playlist-porter.json
