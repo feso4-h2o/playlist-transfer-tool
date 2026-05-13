@@ -4,6 +4,7 @@ import pytest
 
 from playlist_porter.platforms.base import PlatformCapabilities
 from playlist_porter.platforms.qqmusic import (
+    QQMUSIC_EMPTY_SEARCH_REFRESH_THRESHOLD,
     QQMusicAdapter,
     QQMusicClientFacade,
     QQMusicConfig,
@@ -87,6 +88,23 @@ class FakeQQMusicClient:
     def add_songs(self, playlist_id: int, song_info: list[tuple[int, int]]) -> bool:
         self.added_songs.append((playlist_id, song_info))
         return True
+
+
+class SearchPayloadClient:
+    def __init__(self, payloads: list[dict]) -> None:
+        self.payloads = list(payloads)
+        self.search_calls = 0
+        self.closed = False
+
+    def search_tracks(self, query: str, *, limit: int) -> dict:
+        del query, limit
+        self.search_calls += 1
+        if self.payloads:
+            return self.payloads.pop(0)
+        return {"song": []}
+
+    def close(self) -> None:
+        self.closed = True
 
 
 def qq_policy(clock: FakeClock | None = None) -> QQMusicRateLimitPolicy:
@@ -314,6 +332,94 @@ def test_qqmusic_adapter_search_retries_transient_failures() -> None:
     assert clock.sleeps == [0.0]
     assert [candidate.rank for candidate in candidates] == [1, 2]
     assert candidates[0].evidence["qqmusic_capability"] == "search_by_type"
+
+
+def test_qqmusic_search_refreshes_client_for_late_empty_result() -> None:
+    first_client = SearchPayloadClient(
+        [
+            {"song": [song_payload(id=index)]}
+            for index in range(QQMUSIC_EMPTY_SEARCH_REFRESH_THRESHOLD)
+        ]
+        + [{"song": []}]
+    )
+    second_client = SearchPayloadClient([{"song": [song_payload(id=999, title="晴天")]}])
+    clients = [first_client, second_client]
+
+    def client_factory(_credential_payload: object) -> SearchPayloadClient:
+        return clients.pop(0)
+
+    adapter = QQMusicAdapter(client_factory=client_factory, rate_limit_policy=qq_policy())
+
+    for _ in range(QQMUSIC_EMPTY_SEARCH_REFRESH_THRESHOLD):
+        adapter.search_tracks("七里香 周杰伦", limit=2)
+
+    candidates = adapter.search_tracks("七里香 周杰伦", limit=2)
+
+    assert first_client.closed is True
+    assert second_client.search_calls == 1
+    assert candidates[0].track.title == "晴天"
+
+
+def test_qqmusic_search_returns_empty_when_refresh_retry_is_empty() -> None:
+    first_client = SearchPayloadClient(
+        [
+            {"song": [song_payload(id=index)]}
+            for index in range(QQMUSIC_EMPTY_SEARCH_REFRESH_THRESHOLD)
+        ]
+        + [{"song": []}]
+    )
+    second_client = SearchPayloadClient([{"song": []}])
+    clients = [first_client, second_client]
+
+    def client_factory(_credential_payload: object) -> SearchPayloadClient:
+        return clients.pop(0)
+
+    adapter = QQMusicAdapter(client_factory=client_factory, rate_limit_policy=qq_policy())
+
+    for _ in range(QQMUSIC_EMPTY_SEARCH_REFRESH_THRESHOLD):
+        adapter.search_tracks("七里香 周杰伦", limit=2)
+
+    candidates = adapter.search_tracks("七里香 周杰伦", limit=2)
+
+    assert first_client.closed is True
+    assert second_client.search_calls == 1
+    assert candidates == []
+
+
+def test_qqmusic_search_does_not_refresh_early_empty_result() -> None:
+    first_client = SearchPayloadClient([{"song": []}])
+    second_client = SearchPayloadClient([{"song": [song_payload(id=999)]}])
+    clients = [first_client, second_client]
+
+    def client_factory(_credential_payload: object) -> SearchPayloadClient:
+        return clients.pop(0)
+
+    adapter = QQMusicAdapter(client_factory=client_factory, rate_limit_policy=qq_policy())
+
+    candidates = adapter.search_tracks("七里香 周杰伦", limit=2)
+
+    assert first_client.closed is False
+    assert second_client.search_calls == 0
+    assert candidates == []
+
+
+def test_qqmusic_search_does_not_refresh_static_injected_client() -> None:
+    client = SearchPayloadClient(
+        [
+            {"song": [song_payload(id=index)]}
+            for index in range(QQMUSIC_EMPTY_SEARCH_REFRESH_THRESHOLD)
+        ]
+        + [{"song": []}]
+    )
+    adapter = QQMusicAdapter(client=client, rate_limit_policy=qq_policy())
+
+    for _ in range(QQMUSIC_EMPTY_SEARCH_REFRESH_THRESHOLD):
+        adapter.search_tracks("七里香 周杰伦", limit=2)
+
+    candidates = adapter.search_tracks("七里香 周杰伦", limit=2)
+
+    assert client.closed is False
+    assert candidates == []
 
 
 def test_qqmusic_adapter_allows_anonymous_search_after_authenticate() -> None:
