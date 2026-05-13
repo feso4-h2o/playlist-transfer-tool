@@ -103,12 +103,11 @@ optional helper script:
 uv run python scripts/create_qqmusic_credential.py --output <custom path>/qqmusic-credential.json --acknowledge-risk
 ```
 
-The helper prints a risk notice, saves a QR code image in the current folder by
-default, waits for you to authorize the login, and writes the resulting
-credential JSON to the path you provided. Pass `--qr-dir <path>` to choose a
-different QR image directory. It refuses to run unless `--acknowledge-risk` is
-present and will not overwrite an existing credential file unless `--force` is
-passed.
+The helper prints a risk notice, saves a QR code image under `state/` by default,
+waits for you to authorize the login, and writes the resulting credential JSON
+to the path you provided. Pass `--qr-dir <path>` to choose a different QR image
+directory. It refuses to run unless `--acknowledge-risk` is present and will not
+overwrite an existing credential file unless `--force` is passed.
 
 Treat the generated JSON as a reusable session token. Anyone who can read it may
 be able to act as your QQ Music session until the credential expires or is

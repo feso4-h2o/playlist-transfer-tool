@@ -44,8 +44,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--qr-dir",
-        default=".",
-        help="Directory where the QR code image will be saved. Defaults to the current folder.",
+        default="state",
+        help="Directory where the QR code image will be saved. Defaults to state/.",
     )
     parser.add_argument(
         "--login-type",

@@ -69,7 +69,7 @@ def test_qqmusic_login_helper_parser_requires_output() -> None:
         raise AssertionError("expected parser to reject missing --output")
 
 
-def test_qqmusic_login_helper_defaults_qr_dir_to_current_folder(tmp_path) -> None:
+def test_qqmusic_login_helper_defaults_qr_dir_to_state(tmp_path) -> None:
     parser = helper.build_parser()
 
     args = parser.parse_args(
@@ -80,4 +80,4 @@ def test_qqmusic_login_helper_defaults_qr_dir_to_current_folder(tmp_path) -> Non
         ]
     )
 
-    assert args.qr_dir == "."
+    assert args.qr_dir == "state"
