@@ -92,6 +92,30 @@ QQ Music fields:
 Do not commit OAuth tokens, QQ Music cookies, credential JSON, SQLite databases,
 or generated reports.
 
+### Optional QQ Music Credential Helper
+
+QQ Music writes require a local session credential. The main CLI does not create
+or refresh that credential automatically. If you choose to use
+`qqmusic-api-python`'s unofficial login flow, this repository provides an
+optional helper script:
+
+```powershell
+uv run python scripts/create_qqmusic_credential.py --output <custom path>/qqmusic-credential.json --acknowledge-risk
+```
+
+The helper prints a risk notice, saves a QR code image in the current folder by
+default, waits for you to authorize the login, and writes the resulting
+credential JSON to the path you provided. Pass `--qr-dir <path>` to choose a
+different QR image directory. It refuses to run unless `--acknowledge-risk` is
+present and will not overwrite an existing credential file unless `--force` is
+passed.
+
+Treat the generated JSON as a reusable session token. Anyone who can read it may
+be able to act as your QQ Music session until the credential expires or is
+revoked. Prefer a dedicated low-value QQ Music account for testing, keep the
+file outside Git and synced folders, and do not paste it into issues, logs, or
+pull requests.
+
 The generated config also includes optional `commands` defaults. Values in that
 section let you shorten repeated commands, and explicit CLI arguments still
 override the configured defaults.
