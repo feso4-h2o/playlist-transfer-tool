@@ -229,4 +229,5 @@ playlist-porter.json
 state/
 reports/
 qqmusic-credential.json
+qqmusic-credential*.json
 spotify-token-cache*
