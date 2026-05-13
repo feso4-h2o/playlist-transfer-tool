@@ -60,6 +60,11 @@ The generated `playlist-porter.json` points at the tracked sample mock fixtures
 under `fixtures/`, stores SQLite state under `state/`, and writes reports under
 `reports/`. Those local runtime outputs are ignored by Git.
 
+The tracked fixtures contain sample playlist and catalog metadata only. They do
+not include credentials, cookies, tokens, audio, lyrics, cover art, or generated
+runtime databases. The sample metadata is provided for tests and credential-free
+mock workflows; this project is not affiliated with Spotify or QQ Music.
+
 Copy `.env.example` to your local environment manager or shell profile and set
 the values there. Credentials are read from the process environment, not from
 `playlist-porter.json`. For local runs, prefer loading `.env` through `uv`:

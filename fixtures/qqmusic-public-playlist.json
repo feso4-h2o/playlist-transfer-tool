@@ -1,0 +1,618 @@
+{
+  "playlists": [
+    {
+      "description": "Public QQ Music playlist metadata captured from an anonymous dry-run.",
+      "id": "qqmusic-public-sample",
+      "name": "QQ Music Public Sample Playlist",
+      "platform": "qqmusic",
+      "source_run_id": "sanitized-local-run",
+      "tracks": [
+        {
+          "album": "reputation",
+          "artists": [
+            "Taylor Swift"
+          ],
+          "duration_seconds": 238,
+          "platform_track_id": "208426581:1",
+          "release_date": "2017-11-10",
+          "release_year": 2017,
+          "source_playlist_position": 1,
+          "title": "I Did Something Bad"
+        },
+        {
+          "album": "Great DJ",
+          "artists": [
+            "The Ting Tings"
+          ],
+          "duration_seconds": 203,
+          "platform_track_id": "1861964:1",
+          "release_date": "2008-02-26",
+          "release_year": 2008,
+          "source_playlist_position": 2,
+          "title": "Great DJ"
+        },
+        {
+          "album": "Deja Vu",
+          "artists": [
+            "Post Malone",
+            "Justin Bieber"
+          ],
+          "duration_seconds": 235,
+          "platform_track_id": "108486805:1",
+          "release_date": "2016-09-09",
+          "release_year": 2016,
+          "source_playlist_position": 3,
+          "title": "Deja Vu (Explicit)"
+        },
+        {
+          "album": "Wow. (Explicit)",
+          "artists": [
+            "Post Malone"
+          ],
+          "duration_seconds": 149,
+          "platform_track_id": "225913844:1",
+          "release_date": "2018-12-24",
+          "release_year": 2018,
+          "source_playlist_position": 4,
+          "title": "Wow. (Explicit)"
+        },
+        {
+          "album": "Lover",
+          "artists": [
+            "Taylor Swift"
+          ],
+          "duration_seconds": 171,
+          "platform_track_id": "233339343:1",
+          "release_date": "2019-08-23",
+          "release_year": 2019,
+          "source_playlist_position": 5,
+          "title": "You Need To Calm Down"
+        },
+        {
+          "album": "dont smile at me",
+          "artists": [
+            "Billie Eilish"
+          ],
+          "duration_seconds": 178,
+          "platform_track_id": "203224370:1",
+          "release_date": "2017-07-14",
+          "release_year": 2017,
+          "source_playlist_position": 6,
+          "title": "watch"
+        },
+        {
+          "album": "Lover",
+          "artists": [
+            "Taylor Swift"
+          ],
+          "duration_seconds": 221,
+          "platform_track_id": "235175530:1",
+          "release_date": "2019-08-23",
+          "release_year": 2019,
+          "source_playlist_position": 7,
+          "title": "Lover"
+        },
+        {
+          "album": "Lover",
+          "artists": [
+            "Taylor Swift"
+          ],
+          "duration_seconds": 190,
+          "platform_track_id": "235175536:1",
+          "release_date": "2019-08-23",
+          "release_year": 2019,
+          "source_playlist_position": 8,
+          "title": "London Boy"
+        },
+        {
+          "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+          "artists": [
+            "Billie Eilish"
+          ],
+          "duration_seconds": 168,
+          "platform_track_id": "230766576:1",
+          "release_date": "2019-03-29",
+          "release_year": 2019,
+          "source_playlist_position": 9,
+          "title": "all the good girls go to hell"
+        },
+        {
+          "album": "Lover",
+          "artists": [
+            "Taylor Swift",
+            "Brendon Urie"
+          ],
+          "duration_seconds": 193,
+          "platform_track_id": "231729922:1",
+          "release_date": "2019-08-23",
+          "release_year": 2019,
+          "source_playlist_position": 10,
+          "title": "ME! (Feat. Brendon Urie Of Panic! At The Disco)"
+        },
+        {
+          "album": "Circles",
+          "artists": [
+            "Post Malone"
+          ],
+          "duration_seconds": 215,
+          "platform_track_id": "237268580:1",
+          "release_date": "2019-08-30",
+          "release_year": 2019,
+          "source_playlist_position": 11,
+          "title": "Circles"
+        },
+        {
+          "album": "Sunflower (Spider-Man: Into the Spider-Verse)",
+          "artists": [
+            "Post Malone",
+            "Swae Lee"
+          ],
+          "duration_seconds": 157,
+          "platform_track_id": "218485472:1",
+          "release_date": "2018-10-18",
+          "release_year": 2018,
+          "source_playlist_position": 12,
+          "title": "Sunflower"
+        },
+        {
+          "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+          "artists": [
+            "Billie Eilish"
+          ],
+          "duration_seconds": 193,
+          "platform_track_id": "230766581:1",
+          "release_date": "2019-03-29",
+          "release_year": 2019,
+          "source_playlist_position": 13,
+          "title": "bury a friend"
+        },
+        {
+          "album": "浮沉的兄弟",
+          "artists": [
+            "戎祥"
+          ],
+          "duration_seconds": 188,
+          "platform_track_id": "102194966:1",
+          "release_date": "2012-10-09",
+          "release_year": 2012,
+          "source_playlist_position": 14,
+          "title": "浮沉的兄弟"
+        },
+        {
+          "album": "lovely",
+          "artists": [
+            "Billie Eilish",
+            "Khalid"
+          ],
+          "duration_seconds": 200,
+          "platform_track_id": "213752499:1",
+          "release_date": "2018-04-19",
+          "release_year": 2018,
+          "source_playlist_position": 15,
+          "title": "lovely"
+        },
+        {
+          "album": "Dancing With A Stranger",
+          "artists": [
+            "Sam Smith",
+            "Normani"
+          ],
+          "duration_seconds": 171,
+          "platform_track_id": "227508475:1",
+          "release_date": "2019-01-11",
+          "release_year": 2019,
+          "source_playlist_position": 16,
+          "title": "Dancing With A Stranger"
+        },
+        {
+          "album": "Lover",
+          "artists": [
+            "Taylor Swift"
+          ],
+          "duration_seconds": 170,
+          "platform_track_id": "235177194:1",
+          "release_date": "2019-08-23",
+          "release_year": 2019,
+          "source_playlist_position": 17,
+          "title": "I Forgot That You Existed"
+        },
+        {
+          "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+          "artists": [
+            "Billie Eilish"
+          ],
+          "duration_seconds": 173,
+          "platform_track_id": "230766579:1",
+          "release_date": "2019-03-29",
+          "release_year": 2019,
+          "source_playlist_position": 18,
+          "title": "8"
+        },
+        {
+          "album": "Papillon",
+          "artists": [
+            "王嘉尔"
+          ],
+          "duration_seconds": 195,
+          "platform_track_id": "203695796:1",
+          "release_date": "2017-08-29",
+          "release_year": 2017,
+          "source_playlist_position": 19,
+          "title": "Papillon"
+        },
+        {
+          "artists": [
+            "宋冬野"
+          ],
+          "duration_seconds": 240,
+          "platform_track_id": "102055515:1",
+          "source_playlist_position": 20,
+          "title": "美人"
+        },
+        {
+          "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+          "artists": [
+            "Billie Eilish"
+          ],
+          "duration_seconds": 179,
+          "platform_track_id": "230766580:1",
+          "release_date": "2019-03-29",
+          "release_year": 2019,
+          "source_playlist_position": 21,
+          "title": "my strange addiction"
+        },
+        {
+          "album": "Lover",
+          "artists": [
+            "Taylor Swift"
+          ],
+          "duration_seconds": 178,
+          "platform_track_id": "235175529:1",
+          "release_date": "2019-08-23",
+          "release_year": 2019,
+          "source_playlist_position": 22,
+          "title": "Cruel Summer"
+        },
+        {
+          "album": "Lover",
+          "artists": [
+            "Taylor Swift"
+          ],
+          "duration_seconds": 173,
+          "platform_track_id": "235175544:1",
+          "release_date": "2019-08-23",
+          "release_year": 2019,
+          "source_playlist_position": 23,
+          "title": "I Think He Knows"
+        },
+        {
+          "album": "Six Feet Under",
+          "artists": [
+            "Billie Eilish"
+          ],
+          "duration_seconds": 189,
+          "platform_track_id": "107512944:1",
+          "release_date": "2016-11-17",
+          "release_year": 2016,
+          "source_playlist_position": 24,
+          "title": "Six Feet Under"
+        },
+        {
+          "album": "Goodbyes (Explicit)",
+          "artists": [
+            "Post Malone",
+            "Young Thug"
+          ],
+          "duration_seconds": 174,
+          "platform_track_id": "234163624:1",
+          "release_date": "2019-07-05",
+          "release_year": 2019,
+          "source_playlist_position": 25,
+          "title": "Goodbyes (Explicit)"
+        },
+        {
+          "album": "Bellyache",
+          "artists": [
+            "Billie Eilish"
+          ],
+          "duration_seconds": 179,
+          "platform_track_id": "200856420:1",
+          "release_date": "2017-02-24",
+          "release_year": 2017,
+          "source_playlist_position": 26,
+          "title": "bellyache"
+        },
+        {
+          "album": "Make It Bun Dem",
+          "artists": [
+            "Damian \"Jr Gong\" Marley",
+            "Skrillex"
+          ],
+          "duration_seconds": 213,
+          "platform_track_id": "7212436:1",
+          "release_date": "2012-05-01",
+          "release_year": 2012,
+          "source_playlist_position": 27,
+          "title": "Make It Bun Dem"
+        },
+        {
+          "album": "Lover",
+          "artists": [
+            "Taylor Swift"
+          ],
+          "duration_seconds": 190,
+          "platform_track_id": "235175533:1",
+          "release_date": "2019-08-23",
+          "release_year": 2019,
+          "source_playlist_position": 28,
+          "title": "The Man"
+        },
+        {
+          "album": "Greatest",
+          "artists": [
+            "Bee Gees"
+          ],
+          "duration_seconds": 287,
+          "platform_track_id": "2554277:1",
+          "release_date": "1979-10-01",
+          "release_year": 1979,
+          "source_playlist_position": 29,
+          "title": "Staying Alive"
+        },
+        {
+          "album": "Old Town Road",
+          "artists": [
+            "Lil Nas X"
+          ],
+          "duration_seconds": 113,
+          "platform_track_id": "229624698:1",
+          "release_date": "2018-12-17",
+          "release_year": 2018,
+          "source_playlist_position": 30,
+          "title": "Old Town Road"
+        },
+        {
+          "album": "TVアニメ「進撃の巨人」Season 2 オリジナルサウンドトラック (进击的巨人 第二季 动画原声带)",
+          "artists": [
+            "澤野弘之",
+            "R!N/Gemie",
+            "mpi",
+            "Yosh"
+          ],
+          "duration_seconds": 221,
+          "platform_track_id": "202603052:1",
+          "release_date": "2017-06-07",
+          "release_year": 2017,
+          "source_playlist_position": 31,
+          "title": "Barricades (枷锁)"
+        },
+        {
+          "album": "Lover",
+          "artists": [
+            "Taylor Swift"
+          ],
+          "duration_seconds": 222,
+          "platform_track_id": "235175543:1",
+          "release_date": "2019-08-23",
+          "release_year": 2019,
+          "source_playlist_position": 32,
+          "title": "Paper Rings"
+        },
+        {
+          "album": "GIANTS",
+          "artists": [
+            "英雄联盟",
+            "Becky G",
+            "Keke Palmer",
+            "田小娟 (SOYEON)",
+            "DUCKWRTH",
+            "Thutmose"
+          ],
+          "duration_seconds": 191,
+          "platform_track_id": "244716766:1",
+          "release_date": "2019-11-10",
+          "release_year": 2019,
+          "source_playlist_position": 33,
+          "title": "GIANTS"
+        },
+        {
+          "album": "THE THRILL OF IT ALL (Special Edition)",
+          "artists": [
+            "Sam Smith",
+            "YEBBA"
+          ],
+          "duration_seconds": 283,
+          "platform_track_id": "206379064:1",
+          "release_date": "2017-11-03",
+          "release_year": 2017,
+          "source_playlist_position": 34,
+          "title": "No Peace"
+        },
+        {
+          "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+          "artists": [
+            "Billie Eilish"
+          ],
+          "duration_seconds": 196,
+          "platform_track_id": "230766582:1",
+          "release_date": "2019-03-29",
+          "release_year": 2019,
+          "source_playlist_position": 35,
+          "title": "when the party's over"
+        },
+        {
+          "album": "Hollywood's Bleeding (Explicit)",
+          "artists": [
+            "Post Malone"
+          ],
+          "duration_seconds": 158,
+          "platform_track_id": "237657802:1",
+          "release_date": "2019-09-06",
+          "release_year": 2019,
+          "source_playlist_position": 36,
+          "title": "Myself (Explicit)"
+        },
+        {
+          "album": "WHEN I WAS OLDER (Music Inspired By The Film ROMA)",
+          "artists": [
+            "Billie Eilish"
+          ],
+          "duration_seconds": 270,
+          "platform_track_id": "227288708:1",
+          "release_date": "2019-01-09",
+          "release_year": 2019,
+          "source_playlist_position": 37,
+          "title": "WHEN I WAS OLDER (Music Inspired By The Film ROMA)"
+        },
+        {
+          "album": "Lover",
+          "artists": [
+            "Taylor Swift"
+          ],
+          "duration_seconds": 223,
+          "platform_track_id": "235175538:1",
+          "release_date": "2019-08-23",
+          "release_year": 2019,
+          "source_playlist_position": 38,
+          "title": "Afterglow"
+        },
+        {
+          "album": "Lover",
+          "artists": [
+            "Taylor Swift"
+          ],
+          "duration_seconds": 211,
+          "platform_track_id": "234902470:1",
+          "release_date": "2019-08-23",
+          "release_year": 2019,
+          "source_playlist_position": 39,
+          "title": "The Archer"
+        },
+        {
+          "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+          "artists": [
+            "Billie Eilish"
+          ],
+          "duration_seconds": 180,
+          "platform_track_id": "230766577:1",
+          "release_date": "2019-03-29",
+          "release_year": 2019,
+          "source_playlist_position": 40,
+          "title": "you should see me in a crown"
+        },
+        {
+          "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+          "artists": [
+            "Billie Eilish"
+          ],
+          "duration_seconds": 194,
+          "platform_track_id": "230766575:1",
+          "release_date": "2019-03-29",
+          "release_year": 2019,
+          "source_playlist_position": 41,
+          "title": "bad guy"
+        },
+        {
+          "album": "Lover",
+          "artists": [
+            "Taylor Swift"
+          ],
+          "duration_seconds": 293,
+          "platform_track_id": "235175540:1",
+          "release_date": "2019-08-23",
+          "release_year": 2019,
+          "source_playlist_position": 42,
+          "title": "Daylight"
+        },
+        {
+          "album": "知道",
+          "artists": [
+            "宋冬野"
+          ],
+          "duration_seconds": 333,
+          "platform_track_id": "218766812:1",
+          "release_date": "2018-10-29",
+          "release_year": 2018,
+          "source_playlist_position": 43,
+          "title": "知道"
+        },
+        {
+          "album": "Lover",
+          "artists": [
+            "Taylor Swift",
+            "The Chicks"
+          ],
+          "duration_seconds": 201,
+          "platform_track_id": "235175539:1",
+          "release_date": "2019-08-23",
+          "release_year": 2019,
+          "source_playlist_position": 44,
+          "title": "Soon You'll Get Better (feat. Dixie Chicks)"
+        },
+        {
+          "album": "Hollywood's Bleeding (Explicit)",
+          "artists": [
+            "Post Malone",
+            "Ozzy Osbourne",
+            "Travis Scott"
+          ],
+          "duration_seconds": 229,
+          "platform_track_id": "237657811:1",
+          "release_date": "2019-09-06",
+          "release_year": 2019,
+          "source_playlist_position": 45,
+          "title": "Take What You Want"
+        },
+        {
+          "album": "Happier",
+          "artists": [
+            "Marshmello",
+            "Bastille"
+          ],
+          "duration_seconds": 214,
+          "platform_track_id": "215772049:1",
+          "release_date": "2018-08-17",
+          "release_year": 2018,
+          "source_playlist_position": 46,
+          "title": "Happier"
+        },
+        {
+          "album": "Lover",
+          "artists": [
+            "Taylor Swift"
+          ],
+          "duration_seconds": 287,
+          "platform_track_id": "235175534:1",
+          "release_date": "2019-08-23",
+          "release_year": 2019,
+          "source_playlist_position": 47,
+          "title": "Cornelia Street"
+        },
+        {
+          "album": "dont smile at me",
+          "artists": [
+            "Billie Eilish"
+          ],
+          "duration_seconds": 204,
+          "platform_track_id": "203377679:1",
+          "release_date": "2017-07-21",
+          "release_year": 2017,
+          "source_playlist_position": 48,
+          "title": "idontwannabeyouanymore"
+        },
+        {
+          "album": "1989 (Deluxe)",
+          "artists": [
+            "Taylor Swift"
+          ],
+          "duration_seconds": 271,
+          "platform_track_id": "9109365:1",
+          "release_date": "2014-10-27",
+          "release_year": 2014,
+          "source_playlist_position": 49,
+          "title": "Clean"
+        }
+      ]
+    }
+  ]
+}
