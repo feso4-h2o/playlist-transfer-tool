@@ -33,6 +33,7 @@ from playlist_porter.rate_limit import (
 )
 
 QQ_PLATFORM = "qqmusic"
+QQMUSIC_EMPTY_SEARCH_REFRESH_THRESHOLD = 40
 
 
 class QQMusicAdapterError(RuntimeError):
@@ -120,6 +121,7 @@ class QQMusicClientFacade:
         )
         self._client = Client(credential=credential, max_concurrency=max_concurrency)
         self._credential = credential
+        self._loop: asyncio.AbstractEventLoop | None = None
 
     def validate_session(self) -> None:
         """Validate that the configured QQ Music credential is usable."""
@@ -173,15 +175,24 @@ class QQMusicClientFacade:
             )
         )
 
+    def close(self) -> None:
+        """Close the underlying async QQ Music HTTP session."""
+
+        self._run_async(self._client.close())
+        if self._loop is not None:
+            self._loop.close()
+            self._loop = None
+
     def _execute(self, request: Any) -> Any:
         return self._run_async(self._client.execute(request))
 
-    @staticmethod
-    def _run_async(awaitable: Any) -> Any:
+    def _run_async(self, awaitable: Any) -> Any:
         try:
             asyncio.get_running_loop()
         except RuntimeError:
-            return asyncio.run(awaitable)
+            if self._loop is None or self._loop.is_closed():
+                self._loop = asyncio.new_event_loop()
+            return self._loop.run_until_complete(awaitable)
         raise QQMusicAdapterError("QQ Music adapter cannot run inside an active event loop")
 
 
@@ -209,6 +220,7 @@ class QQMusicAdapter(BasePlatform):
             is_official=False,
         )
         self._client = client
+        self._can_refresh_client = client is None or client_factory is not None
         self._client_factory = client_factory or (
             lambda credential_payload: QQMusicClientFacade(
                 credential_payload=credential_payload,
@@ -217,6 +229,7 @@ class QQMusicAdapter(BasePlatform):
         )
         self._policy = rate_limit_policy or QQMusicRateLimitPolicy()
         self.authenticated = False
+        self._search_requests_for_client = 0
 
     def authenticate(self) -> None:
         """Validate the local QQ Music session before transfer work."""
@@ -258,17 +271,12 @@ class QQMusicAdapter(BasePlatform):
     def search_tracks(self, query: str, limit: int = 10) -> list[TrackCandidate]:
         """Search QQ Music and return ranked internal candidates."""
 
-        try:
-            payload = self._policy.execute(
-                "qqmusic track search",
-                _retryable_qqmusic_operation(
-                    lambda: self._ensure_client().search_tracks(query, limit=limit)
-                ),
-                request_kind="read",
-            )
-        except Exception as exc:
-            _raise_classified_qqmusic_exception(exc)
+        payload = self._search_tracks_payload(query, limit=limit)
         tracks = search_tracks_from_qqmusic_payload(payload)
+        if not tracks and self._should_retry_empty_search():
+            self._refresh_client()
+            payload = self._search_tracks_payload(query, limit=limit)
+            tracks = search_tracks_from_qqmusic_payload(payload)
         return [
             TrackCandidate(
                 track=track,
@@ -282,6 +290,20 @@ class QQMusicAdapter(BasePlatform):
             )
             for rank, track in enumerate(tracks[:limit], start=1)
         ]
+
+    def _search_tracks_payload(self, query: str, *, limit: int) -> Any:
+        try:
+            payload = self._policy.execute(
+                "qqmusic track search",
+                _retryable_qqmusic_operation(
+                    lambda: self._ensure_client().search_tracks(query, limit=limit)
+                ),
+                request_kind="read",
+            )
+        except Exception as exc:
+            _raise_classified_qqmusic_exception(exc)
+        self._search_requests_for_client += 1
+        return payload
 
     def create_playlist(self, name: str, description: str | None = None) -> str:
         """Create a QQ Music playlist when supported by the configured client."""
@@ -329,7 +351,21 @@ class QQMusicAdapter(BasePlatform):
     def _ensure_client(self) -> Any:
         if self._client is None:
             self._client = self._client_factory(self.config.load_credential_payload())
+            self._search_requests_for_client = 0
         return self._client
+
+    def _should_retry_empty_search(self) -> bool:
+        return (
+            self._can_refresh_client
+            and self._search_requests_for_client > QQMUSIC_EMPTY_SEARCH_REFRESH_THRESHOLD
+        )
+
+    def _refresh_client(self) -> None:
+        client = self._client
+        if client is not None and hasattr(client, "close"):
+            client.close()
+        self._client = None
+        self._ensure_client()
 
     def _has_configured_credentials(self) -> bool:
         return self.config.credential_payload is not None or self.config.credential_path is not None
@@ -615,6 +651,7 @@ __all__ = [
     "QQMusicAdapterError",
     "QQMusicClientFacade",
     "QQMusicConfig",
+    "QQMUSIC_EMPTY_SEARCH_REFRESH_THRESHOLD",
     "QQMusicWriteUnsupported",
     "playlist_from_qqmusic_payload",
     "search_tracks_from_qqmusic_payload",

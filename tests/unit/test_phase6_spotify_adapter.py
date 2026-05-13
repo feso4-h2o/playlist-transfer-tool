@@ -67,11 +67,7 @@ class FakeSpotifyClient:
             }
         }
 
-    def current_user(self):
-        return {"id": "user-1"}
-
-    def user_playlist_create(self, user, name, public, description):
-        assert user == "user-1"
+    def current_user_playlist_create(self, name, public, description):
         assert public is False
         return {"id": f"created-{name}-{description}"}
 
