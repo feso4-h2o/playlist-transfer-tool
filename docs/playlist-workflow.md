@@ -231,6 +231,22 @@ but uses a different source playlist and restart setting for one run:
 uv run playlist-porter match --config playlist-porter.json --source-playlist <playlist-id-or-url> --restart
 ```
 
+## Verbosity And Debug Logs
+
+Logging is flag-controlled for each command. These options are not read from
+`playlist-porter.json`:
+
+- `-v`: print INFO and above to the console.
+- `-vv`: print DEBUG and above to the console.
+- `-l` / `--log`: write DEBUG diagnostics to a timestamped file under `logs/`.
+
+The flags work before or after the subcommand:
+
+```powershell
+uv run playlist-porter -v match --config playlist-porter.json
+uv run playlist-porter match --config playlist-porter.json -vv --log
+```
+
 ## Playlist Identifiers
 
 `match --source-playlist` identifies the playlist to read from
