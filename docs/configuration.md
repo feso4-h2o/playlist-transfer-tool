@@ -6,6 +6,19 @@ Playlist Porter separates local run configuration from credentials.
 flags, and optional `commands.*` defaults. Spotify and QQ Music credentials are
 environment-only inputs so secrets do not end up in project config.
 
+## Credential Scope
+
+Mock fixture workflows do not need Spotify or QQ Music credentials.
+
+Spotify playlist reads, Spotify searches, and Spotify writes currently require
+OAuth environment variables because the Spotify adapter uses an authenticated
+Spotipy client. This means `match` needs Spotify credentials whenever Spotify is
+the source or destination platform.
+
+QQ Music public playlist reads and destination searches can run without
+`QQMUSIC_CREDENTIAL_PATH` when `qqmusic.allow_anonymous_read` is enabled in
+`playlist-porter.json`. QQ Music writes always require a local credential JSON.
+
 ## Starter Config
 
 Create a local config:
@@ -33,7 +46,7 @@ Copy `.env.example` to `.env` or another local environment manager. The CLI does
 not auto-load `.env`; use `uv --env-file` for local runs:
 
 ```powershell
-uv run --env-file .env playlist-porter match --config playlist-porter.json
+uv run --env-file .env playlist-porter write --config playlist-porter.json
 ```
 
 Keep `.env`, OAuth token caches, QQ Music credential JSON, SQLite databases, and
@@ -66,6 +79,16 @@ The first Spotify command that needs OAuth may ask you to open a browser URL and
 paste the redirected callback URL. Paste the full URL, including the `?code=...`
 query string.
 
+Example prompt and input shape:
+
+```text
+Go to the following URL: https://accounts.spotify.com/authorize?client_id=<client-id>&response_type=code&redirect_uri=http%3A%2F%2F127.0.0.1%3A8888%2Fcallback&scope=<scopes>
+Enter the URL you were redirected to: http://127.0.0.1:8888/callback?code=<authorization-code>&state=<state>
+```
+
+The input is the local callback URL from the browser address bar after approving
+the Spotify request, not the `accounts.spotify.com/authorize` URL.
+
 ## QQ Music Setup
 
 QQ Music credentials are also environment-only:
@@ -84,10 +107,10 @@ local workflows that require an explicit account identifier.
 QQ Music writes require a local session credential. The main CLI does not create
 or refresh that credential automatically. If you choose to use
 `qqmusic-api-python`'s unofficial QR login flow, this repository includes a
-helper:
+helper. Read the helper's options first:
 
 ```powershell
-uv run python scripts/create_qqmusic_credential.py --output state/qqmusic-credential.json --acknowledge-risk
+uv run python scripts/create_qqmusic_credential.py --help
 ```
 
 The helper:
@@ -99,13 +122,15 @@ The helper:
 - Refuses to run unless `--acknowledge-risk` is present.
 - Refuses to overwrite an existing credential file unless `--force` is passed.
 
-Useful options:
+Command shape:
 
 ```powershell
-uv run python scripts/create_qqmusic_credential.py --output state/qqmusic-credential.json --qr-dir state --login-type qq --timeout-seconds 180 --acknowledge-risk
+uv run python scripts/create_qqmusic_credential.py --output <path-to-qqmusic-credential.json> --qr-dir <qr-output-dir> --login-type <qq|wechat|mobile> --timeout-seconds <seconds>
 ```
 
-`--login-type` accepts `qq`, `wechat`, or `mobile`.
+`--login-type` accepts `qq`, `wechat`, or `mobile`. After reading the risk
+notice and deciding to continue, add the required acknowledgement flag to the
+command. Without that flag, the helper refuses to run.
 
 Treat the generated JSON as a reusable QQ Music session credential. Anyone who
 can read it may be able to act as your QQ Music session until the credential
@@ -116,5 +141,5 @@ issues, logs, or pull requests.
 After creating the file, point `QQMUSIC_CREDENTIAL_PATH` at it:
 
 ```powershell
-QQMUSIC_CREDENTIAL_PATH=state/qqmusic-credential.json
+QQMUSIC_CREDENTIAL_PATH=<path-to-qqmusic-credential.json>
 ```

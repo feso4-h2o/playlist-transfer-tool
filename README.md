@@ -64,7 +64,7 @@ Music credentials are read from the process environment, not from
 For local runs, prefer loading credentials with `uv`:
 
 ```powershell
-uv run --env-file .env playlist-porter match --config playlist-porter.json
+uv run --env-file .env playlist-porter write --config playlist-porter.json
 ```
 
 See [docs/configuration.md](docs/configuration.md) for Spotify Developer
@@ -83,55 +83,20 @@ Use the same lifecycle for Spotify, QQ Music, and mock fixture runs:
 3. `write`: write approved matches from the reviewed run to the destination.
 4. `export-report`: regenerate reports for an existing run.
 
-Example:
+With `commands.*` defaults configured in `playlist-porter.json`, the workflow
+can be run with short commands:
 
 ```powershell
-uv run playlist-porter match --config playlist-porter.json --source-platform spotify --destination-platform qqmusic --source-playlist <spotify-playlist-id-or-url> --restart
-uv run playlist-porter review --config playlist-porter.json --run-id <run-id>
-uv run playlist-porter write --config playlist-porter.json --destination-platform qqmusic --run-id <run-id> --create-playlist "Spotify Copy"
-uv run playlist-porter export-report --config playlist-porter.json --run-id <run-id> --output-dir reports --format both
+uv run playlist-porter match --config playlist-porter.json
+uv run playlist-porter review --config playlist-porter.json
+uv run --env-file .env playlist-porter write --config playlist-porter.json
+uv run playlist-porter export-report --config playlist-porter.json
 ```
 
 See [docs/playlist-workflow.md](docs/playlist-workflow.md) for Spotify -> QQ
-Music, QQ Music -> Spotify, and mock fixture examples.
-
-## Playlist Identifiers
-
-`match --source-playlist` identifies the playlist to read from the selected
-source platform. Source playlist values may also come from
-`commands.match.source_playlist`.
-
-`write --destination-playlist-id` appends to an existing normal destination
-playlist or songlist. `write --create-playlist` creates a new normal destination
-playlist or songlist by name, then writes there. These are separate write target
-paths; choose one explicit target for a write.
-
-Current source playlist support:
-
-- Spotify: raw playlist IDs, Spotify playlist URLs, and
-  `spotify:playlist:<id>` URIs.
-- QQ Music: raw numeric songlist IDs and common playlist URL forms where a
-  numeric ID can be extracted.
-
-Current destination playlist support:
-
-- Spotify: pass the raw Spotify playlist ID.
-- QQ Music: pass the raw numeric songlist ID.
-
-Destination URL parsing and non-playlist library targets such as Spotify Liked
-Songs are not currently supported write targets.
-
-## Reports
-
-Match and write commands export reports under the configured report directory:
-
-- `transfer-summary-<HHMMSS>.json` and `transfer-summary-<HHMMSS>.csv`:
-  aggregate metrics from persisted transfer state.
-- `unavailable-tracks-<HHMMSS>.json` and `unavailable-tracks-<HHMMSS>.csv`:
-  not-found, unresolved, and rejected tracks with attempted queries, top
-  alternates, confidence scores, and reason codes.
-
-Reports are grouped by short run ID, for example `reports/767cbfe5/`.
+Music, QQ Music -> Spotify, mock fixture examples, `playlist-porter.json`
+examples, CLI override flags, playlist identifier support, write-target choices,
+and report export details.
 
 ## Development
 

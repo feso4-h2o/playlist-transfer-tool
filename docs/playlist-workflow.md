@@ -9,57 +9,123 @@ runs:
 3. `write`: write approved matches from that run to the destination.
 4. `export-report`: regenerate persisted reports when needed.
 
+The JSON examples below show the relevant `playlist-porter.json` sections to
+edit after running `init-config`; they are not complete replacement config
+files.
+
 ## Spotify To QQ Music
 
-Match a Spotify source playlist against QQ Music:
+Configure the source and destination defaults:
 
-```powershell
-uv run --env-file .env playlist-porter match --config playlist-porter.json --source-platform spotify --destination-platform qqmusic --source-playlist <spotify-playlist-id-or-url> --restart
+```json
+{
+  "commands": {
+    "match": {
+      "source_platform": "spotify",
+      "destination_platform": "qqmusic",
+      "source_playlist": "<spotify-playlist-id-or-url>",
+      "restart": true,
+      "output_dir": "reports"
+    },
+    "review": {
+      "database_path": "state/playlist-porter.sqlite",
+      "run_id": "<run-id>"
+    },
+    "write": {
+      "destination_platform": "qqmusic",
+      "database_path": "state/playlist-porter.sqlite",
+      "run_id": "<run-id>",
+      "output_dir": "reports",
+      "destination_playlist_id": "",
+      "create_playlist": "Spotify Copy"
+    },
+    "export_report": {
+      "database_path": "state/playlist-porter.sqlite",
+      "run_id": "<run-id>",
+      "output_dir": "reports",
+      "format": "both"
+    }
+  }
+}
 ```
 
-Review uncertain matches:
+Then run each step with the config:
 
 ```powershell
-uv run playlist-porter review --config playlist-porter.json --run-id <run-id>
+uv run playlist-porter match --config playlist-porter.json
 ```
 
-Create a new QQ Music songlist and write approved matches:
+After `match` prints the run ID, paste it into `commands.review.run_id`,
+`commands.write.run_id`, and `commands.export_report.run_id`. Then run:
 
 ```powershell
-uv run --env-file .env playlist-porter write --config playlist-porter.json --destination-platform qqmusic --run-id <run-id> --create-playlist "Spotify Copy"
+uv run playlist-porter review --config playlist-porter.json
+uv run --env-file .env playlist-porter write --config playlist-porter.json
+uv run playlist-porter export-report --config playlist-porter.json
 ```
 
-Or append to an existing QQ Music songlist by raw numeric ID:
+If you do not want to edit the config between steps, pass `--run-id <run-id>` to
+`review`, `write`, and `export-report`; CLI flags override configured defaults.
 
-```powershell
-uv run --env-file .env playlist-porter write --config playlist-porter.json --destination-platform qqmusic --run-id <run-id> --destination-playlist-id <qqmusic-songlist-id>
-```
+Replace `write.create_playlist` with `write.destination_playlist_id` to append
+to an existing QQ Music songlist instead of creating a new one.
 
 ## QQ Music To Spotify
 
-Match a QQ Music source songlist against Spotify:
+Configure the source and destination defaults:
 
-```powershell
-uv run --env-file .env playlist-porter match --config playlist-porter.json --source-platform qqmusic --destination-platform spotify --source-playlist <qqmusic-songlist-id-or-url> --restart
+```json
+{
+  "commands": {
+    "match": {
+      "source_platform": "qqmusic",
+      "destination_platform": "spotify",
+      "source_playlist": "<qqmusic-songlist-id-or-url>",
+      "restart": true,
+      "output_dir": "reports"
+    },
+    "review": {
+      "database_path": "state/playlist-porter.sqlite",
+      "run_id": "<run-id>"
+    },
+    "write": {
+      "destination_platform": "spotify",
+      "database_path": "state/playlist-porter.sqlite",
+      "run_id": "<run-id>",
+      "output_dir": "reports",
+      "destination_playlist_id": "",
+      "create_playlist": "QQ Music Copy"
+    },
+    "export_report": {
+      "database_path": "state/playlist-porter.sqlite",
+      "run_id": "<run-id>",
+      "output_dir": "reports",
+      "format": "both"
+    }
+  }
+}
 ```
 
-Review uncertain matches:
+Then run each step with the config:
 
 ```powershell
-uv run playlist-porter review --config playlist-porter.json --run-id <run-id>
+uv run playlist-porter match --config playlist-porter.json
 ```
 
-Create a new Spotify playlist and write approved matches:
+After `match` prints the run ID, paste it into `commands.review.run_id`,
+`commands.write.run_id`, and `commands.export_report.run_id`. Then run:
 
 ```powershell
-uv run --env-file .env playlist-porter write --config playlist-porter.json --destination-platform spotify --run-id <run-id> --create-playlist "QQ Music Copy"
+uv run playlist-porter review --config playlist-porter.json
+uv run --env-file .env playlist-porter write --config playlist-porter.json
+uv run playlist-porter export-report --config playlist-porter.json
 ```
 
-Or append to an existing Spotify playlist by raw playlist ID:
+If you do not want to edit the config between steps, pass `--run-id <run-id>` to
+`review`, `write`, and `export-report`; CLI flags override configured defaults.
 
-```powershell
-uv run --env-file .env playlist-porter write --config playlist-porter.json --destination-platform spotify --run-id <run-id> --destination-playlist-id <spotify-playlist-id>
-```
+Replace `write.create_playlist` with `write.destination_playlist_id` to append
+to an existing Spotify playlist instead of creating a new one.
 
 ## Mock Fixture Workflow
 
@@ -68,10 +134,57 @@ workflow without external services:
 
 ```powershell
 uv run playlist-porter init-config --path playlist-porter.json
-uv run playlist-porter match --config playlist-porter.json --source-platform mock --destination-platform mock --source-playlist sample-mixed --restart
-uv run playlist-porter review --config playlist-porter.json --run-id <run-id>
-uv run playlist-porter write --config playlist-porter.json --destination-platform mock --run-id <run-id> --create-playlist "Sample Copy"
 ```
+
+Then configure mock defaults:
+
+```json
+{
+  "mock": {
+    "source_playlists_path": "fixtures/mock-playlists.json",
+    "destination_catalog_path": "fixtures/mock-catalog.json",
+    "writes_path": "state/mock-writes.json"
+  },
+  "commands": {
+    "match": {
+      "source_platform": "mock",
+      "destination_platform": "mock",
+      "source_playlist": "sample-mixed",
+      "restart": true,
+      "output_dir": "reports"
+    },
+    "review": {
+      "database_path": "state/playlist-porter.sqlite",
+      "run_id": "<run-id>"
+    },
+    "write": {
+      "destination_platform": "mock",
+      "database_path": "state/playlist-porter.sqlite",
+      "run_id": "<run-id>",
+      "output_dir": "reports",
+      "destination_playlist_id": "",
+      "create_playlist": "Sample Copy"
+    }
+  }
+}
+```
+
+Then run the mock lifecycle:
+
+```powershell
+uv run playlist-porter match --config playlist-porter.json
+```
+
+After `match` prints the run ID, paste it into `commands.review.run_id` and
+`commands.write.run_id`. Then run:
+
+```powershell
+uv run playlist-porter review --config playlist-porter.json
+uv run playlist-porter write --config playlist-porter.json
+```
+
+If you do not want to edit the config between steps, pass `--run-id <run-id>` to
+`review` and `write`; CLI flags override configured defaults.
 
 Mock writes record approved destination IDs to the configured mock writes file,
 usually under `state/`. Match and write reports are written under the configured
@@ -79,39 +192,43 @@ report output directory, usually `reports/`.
 
 ## Config Defaults And Overrides
 
-The generated config includes optional defaults under `commands`:
+Explicit CLI flags override defaults from `commands.*` in `playlist-porter.json`.
 
-- `commands.match.source_platform`
-- `commands.match.destination_platform`
-- `commands.match.source_playlist`
-- `commands.match.restart`
-- `commands.match.database_path`
-- `commands.match.output_dir`
-- `commands.review.database_path`
-- `commands.review.run_id`
-- `commands.write.destination_platform`
-- `commands.write.database_path`
-- `commands.write.run_id`
-- `commands.write.output_dir`
-- `commands.write.destination_playlist_id`
-- `commands.write.create_playlist`
-- `commands.export_report.database_path`
-- `commands.export_report.run_id`
-- `commands.export_report.output_dir`
-- `commands.export_report.format`
+`match` overrides:
 
-Explicit CLI flags override these defaults. For example, if
-`commands.match.source_platform`, `commands.match.destination_platform`, and
-`commands.match.source_playlist` are already configured, this is enough:
+- `--source-platform`: `commands.match.source_platform`
+- `--destination-platform`: `commands.match.destination_platform`
+- `--source-playlist`: `commands.match.source_playlist`
+- `--restart` / `--no-restart`: `commands.match.restart`
+- `--db`: `commands.match.database_path`
+- `--output-dir`: `commands.match.output_dir`
+
+`review` overrides:
+
+- `--db`: `commands.review.database_path`
+- `--run-id`: `commands.review.run_id`
+
+`write` overrides:
+
+- `--destination-platform`: `commands.write.destination_platform`
+- `--db`: `commands.write.database_path`
+- `--run-id`: `commands.write.run_id`
+- `--output-dir`: `commands.write.output_dir`
+- `--destination-playlist-id`: `commands.write.destination_playlist_id`
+- `--create-playlist`: `commands.write.create_playlist`
+
+`export-report` overrides:
+
+- `--db`: `commands.export_report.database_path`
+- `--run-id`: `commands.export_report.run_id`
+- `--output-dir`: `commands.export_report.output_dir`
+- `--format`: `commands.export_report.format`
+
+For example, this command keeps the configured platforms and output directory,
+but uses a different source playlist and restart setting for one run:
 
 ```powershell
-uv run --env-file .env playlist-porter match --config playlist-porter.json
-```
-
-You can override just the source playlist for one run:
-
-```powershell
-uv run --env-file .env playlist-porter match --config playlist-porter.json --source-playlist <playlist-id-or-url> --restart
+uv run playlist-porter match --config playlist-porter.json --source-playlist <playlist-id-or-url> --restart
 ```
 
 ## Playlist Identifiers
@@ -141,7 +258,8 @@ Destination URL parsing is not currently supported for writes.
 ## Create Versus Existing Destination
 
 `write --destination-playlist-id` and `write --create-playlist` are separate
-write target paths:
+write target paths and should be treated as mutually exclusive options. Set
+exactly one for a write, either through CLI flags or `commands.write` defaults:
 
 - Use `--destination-playlist-id` to append approved matches to an existing
   normal playlist or songlist.
