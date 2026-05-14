@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+from loguru import logger
+
+from playlist_porter.diagnostics import (
+    candidate_summary,
+    decision_summary,
+    diagnostic_logger,
+    track_summary,
+)
 from playlist_porter.matching.scoring import ScoringConfig, decide_match
 from playlist_porter.models import MatchDecision, Playlist, TrackCandidate, UniversalTrack
 from playlist_porter.normalization import (
@@ -10,6 +18,8 @@ from playlist_porter.normalization import (
     normalize_title_forms,
 )
 from playlist_porter.platforms.base import BasePlatform
+
+MATCH_DIAGNOSTICS = diagnostic_logger("match")
 
 
 def build_search_queries(track: UniversalTrack) -> tuple[str, ...]:
@@ -41,9 +51,41 @@ def generate_candidates(
     """Search a destination adapter with broadened queries and de-duplicate results."""
 
     by_identity: dict[str, TrackCandidate] = {}
+    queries = build_search_queries(source_track)
+    logger.debug(
+        "generated search queries",
+        query_count=len(queries),
+        destination_platform=destination.platform_name,
+    )
+    MATCH_DIAGNOSTICS.debug(
+        "source track search queries generated",
+        source_track=track_summary(source_track),
+        query_count=len(queries),
+        destination_platform=destination.platform_name,
+        per_query_limit=per_query_limit,
+        candidate_limit=limit,
+    )
 
-    for query in build_search_queries(source_track):
-        for candidate in destination.search_tracks(query, limit=per_query_limit):
+    search_count = 0
+    for query in queries:
+        search_count += 1
+        query_candidates = destination.search_tracks(query, limit=per_query_limit)
+        MATCH_DIAGNOSTICS.debug(
+            "destination search query completed",
+            source_track=track_summary(source_track),
+            query=query,
+            destination_platform=destination.platform_name,
+            candidate_count=len(query_candidates),
+        )
+        for candidate in query_candidates:
+            MATCH_DIAGNOSTICS.debug(
+                "destination search candidate returned",
+                source_track=track_summary(source_track),
+                query=query,
+                destination_platform=destination.platform_name,
+                candidate=candidate_summary(candidate),
+            )
+        for candidate in query_candidates:
             identity = candidate.track.platform_track_id or str(candidate.track.internal_id)
             existing = by_identity.get(identity)
             if existing is None or candidate.score > existing.score:
@@ -54,10 +96,33 @@ def generate_candidates(
         key=lambda candidate: (candidate.score, -candidate.rank),
         reverse=True,
     )
-    return [
+    result = [
         candidate.model_copy(update={"rank": rank})
         for rank, candidate in enumerate(candidates[:limit], start=1)
     ]
+    logger.debug(
+        "destination search candidates generated",
+        search_count=search_count,
+        unique_candidate_count=len(by_identity),
+        returned_candidate_count=len(result),
+        destination_platform=destination.platform_name,
+    )
+    MATCH_DIAGNOSTICS.debug(
+        "destination search candidates deduplicated",
+        source_track=track_summary(source_track),
+        destination_platform=destination.platform_name,
+        search_count=search_count,
+        unique_candidate_count=len(by_identity),
+        returned_candidate_count=len(result),
+    )
+    for candidate in result:
+        MATCH_DIAGNOSTICS.debug(
+            "destination candidate retained",
+            source_track=track_summary(source_track),
+            destination_platform=destination.platform_name,
+            candidate=candidate_summary(candidate),
+        )
+    return result
 
 
 def match_track(
@@ -69,8 +134,30 @@ def match_track(
 ) -> MatchDecision:
     """Generate candidates and assign one match decision for a source track."""
 
+    scoring_config = config or ScoringConfig()
+    MATCH_DIAGNOSTICS.debug(
+        "track matching started",
+        source_track=track_summary(source_track),
+        destination_platform=destination.platform_name,
+        candidate_limit=candidate_limit,
+        scoring_config={
+            "duration_tolerance_seconds": scoring_config.duration_tolerance_seconds,
+            "duration_mismatch_seconds": scoring_config.duration_mismatch_seconds,
+            "duration_max_penalty_seconds": scoring_config.duration_max_penalty_seconds,
+            "high_confidence_threshold": scoring_config.high_confidence_threshold,
+            "medium_confidence_threshold": scoring_config.medium_confidence_threshold,
+            "ambiguity_delta": scoring_config.ambiguity_delta,
+        },
+    )
     candidates = generate_candidates(source_track, destination, limit=candidate_limit)
-    return decide_match(source_track, candidates, config=config)
+    decision = decide_match(source_track, candidates, config=scoring_config)
+    MATCH_DIAGNOSTICS.debug(
+        "track matching finished",
+        decision=decision_summary(decision),
+        destination_platform=destination.platform_name,
+        candidate_limit=candidate_limit,
+    )
+    return decision
 
 
 def match_playlist(
@@ -82,10 +169,25 @@ def match_playlist(
 ) -> list[MatchDecision]:
     """Match all source playlist tracks against a destination adapter."""
 
-    return [
+    logger.info(
+        "playlist matching started",
+        source_platform=source_playlist.platform,
+        destination_platform=destination.platform_name,
+        track_count=len(source_playlist.tracks),
+    )
+    decisions = [
         match_track(track, destination, candidate_limit=candidate_limit, config=config)
         for track in source_playlist.tracks
     ]
+    logger.info(
+        "playlist matching finished",
+        source_platform=source_playlist.platform,
+        destination_platform=destination.platform_name,
+        track_count=len(source_playlist.tracks),
+        decision_count=len(decisions),
+        candidate_count=sum(len(decision.candidates) for decision in decisions),
+    )
+    return decisions
 
 
 __all__ = ["build_search_queries", "generate_candidates", "match_playlist", "match_track"]

@@ -6,10 +6,20 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from loguru import logger
 from rich.console import Console
 from rich.table import Table
 
 from playlist_porter.config import PorterConfig, SpotifyConfig
+from playlist_porter.diagnostics import (
+    candidate_summary,
+    diagnostic_logger,
+    metrics_snapshot,
+    platform_capabilities_snapshot,
+    preflight_snapshot,
+    track_summary,
+    write_pair_snapshot,
+)
 from playlist_porter.matching.candidates import match_playlist
 from playlist_porter.matching.status import MatchStatus
 from playlist_porter.models import MatchDecision, TrackCandidate, TransferRun
@@ -30,6 +40,8 @@ WRITABLE_AUTO_STATUSES = {
 }
 
 PlatformName = Literal["mock", "spotify", "qqmusic"]
+WORKFLOW_DIAGNOSTICS = diagnostic_logger("workflow")
+WRITE_DIAGNOSTICS = diagnostic_logger("write")
 
 
 @dataclass(frozen=True)
@@ -91,6 +103,12 @@ class ExecuteResult:
 def create_mock_adapter(config: PorterConfig) -> MockAdapter:
     """Create the fixture-backed adapter used for Phase 4 commands."""
 
+    logger.debug(
+        "creating mock adapter",
+        source_playlists_path=str(config.mock_source_playlists_path),
+        destination_catalog_path=str(config.mock_destination_catalog_path),
+        writes_path=str(config.mock_writes_path) if config.mock_writes_path else None,
+    )
     return MockAdapter.from_json(
         playlists_path=config.mock_source_playlists_path,
         catalog_path=config.mock_destination_catalog_path,
@@ -101,6 +119,7 @@ def create_mock_adapter(config: PorterConfig) -> MockAdapter:
 def create_platform_adapter(config: PorterConfig, platform: PlatformName) -> BasePlatform:
     """Create a configured platform adapter for transfer orchestration."""
 
+    logger.debug("creating platform adapter", platform=platform)
     if platform == "mock":
         return create_mock_adapter(config)
     if platform == "spotify":
@@ -126,6 +145,15 @@ def run_transfer(
 ) -> TransferResult:
     """Run a direction-aware transfer with matching, persistence, optional writes, and exports."""
 
+    logger.info(
+        "transfer run requested",
+        source_platform=source_platform,
+        destination_platform=destination_platform,
+        dry_run=dry_run,
+        database_path=str(database_path or config.database_path),
+        output_dir=str(output_dir or config.report_output_dir),
+        restart=restart,
+    )
     return run_transfer_with_adapters(
         create_platform_adapter(config, source_platform),
         create_platform_adapter(config, destination_platform),
@@ -153,6 +181,13 @@ def execute_transfer_run(
 ) -> TransferResult:
     """Execute writes for an existing reviewed transfer run."""
 
+    logger.info(
+        "write run requested",
+        destination_platform=destination_platform,
+        run_id=transfer_run_id,
+        database_path=str(database_path or config.database_path),
+        output_dir=str(output_dir or config.report_output_dir),
+    )
     return execute_transfer_run_with_adapter(
         create_platform_adapter(config, destination_platform),
         transfer_run_id=transfer_run_id,
@@ -183,6 +218,7 @@ def execute_transfer_run_with_adapter(
         output_dir=output_dir,
     )
     if not preflight.ok:
+        logger.error("execute preflight failed", issues=list(preflight.issues))
         raise PreflightError(preflight)
 
     repository = TransferRepository(database_path)
@@ -201,6 +237,7 @@ def execute_transfer_run_with_adapter(
         )
 
     destination.authenticate()
+    logger.info("destination authenticated", destination_platform=destination.platform_name)
     write_result = _execute_transfer_writes(
         repository,
         destination,
@@ -210,8 +247,18 @@ def execute_transfer_run_with_adapter(
         create_playlist_name=create_playlist_name,
     )
     report_paths = tuple(export_reports(repository, transfer_run_id, output_dir))
+    logger.info(
+        "reports exported",
+        run_id=transfer_run_id,
+        reports=[str(path) for path in report_paths],
+    )
     repository.mark_run_completed(transfer_run_id)
     metrics = repository.load_metrics(transfer_run_id)
+    WORKFLOW_DIAGNOSTICS.debug(
+        "execute metrics loaded",
+        run_id=transfer_run_id,
+        metrics=metrics_snapshot(metrics),
+    )
     render_metrics(console, metrics, title="Transfer summary")
     return TransferResult(
         transfer_run_id=transfer_run_id,
@@ -249,14 +296,36 @@ def run_transfer_with_adapters(
         output_dir=output_dir,
     )
     if not preflight.ok:
+        logger.error("transfer preflight failed", issues=list(preflight.issues))
         raise PreflightError(preflight)
 
     source.authenticate()
+    logger.info("source authenticated", source_platform=source.platform_name)
     if destination is not source:
         destination.authenticate()
+        logger.info("destination authenticated", destination_platform=destination.platform_name)
 
     repository = TransferRepository(database_path)
     playlist = source.get_playlist(source_playlist_id)
+    logger.info(
+        "source playlist loaded",
+        source_platform=source.platform_name,
+        track_count=len(playlist.tracks),
+    )
+    WORKFLOW_DIAGNOSTICS.debug(
+        "source playlist loaded",
+        source_platform=source.platform_name,
+        playlist_name=playlist.name,
+        playlist_platform=playlist.platform,
+        playlist_id=playlist.platform_playlist_id,
+        track_count=len(playlist.tracks),
+    )
+    for track in playlist.tracks:
+        WORKFLOW_DIAGNOSTICS.debug(
+            "source playlist track loaded",
+            source_platform=source.platform_name,
+            track=track_summary(track),
+        )
     run = TransferRun(
         source_platform=source.platform_name,
         destination_platform=destination.platform_name,
@@ -269,19 +338,45 @@ def run_transfer_with_adapters(
     if restart:
         transfer_run_id = repository.create_run(run)
         created = True
+        logger.info("transfer run created", run_id=transfer_run_id, restart=True)
     else:
         transfer_run_id, created = repository.get_or_create_run(run)
+        logger.info("transfer run resolved", run_id=transfer_run_id, created=created)
         if not created and dry_run:
+            logger.info("pruning stale dry-run transfer state", run_id=transfer_run_id)
             repository.prune_transfer_state(
                 transfer_run_id,
                 [track.internal_id for track in playlist.tracks],
             )
 
+    WORKFLOW_DIAGNOSTICS.debug(
+        "transfer run state resolved",
+        run_id=transfer_run_id,
+        created=created,
+        restart=restart,
+        dry_run=dry_run,
+        source_platform=source.platform_name,
+        destination_platform=destination.platform_name,
+    )
+
     if created or dry_run:
         repository.save_source_playlist(transfer_run_id, playlist)
         decisions = match_playlist(playlist, destination)
+        logger.info(
+            "match decisions generated",
+            run_id=transfer_run_id,
+            decision_count=len(decisions),
+            candidate_count=sum(len(decision.candidates) for decision in decisions),
+        )
+        WORKFLOW_DIAGNOSTICS.debug(
+            "match decisions generated",
+            run_id=transfer_run_id,
+            decision_count=len(decisions),
+            candidate_count=sum(len(decision.candidates) for decision in decisions),
+        )
         repository.save_match_decisions(transfer_run_id, decisions)
     else:
+        logger.info("syncing metrics for existing run", run_id=transfer_run_id)
         repository.sync_metrics(transfer_run_id)
 
     write_result = _execute_transfer_writes(
@@ -295,10 +390,20 @@ def run_transfer_with_adapters(
 
     repository.sync_metrics(transfer_run_id)
     report_paths = tuple(export_reports(repository, transfer_run_id, output_dir))
+    logger.info(
+        "reports exported",
+        run_id=transfer_run_id,
+        reports=[str(path) for path in report_paths],
+    )
     if not dry_run:
         repository.mark_run_completed(transfer_run_id)
 
     metrics = repository.load_metrics(transfer_run_id)
+    WORKFLOW_DIAGNOSTICS.debug(
+        "transfer metrics loaded",
+        run_id=transfer_run_id,
+        metrics=metrics_snapshot(metrics),
+    )
     render_metrics(
         console,
         metrics,
@@ -346,12 +451,21 @@ def validate_transfer_preflight(
         _writable_path_issues(output_dir, label="report output directory", directory=True)
     )
 
-    return PreflightResult(
+    result = PreflightResult(
         source_platform=source.platform_name,
         destination_platform=destination.platform_name,
         dry_run=dry_run,
         issues=tuple(issues),
     )
+    WORKFLOW_DIAGNOSTICS.debug(
+        "transfer preflight checked",
+        preflight=preflight_snapshot(result),
+        source=platform_capabilities_snapshot(source),
+        destination=platform_capabilities_snapshot(destination),
+        database_path=str(database_path),
+        output_dir=str(output_dir),
+    )
+    return result
 
 
 def validate_execute_preflight(
@@ -370,12 +484,20 @@ def validate_execute_preflight(
     issues.extend(
         _writable_path_issues(output_dir, label="report output directory", directory=True)
     )
-    return PreflightResult(
+    result = PreflightResult(
         source_platform="persisted",
         destination_platform=destination.platform_name,
         dry_run=False,
         issues=tuple(issues),
     )
+    WORKFLOW_DIAGNOSTICS.debug(
+        "execute preflight checked",
+        preflight=preflight_snapshot(result),
+        destination=platform_capabilities_snapshot(destination),
+        database_path=str(database_path),
+        output_dir=str(output_dir),
+    )
+    return result
 
 
 def dry_run_mock_transfer(
@@ -392,7 +514,24 @@ def dry_run_mock_transfer(
     repository = TransferRepository(database_path or config.database_path)
     adapter = create_mock_adapter(config)
     adapter.authenticate()
+    logger.info(
+        "mock adapter authenticated",
+        database_path=str(database_path or config.database_path),
+    )
     playlist = adapter.get_playlist(source_playlist_id)
+    logger.info("mock source playlist loaded", track_count=len(playlist.tracks))
+    WORKFLOW_DIAGNOSTICS.debug(
+        "mock source playlist loaded",
+        playlist_name=playlist.name,
+        playlist_platform=playlist.platform,
+        playlist_id=playlist.platform_playlist_id,
+        track_count=len(playlist.tracks),
+    )
+    for track in playlist.tracks:
+        WORKFLOW_DIAGNOSTICS.debug(
+            "mock source playlist track loaded",
+            track=track_summary(track),
+        )
     run = TransferRun(
         source_platform="mock",
         destination_platform="mock",
@@ -403,9 +542,12 @@ def dry_run_mock_transfer(
     if restart:
         transfer_run_id = repository.create_run(run)
         created = True
+        logger.info("dry run created", run_id=transfer_run_id, restart=True)
     else:
         transfer_run_id, created = repository.get_or_create_run(run)
+        logger.info("dry run resolved", run_id=transfer_run_id, created=created)
         if not created:
+            logger.info("pruning stale dry-run transfer state", run_id=transfer_run_id)
             repository.prune_transfer_state(
                 transfer_run_id,
                 [track.internal_id for track in playlist.tracks],
@@ -413,8 +555,25 @@ def dry_run_mock_transfer(
 
     repository.save_source_playlist(transfer_run_id, playlist)
     decisions = match_playlist(playlist, adapter)
+    logger.info(
+        "mock match decisions generated",
+        run_id=transfer_run_id,
+        decision_count=len(decisions),
+        candidate_count=sum(len(decision.candidates) for decision in decisions),
+    )
+    WORKFLOW_DIAGNOSTICS.debug(
+        "mock match decisions generated",
+        run_id=transfer_run_id,
+        decision_count=len(decisions),
+        candidate_count=sum(len(decision.candidates) for decision in decisions),
+    )
     repository.save_match_decisions(transfer_run_id, decisions)
     metrics = repository.load_metrics(transfer_run_id)
+    WORKFLOW_DIAGNOSTICS.debug(
+        "mock dry-run metrics loaded",
+        run_id=transfer_run_id,
+        metrics=metrics_snapshot(metrics),
+    )
     render_metrics(console, metrics, title="Dry run summary")
     return DryRunResult(transfer_run_id=transfer_run_id, created=created, metrics=metrics)
 
@@ -434,6 +593,7 @@ def execute_mock_transfer(
     repository = TransferRepository(database_path or config.database_path)
     adapter = create_mock_adapter(config)
     adapter.authenticate()
+    logger.info("mock write adapter authenticated")
     run_record = repository.load_run(transfer_run_id)
     destination_id = destination_playlist_id or run_record.destination_playlist_id
     if destination_playlist_id is not None:
@@ -468,6 +628,11 @@ def execute_mock_transfer(
 
     repository.mark_run_completed(transfer_run_id)
     metrics = repository.load_metrics(transfer_run_id)
+    WORKFLOW_DIAGNOSTICS.debug(
+        "mock execution metrics loaded",
+        run_id=transfer_run_id,
+        metrics=metrics_snapshot(metrics),
+    )
     render_metrics(console, metrics, title="Execution summary")
     return ExecuteResult(
         transfer_run_id=transfer_run_id,
@@ -492,6 +657,11 @@ def _execute_transfer_writes(
             repository.load_match_decisions(transfer_run_id),
             repository.load_user_overrides(transfer_run_id),
         )
+        logger.info(
+            "dry run skipped destination writes",
+            run_id=transfer_run_id,
+            eligible_write_count=len(write_pairs),
+        )
         return ExecuteResult(
             transfer_run_id=transfer_run_id,
             destination_playlist_id=destination_playlist_id or "",
@@ -515,12 +685,41 @@ def _execute_transfer_writes(
     destination_id = destination_playlist_id or run_record.destination_playlist_id
     if destination_playlist_id is not None:
         repository.update_destination_playlist_id(transfer_run_id, destination_playlist_id)
+        logger.info(
+            "destination playlist id recorded",
+            run_id=transfer_run_id,
+        )
+        WRITE_DIAGNOSTICS.debug(
+            "destination playlist id recorded",
+            run_id=transfer_run_id,
+            destination_platform=destination.platform_name,
+            destination_playlist_id=destination_playlist_id,
+        )
     if destination_id is None:
         destination_id = destination.create_playlist(
             create_playlist_name or f"{run_record.source_playlist_name or 'Playlist'} Copy",
             "Created by playlist-porter write",
         )
         repository.update_destination_playlist_id(transfer_run_id, destination_id)
+        logger.info(
+            "destination playlist created",
+            run_id=transfer_run_id,
+            destination_platform=destination.platform_name,
+        )
+        WRITE_DIAGNOSTICS.debug(
+            "destination playlist created",
+            run_id=transfer_run_id,
+            destination_platform=destination.platform_name,
+            destination_playlist_id=destination_id,
+            create_playlist_name=create_playlist_name,
+        )
+    else:
+        WRITE_DIAGNOSTICS.debug(
+            "destination playlist reused",
+            run_id=transfer_run_id,
+            destination_platform=destination.platform_name,
+            destination_playlist_id=destination_id,
+        )
 
     write_pairs = _eligible_write_pairs(
         repository.load_match_decisions(transfer_run_id),
@@ -536,6 +735,12 @@ def _execute_transfer_writes(
         pending_destination_ids,
         repository,
         transfer_run_id,
+    )
+    logger.info(
+        "pending writes resolved",
+        run_id=transfer_run_id,
+        eligible_write_count=len(write_pairs),
+        pending_write_count=len(pending_pairs),
     )
     written_count = _write_pending_pairs(
         destination,
@@ -583,10 +788,25 @@ def _eligible_write_pairs(
     pairs: list[tuple[str, str]] = []
     for decision in decisions:
         source_track_id = str(decision.source_track.internal_id)
-        candidate = _effective_selected_candidate(decision, overrides.get(source_track_id))
+        override = overrides.get(source_track_id)
+        candidate = _effective_selected_candidate(decision, override)
+        WRITE_DIAGNOSTICS.debug(
+            "write eligibility evaluated",
+            source_track=track_summary(decision.source_track),
+            decision_status=decision.status.value,
+            override_status=override.status.value if override is not None else None,
+            selected_candidate=candidate_summary(candidate),
+            eligible=candidate is not None and candidate.track.platform_track_id is not None,
+        )
         if candidate is None or candidate.track.platform_track_id is None:
             continue
         pairs.append((source_track_id, candidate.track.platform_track_id))
+    WRITE_DIAGNOSTICS.debug(
+        "eligible write pairs resolved",
+        decision_count=len(decisions),
+        override_count=len(overrides),
+        eligible_write_count=len(pairs),
+    )
     return pairs
 
 
@@ -622,12 +842,30 @@ def _pending_pairs(
     repository: TransferRepository,
     transfer_run_id: str,
 ) -> list[tuple[str, str]]:
-    pending_pairs = [
-        pair
-        for pair in write_pairs
-        if repository.should_write_track(transfer_run_id, pair[0], pair[1])
-    ]
+    pending_pairs = []
+    for pair in write_pairs:
+        should_write = repository.should_write_track(transfer_run_id, pair[0], pair[1])
+        WRITE_DIAGNOSTICS.debug(
+            "write resume eligibility checked",
+            run_id=transfer_run_id,
+            pair=write_pair_snapshot(pair[0], pair[1]),
+            should_write=should_write,
+        )
+        if should_write:
+            pending_pairs.append(pair)
+    WRITE_DIAGNOSTICS.debug(
+        "pending write pairs resolved",
+        run_id=transfer_run_id,
+        eligible_write_count=len(write_pairs),
+        pending_write_count=len(pending_pairs),
+    )
     if [destination_id for _, destination_id in pending_pairs] != pending_destination_ids:
+        WRITE_DIAGNOSTICS.debug(
+            "pending write filter mismatch",
+            run_id=transfer_run_id,
+            pending_pair_count=len(pending_pairs),
+            pending_destination_id_count=len(pending_destination_ids),
+        )
         raise RuntimeError("pending write filter returned inconsistent source-aware results")
     return pending_pairs
 
@@ -641,11 +879,20 @@ def _write_pending_pairs(
     transfer_run_id: str,
 ) -> int:
     if not pending_pairs:
+        logger.info("no pending tracks to write", run_id=transfer_run_id)
+        WRITE_DIAGNOSTICS.debug("no pending tracks to write", run_id=transfer_run_id)
         return 0
 
     progress_writer = getattr(destination, "add_tracks_with_progress", None)
     if callable(progress_writer):
         try:
+            WRITE_DIAGNOSTICS.debug(
+                "progress writer started",
+                run_id=transfer_run_id,
+                destination_platform=destination.platform_name,
+                destination_playlist_id=destination_playlist_id,
+                pending_write_count=len(pending_pairs),
+            )
             return int(
                 progress_writer(
                     destination_playlist_id,
@@ -656,6 +903,14 @@ def _write_pending_pairs(
                 )
             )
         except Exception as exc:
+            logger.error("progress write failed", run_id=transfer_run_id, error=exc)
+            WRITE_DIAGNOSTICS.debug(
+                "progress writer failed",
+                run_id=transfer_run_id,
+                destination_platform=destination.platform_name,
+                destination_playlist_id=destination_playlist_id,
+                error=exc,
+            )
             _record_first_incomplete_write_failure(
                 pending_pairs,
                 repository=repository,
@@ -667,8 +922,24 @@ def _write_pending_pairs(
     written_count = 0
     for source_track_id, track_id in pending_pairs:
         try:
+            WRITE_DIAGNOSTICS.debug(
+                "track write started",
+                run_id=transfer_run_id,
+                destination_platform=destination.platform_name,
+                destination_playlist_id=destination_playlist_id,
+                pair=write_pair_snapshot(source_track_id, track_id),
+            )
             destination.add_tracks(destination_playlist_id, [track_id])
         except Exception as exc:
+            logger.error("track write failed", run_id=transfer_run_id, error=exc)
+            WRITE_DIAGNOSTICS.debug(
+                "track write failed",
+                run_id=transfer_run_id,
+                destination_platform=destination.platform_name,
+                destination_playlist_id=destination_playlist_id,
+                pair=write_pair_snapshot(source_track_id, track_id),
+                error=exc,
+            )
             repository.record_write_failure(
                 transfer_run_id,
                 source_track_id,
@@ -678,6 +949,13 @@ def _write_pending_pairs(
             raise
         repository.record_write_success(transfer_run_id, source_track_id, track_id)
         written_count += 1
+        logger.debug("track write recorded", run_id=transfer_run_id, written_count=written_count)
+        WRITE_DIAGNOSTICS.debug(
+            "track write recorded",
+            run_id=transfer_run_id,
+            pair=write_pair_snapshot(source_track_id, track_id),
+            written_count=written_count,
+        )
     return written_count
 
 
@@ -690,6 +968,12 @@ def _record_first_incomplete_write_failure(
 ) -> None:
     for source_track_id, track_id in pending_pairs:
         if repository.should_write_track(transfer_run_id, source_track_id, track_id):
+            WRITE_DIAGNOSTICS.debug(
+                "first incomplete write failure recorded",
+                run_id=transfer_run_id,
+                pair=write_pair_snapshot(source_track_id, track_id),
+                error=error,
+            )
             repository.record_write_failure(
                 transfer_run_id,
                 source_track_id,

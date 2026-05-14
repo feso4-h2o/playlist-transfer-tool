@@ -228,6 +228,7 @@ __marimo__/
 playlist-porter.json
 state/
 reports/
+logs/
 qqmusic-credential.json
 qqmusic-credential*.json
 spotify-token-cache*

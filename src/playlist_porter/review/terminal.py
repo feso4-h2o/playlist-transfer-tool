@@ -8,9 +8,16 @@ from rich.console import Console
 from rich.prompt import Prompt
 from rich.table import Table
 
+from playlist_porter.diagnostics import (
+    decision_summary,
+    diagnostic_logger,
+    review_update_snapshot,
+)
 from playlist_porter.matching.status import MatchStatus, UnavailableReason
 from playlist_porter.models import MatchDecision, TrackCandidate
 from playlist_porter.persistence.repositories import TransferRepository
+
+REVIEW_DIAGNOSTICS = diagnostic_logger("review")
 
 REVIEWABLE_STATUSES = {
     MatchStatus.METADATA_MEDIUM_CONFIDENCE,
@@ -32,7 +39,14 @@ class ReviewUpdate:
 def reviewable_decisions(decisions: list[MatchDecision]) -> list[MatchDecision]:
     """Return decisions that should be shown for manual review."""
 
-    return [decision for decision in decisions if decision.status in REVIEWABLE_STATUSES]
+    reviewable = [decision for decision in decisions if decision.status in REVIEWABLE_STATUSES]
+    REVIEW_DIAGNOSTICS.debug(
+        "reviewable decisions filtered",
+        decision_count=len(decisions),
+        reviewable_count=len(reviewable),
+        statuses=[decision.status.value for decision in decisions],
+    )
+    return reviewable
 
 
 def apply_review_update(
@@ -42,10 +56,22 @@ def apply_review_update(
 ) -> None:
     """Persist one accept/reject review update."""
 
+    REVIEW_DIAGNOSTICS.debug(
+        "review update requested",
+        run_id=transfer_run_id,
+        update=review_update_snapshot(update),
+    )
     decision = _find_decision(repository, transfer_run_id, update.source_track_internal_id)
     action = update.action.casefold()
     if action == "accept":
         candidate = _candidate_by_rank(decision, update.candidate_rank or 1)
+        REVIEW_DIAGNOSTICS.debug(
+            "review candidate accepted",
+            run_id=transfer_run_id,
+            update=review_update_snapshot(update),
+            decision=decision_summary(decision),
+            selected_candidate_rank=candidate.rank,
+        )
         repository.save_user_override(
             transfer_run_id,
             update.source_track_internal_id,
@@ -54,6 +80,15 @@ def apply_review_update(
         )
         return
     if action == "reject":
+        REVIEW_DIAGNOSTICS.debug(
+            "review candidate rejected",
+            run_id=transfer_run_id,
+            update=review_update_snapshot(update),
+            decision=decision_summary(decision),
+            reason_codes=[
+                reason.value for reason in (list(update.reason_codes) or decision.reason_codes)
+            ],
+        )
         repository.save_user_override(
             transfer_run_id,
             update.source_track_internal_id,
@@ -62,7 +97,19 @@ def apply_review_update(
         )
         return
     if action == "skip":
+        REVIEW_DIAGNOSTICS.debug(
+            "review update skipped",
+            run_id=transfer_run_id,
+            update=review_update_snapshot(update),
+            decision=decision_summary(decision),
+        )
         return
+    REVIEW_DIAGNOSTICS.debug(
+        "review update invalid action",
+        run_id=transfer_run_id,
+        update=review_update_snapshot(update),
+        decision=decision_summary(decision),
+    )
     raise ValueError(f"unknown review action: {update.action}")
 
 
@@ -75,8 +122,14 @@ def run_interactive_review(
     """Run a simple Rich prompt loop and return the number of saved overrides."""
 
     console = console or Console()
+    decisions = reviewable_decisions(repository.load_match_decisions(transfer_run_id))
+    REVIEW_DIAGNOSTICS.debug(
+        "interactive review loaded decisions",
+        run_id=transfer_run_id,
+        reviewable_count=len(decisions),
+    )
     saved_count = 0
-    for decision in reviewable_decisions(repository.load_match_decisions(transfer_run_id)):
+    for decision in decisions:
         _render_decision(console, decision)
         action = Prompt.ask(
             "Action",
@@ -99,6 +152,18 @@ def run_interactive_review(
         apply_review_update(repository, transfer_run_id, update)
         if action != "skip":
             saved_count += 1
+        REVIEW_DIAGNOSTICS.debug(
+            "interactive review action processed",
+            run_id=transfer_run_id,
+            update=review_update_snapshot(update),
+            saved_count=saved_count,
+        )
+    REVIEW_DIAGNOSTICS.debug(
+        "interactive review completed",
+        run_id=transfer_run_id,
+        saved_count=saved_count,
+        reviewable_count=len(decisions),
+    )
     return saved_count
 
 
@@ -117,11 +182,17 @@ def _candidate_by_rank(decision: MatchDecision, rank: int) -> TrackCandidate:
     for candidate in decision.candidates:
         if candidate.rank == rank:
             return candidate
+    REVIEW_DIAGNOSTICS.debug(
+        "review candidate rank not found",
+        decision=decision_summary(decision),
+        requested_rank=rank,
+    )
     raise ValueError(f"candidate rank {rank} not found for {decision.source_track.title}")
 
 
 def _render_decision(console: Console, decision: MatchDecision) -> None:
     source = decision.source_track
+    REVIEW_DIAGNOSTICS.debug("review decision rendered", decision=decision_summary(decision))
     console.print(f"\n[bold]{source.title}[/bold] - {', '.join(source.artists)}")
     console.print(
         f"status={decision.status.value} score={decision.score} "

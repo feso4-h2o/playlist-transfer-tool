@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Literal, TypeVar
 
+from loguru import logger
+
 T = TypeVar("T")
 
 Clock = Callable[[], float]
@@ -207,8 +209,22 @@ class SpotifyRateLimitPolicy:
                 return operation()
             except RetryPolicyError as exc:
                 if not _is_retryable(exc.category):
+                    logger.error(
+                        "spotify operation failed without retry",
+                        operation=operation_name,
+                        category=exc.category,
+                        error=exc,
+                    )
                     raise
                 if _retry_after_exceeds_budget(exc, self.backoff.max_seconds):
+                    logger.warning(
+                        "spotify retry-after exceeds retry budget",
+                        operation=operation_name,
+                        attempt=attempt,
+                        category=exc.category,
+                        retry_after_seconds=exc.retry_after_seconds,
+                        max_seconds=self.backoff.max_seconds,
+                    )
                     raise RetryBudgetExceeded(
                         _retry_budget_message(
                             operation_name,
@@ -218,6 +234,13 @@ class SpotifyRateLimitPolicy:
                         + f"; retry after exceeds max retry delay: {self.backoff.max_seconds:g}s"
                     ) from exc
                 if attempt >= self.backoff.max_attempts:
+                    logger.warning(
+                        "spotify retry budget exhausted",
+                        operation=operation_name,
+                        attempts=self.backoff.max_attempts,
+                        category=exc.category,
+                        error=exc,
+                    )
                     raise RetryBudgetExceeded(
                         _retry_budget_message(
                             operation_name,
@@ -225,7 +248,17 @@ class SpotifyRateLimitPolicy:
                             last_error=exc,
                         )
                     ) from exc
-                self.sleep(self._delay_for(exc, retry_index=attempt))
+                delay = self._delay_for(exc, retry_index=attempt)
+                logger.warning(
+                    "spotify operation retrying",
+                    operation=operation_name,
+                    attempt=attempt,
+                    next_attempt=attempt + 1,
+                    category=exc.category,
+                    delay_seconds=delay,
+                    error=exc,
+                )
+                self.sleep(delay)
         raise AssertionError("retry loop exited unexpectedly")
 
     def wrap(self, operation_name: str, operation: Callable[..., T]) -> Callable[..., T]:
@@ -300,9 +333,23 @@ class QQMusicRateLimitPolicy:
                 result = operation()
             except RetryPolicyError as exc:
                 if not _is_retryable(exc.category):
+                    logger.error(
+                        "qqmusic operation failed without retry",
+                        operation=operation_name,
+                        category=exc.category,
+                        error=exc,
+                    )
                     raise
                 self._record_retryable_failure(operation_name)
                 if _retry_after_exceeds_budget(exc, self.backoff.max_seconds):
+                    logger.warning(
+                        "qqmusic retry-after exceeds retry budget",
+                        operation=operation_name,
+                        attempt=attempt,
+                        category=exc.category,
+                        retry_after_seconds=exc.retry_after_seconds,
+                        max_seconds=self.backoff.max_seconds,
+                    )
                     raise RetryBudgetExceeded(
                         _retry_budget_message(
                             operation_name,
@@ -312,6 +359,13 @@ class QQMusicRateLimitPolicy:
                         + f"; retry after exceeds max retry delay: {self.backoff.max_seconds:g}s"
                     ) from exc
                 if attempt >= self.backoff.max_attempts:
+                    logger.warning(
+                        "qqmusic retry budget exhausted",
+                        operation=operation_name,
+                        attempts=self.backoff.max_attempts,
+                        category=exc.category,
+                        error=exc,
+                    )
                     raise RetryBudgetExceeded(
                         _retry_budget_message(
                             operation_name,
@@ -319,7 +373,17 @@ class QQMusicRateLimitPolicy:
                             last_error=exc,
                         )
                     ) from exc
-                self.sleep(self._full_jitter_delay(retry_index=attempt))
+                delay = self._full_jitter_delay(retry_index=attempt)
+                logger.warning(
+                    "qqmusic operation retrying",
+                    operation=operation_name,
+                    attempt=attempt,
+                    next_attempt=attempt + 1,
+                    category=exc.category,
+                    delay_seconds=delay,
+                    error=exc,
+                )
+                self.sleep(delay)
             else:
                 self._consecutive_failures = 0
                 return result
@@ -351,6 +415,12 @@ class QQMusicRateLimitPolicy:
         self._consecutive_failures += 1
         if self._consecutive_failures >= self.circuit_breaker_threshold:
             self._circuit_opened_at = self.clock()
+            logger.warning(
+                "qqmusic circuit breaker opened",
+                operation=operation_name,
+                consecutive_failures=self._consecutive_failures,
+                retry_after_seconds=self.circuit_breaker_cooldown_seconds,
+            )
             raise CircuitBreakerOpen(
                 f"{operation_name} paused after repeated QQ Music failures",
                 retry_after_seconds=self.circuit_breaker_cooldown_seconds,
@@ -361,6 +431,11 @@ class QQMusicRateLimitPolicy:
             return
         elapsed = self.clock() - self._circuit_opened_at
         if elapsed < self.circuit_breaker_cooldown_seconds:
+            logger.warning(
+                "qqmusic circuit breaker still open",
+                operation=operation_name,
+                retry_after_seconds=self.circuit_breaker_cooldown_seconds - elapsed,
+            )
             raise CircuitBreakerOpen(
                 f"{operation_name} paused while QQ Music circuit breaker is open",
                 retry_after_seconds=self.circuit_breaker_cooldown_seconds - elapsed,

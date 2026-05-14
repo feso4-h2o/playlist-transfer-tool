@@ -8,9 +8,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from playlist_porter.diagnostics import diagnostic_logger, metrics_snapshot, path_values
 from playlist_porter.matching.status import MatchStatus
 from playlist_porter.models import MatchDecision
 from playlist_porter.persistence.repositories import TransferRepository, UserOverride
+
+EXPORT_DIAGNOSTICS = diagnostic_logger("export")
 
 SUMMARY_FIELDS = [
     "transfer_run_id",
@@ -59,6 +62,15 @@ def export_reports(
     summary = build_summary(repository, transfer_run_id)
     unavailable_rows = build_unavailable_rows(repository, transfer_run_id)
     paths = _report_paths(output_path, output_format, _short_timestamp())
+    EXPORT_DIAGNOSTICS.debug(
+        "report export prepared",
+        run_id=transfer_run_id,
+        output_dir=str(output_path),
+        output_format=output_format,
+        summary=summary,
+        unavailable_row_count=len(unavailable_rows),
+        planned_paths={key: str(path) for key, path in paths.items()},
+    )
 
     written: list[Path] = []
     if output_format in {"json", "both"}:
@@ -73,12 +85,29 @@ def export_reports(
             encoding="utf-8",
         )
         written.extend([summary_path, unavailable_path])
+        EXPORT_DIAGNOSTICS.debug(
+            "json reports written",
+            run_id=transfer_run_id,
+            paths=path_values([summary_path, unavailable_path]),
+            unavailable_row_count=len(unavailable_rows),
+        )
     if output_format in {"csv", "both"}:
         summary_path = paths["summary_csv"]
         unavailable_path = paths["unavailable_csv"]
         _write_csv(summary_path, SUMMARY_FIELDS, [summary])
         _write_csv(unavailable_path, UNAVAILABLE_FIELDS, unavailable_rows)
         written.extend([summary_path, unavailable_path])
+        EXPORT_DIAGNOSTICS.debug(
+            "csv reports written",
+            run_id=transfer_run_id,
+            paths=path_values([summary_path, unavailable_path]),
+            unavailable_row_count=len(unavailable_rows),
+        )
+    EXPORT_DIAGNOSTICS.debug(
+        "report export completed",
+        run_id=transfer_run_id,
+        written_paths=path_values(written),
+    )
     return written
 
 
@@ -86,6 +115,11 @@ def build_summary(repository: TransferRepository, transfer_run_id: str) -> dict[
     """Build one exportable metrics summary row."""
 
     metrics = repository.load_metrics(transfer_run_id)
+    EXPORT_DIAGNOSTICS.debug(
+        "report summary built",
+        run_id=transfer_run_id,
+        metrics=metrics_snapshot(metrics),
+    )
     return {
         "transfer_run_id": metrics.transfer_run_id,
         "source_track_count": metrics.source_track_count,
@@ -116,6 +150,12 @@ def build_unavailable_rows(
         if not _is_unavailable_for_report(decision, override):
             continue
         rows.append(_unavailable_row(decision, override))
+    EXPORT_DIAGNOSTICS.debug(
+        "unavailable report rows built",
+        run_id=transfer_run_id,
+        override_count=len(overrides),
+        row_count=len(rows),
+    )
     return rows
 
 
