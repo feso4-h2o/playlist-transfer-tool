@@ -13,8 +13,8 @@ distribution.
 
 The current CLI supports:
 
-- Local mock dry-runs and writes from JSON fixtures.
 - Direction-aware `mock`, `spotify`, and `qqmusic` transfer orchestration.
+- Local mock matching and writes from JSON fixtures.
 - SQLite transfer state, resumable writes, review overrides, and reports.
 - Spotify OAuth through Spotipy.
 - QQ Music access through the unofficial `qqmusic-api-python` package.
@@ -56,164 +56,48 @@ Write a starter config:
 uv run playlist-porter init-config --path playlist-porter.json
 ```
 
-The generated `playlist-porter.json` points at the tracked sample mock fixtures
-under `fixtures/`, stores SQLite state under `state/`, and writes reports under
-`reports/`. Those local runtime outputs are ignored by Git.
+The generated `playlist-porter.json` stores local paths, platform behavior
+flags, mock fixture paths, and optional `commands.*` defaults. Spotify and QQ
+Music credentials are read from the process environment, not from
+`playlist-porter.json`.
 
-The tracked fixtures contain sample playlist and catalog metadata only. They do
-not include credentials, cookies, tokens, audio, lyrics, cover art, or generated
-runtime databases. The sample metadata is provided for tests and credential-free
-mock workflows; this project is not affiliated with Spotify or QQ Music.
-
-Copy `.env.example` to your local environment manager or shell profile and set
-the values there. Credentials are read from the process environment, not from
-`playlist-porter.json`. For local runs, prefer loading `.env` through `uv`:
+For local runs that need credentials, prefer loading them with `uv`:
 
 ```powershell
 uv run --env-file .env playlist-porter match --config playlist-porter.json
 ```
 
-Spotify fields:
-
-- `SPOTIFY_CLIENT_ID`: Spotify app client ID.
-- `SPOTIFY_CLIENT_SECRET`: Spotify app client secret.
-- `SPOTIFY_REDIRECT_URI`: redirect URI registered on the Spotify app, for
-  example `http://127.0.0.1:8080/callback`.
-- `SPOTIFY_SCOPES`: optional space-delimited override for playlist read/write
-  scopes.
-
-QQ Music fields:
-
-- `QQMUSIC_CREDENTIAL_PATH`: path to a local JSON file containing credential
-  data accepted by `qqmusic_api.Credential`.
-- `QQMUSIC_USER_ID`: optional account/user identifier if your QQ Music workflow
-  needs it.
+See [docs/configuration.md](docs/configuration.md) for Spotify Developer
+Dashboard setup, `.env` values, and the optional QQ Music credential helper.
 
 Do not commit OAuth tokens, QQ Music cookies, credential JSON, SQLite databases,
 or generated reports.
 
-### Optional QQ Music Credential Helper
+## Transfer Workflow
 
-QQ Music writes require a local session credential. The main CLI does not create
-or refresh that credential automatically. If you choose to use
-`qqmusic-api-python`'s unofficial login flow, this repository provides an
-optional helper script:
+Use the same lifecycle for Spotify, QQ Music, and mock fixture runs:
 
-```powershell
-uv run python scripts/create_qqmusic_credential.py --output <custom path>/qqmusic-credential.json --acknowledge-risk
-```
+1. `match`: read source tracks, search the destination, score candidates,
+   persist decisions, and export reports.
+2. `review`: accept or reject uncertain matches from a persisted run.
+3. `write`: write approved matches from the reviewed run to the destination.
+4. `export-report`: regenerate reports for an existing run.
 
-The helper prints a risk notice, saves a QR code image under `state/` by default,
-waits for you to authorize the login, and writes the resulting credential JSON
-to the path you provided. Pass `--qr-dir <path>` to choose a different QR image
-directory. It refuses to run unless `--acknowledge-risk` is present and will not
-overwrite an existing credential file unless `--force` is passed.
-
-Treat the generated JSON as a reusable session token. Anyone who can read it may
-be able to act as your QQ Music session until the credential expires or is
-revoked. Prefer a dedicated low-value QQ Music account for testing, keep the
-file outside Git and synced folders, and do not paste it into issues, logs, or
-pull requests.
-
-The generated config also includes optional `commands` defaults. Values in that
-section let you shorten repeated commands, and explicit CLI arguments still
-override the configured defaults.
-
-## Mock Dry-Run
-
-The repository includes credential-free fixtures so a new checkout can exercise
-the workflow without external services:
+With `commands.*` defaults configured in `playlist-porter.json`, the workflow
+can be run with short commands. If Spotify credentials are stored in `.env`,
+load that file for `match` as well as `write`:
 
 ```powershell
-uv run playlist-porter init-config --path playlist-porter.json
-uv run playlist-porter dry-run --config playlist-porter.json --source-playlist sample-mixed
-```
-
-The command prints a run ID and records match decisions in
-`state/playlist-porter.sqlite`.
-
-You can run the newer direction-aware matching command against the same mock data:
-
-```powershell
-uv run playlist-porter match --config playlist-porter.json --source-platform mock --destination-platform mock --source-playlist sample-mixed
-```
-
-If those values are configured under `commands.match`, this can be shortened
-to:
-
-```powershell
-uv run playlist-porter match --config playlist-porter.json
-```
-
-## Review
-
-Review uncertain matches after a dry-run:
-
-```powershell
-uv run playlist-porter review --db state/playlist-porter.sqlite --run-id <run-id>
-```
-
-If `commands.review` supplies the database path and run ID:
-
-```powershell
+uv run --env-file .env playlist-porter match --config playlist-porter.json
 uv run playlist-porter review --config playlist-porter.json
-```
-
-For non-interactive updates, pass a source track UUID from the review output:
-
-```powershell
-uv run playlist-porter review --db state/playlist-porter.sqlite --run-id <run-id> --source-track-id <source-track-id> --action accept --candidate-rank 1
-```
-
-Accepted review overrides are stored in SQLite and reused when executing the
-same run.
-
-## Write
-
-Write approved matches from an existing reviewed run:
-
-```powershell
-uv run playlist-porter write --config playlist-porter.json --destination-platform spotify --run-id <run-id> --create-playlist "QQ Music Copy"
-```
-
-Only `isrc_exact`, `metadata_high_confidence`, and user-approved matches are
-written. Medium-confidence, needs-review, rejected, and not-found tracks are
-skipped.
-
-Mock writes use the same command with `--destination-platform mock` and write
-approved destination IDs to `state/mock-writes.json`.
-
-```powershell
-uv run playlist-porter write --config playlist-porter.json --destination-platform mock --run-id <run-id> --create-playlist "Sample Copy"
-```
-
-Resume an interrupted write by rerunning `write` with the same run ID,
-destination platform, and playlist target.
-
-## Reports
-
-Match and write commands export reports under the configured report directory:
-
-- `transfer-summary-<HHMMSS>.json` and `transfer-summary-<HHMMSS>.csv`:
-  aggregate metrics from persisted transfer state.
-- `unavailable-tracks-<HHMMSS>.json` and `unavailable-tracks-<HHMMSS>.csv`:
-  not-found, unresolved, and rejected tracks with attempted queries, top
-  alternates, confidence scores, and reason codes.
-
-Reports are grouped by short run ID, for example `reports/767cbfe5/`.
-
-Export reports again for an existing run:
-
-```powershell
-uv run playlist-porter export-report --db state/playlist-porter.sqlite --run-id <run-id> --output-dir reports --format both
-```
-
-If `commands.export_report` supplies the database path, run ID, output
-directory, and format:
-
-```powershell
+uv run --env-file .env playlist-porter write --config playlist-porter.json
 uv run playlist-porter export-report --config playlist-porter.json
 ```
+
+See [docs/playlist-workflow.md](docs/playlist-workflow.md) for Spotify -> QQ
+Music, QQ Music -> Spotify, mock fixture examples, `playlist-porter.json`
+examples, CLI override flags, playlist identifier support, write-target choices,
+and report export details.
 
 ## Development
 
