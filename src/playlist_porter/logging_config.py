@@ -34,6 +34,10 @@ SECRET_TEXT_PATTERNS = (
     re.compile(r"(?i)(access_token\s*[:=]\s*)[^\s,;&]+"),
     re.compile(r"(?i)(refresh_token\s*[:=]\s*)[^\s,;&]+"),
     re.compile(r"(?i)(cookie\s*[:=]\s*)[^\r\n]+"),
+    re.compile(
+        r"(?i)((?:[a-z0-9_ -]*credential(?:\s+|_)(?:file|path|json)"
+        r"[^:=\r\n]{0,40}[:=]\s*))[^\r\n]+"
+    ),
 )
 
 

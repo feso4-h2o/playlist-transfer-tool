@@ -392,6 +392,7 @@ def test_redact_replaces_nested_secret_values() -> None:
         "nested": [
             {"refresh_token": "refresh-value"},
             "client_secret=visible-in-source",
+            "QQ Music credential file is missing: C:\\Users\\me\\qqmusic.json",
         ],
         "platform": "spotify",
         "count": 3,
@@ -404,5 +405,6 @@ def test_redact_replaces_nested_secret_values() -> None:
     assert redacted["client_secret"] == REDACTED
     assert redacted["nested"][0]["refresh_token"] == REDACTED
     assert redacted["nested"][1] == f"client_secret={REDACTED}"
+    assert redacted["nested"][2] == f"QQ Music credential file is missing: {REDACTED}"
     assert redacted["platform"] == "spotify"
     assert redacted["count"] == 3
