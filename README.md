@@ -61,10 +61,10 @@ flags, mock fixture paths, and optional `commands.*` defaults. Spotify and QQ
 Music credentials are read from the process environment, not from
 `playlist-porter.json`.
 
-For local runs, prefer loading credentials with `uv`:
+For local runs that need credentials, prefer loading them with `uv`:
 
 ```powershell
-uv run --env-file .env playlist-porter write --config playlist-porter.json
+uv run --env-file .env playlist-porter match --config playlist-porter.json
 ```
 
 See [docs/configuration.md](docs/configuration.md) for Spotify Developer
@@ -84,10 +84,11 @@ Use the same lifecycle for Spotify, QQ Music, and mock fixture runs:
 4. `export-report`: regenerate reports for an existing run.
 
 With `commands.*` defaults configured in `playlist-porter.json`, the workflow
-can be run with short commands:
+can be run with short commands. If Spotify credentials are stored in `.env`,
+load that file for `match` as well as `write`:
 
 ```powershell
-uv run playlist-porter match --config playlist-porter.json
+uv run --env-file .env playlist-porter match --config playlist-porter.json
 uv run playlist-porter review --config playlist-porter.json
 uv run --env-file .env playlist-porter write --config playlist-porter.json
 uv run playlist-porter export-report --config playlist-porter.json

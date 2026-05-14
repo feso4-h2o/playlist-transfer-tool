@@ -52,7 +52,7 @@ Configure the source and destination defaults:
 Then run each step with the config:
 
 ```powershell
-uv run playlist-porter match --config playlist-porter.json
+uv run --env-file .env playlist-porter match --config playlist-porter.json
 ```
 
 After `match` prints the run ID, paste it into `commands.review.run_id`,
@@ -109,7 +109,7 @@ Configure the source and destination defaults:
 Then run each step with the config:
 
 ```powershell
-uv run playlist-porter match --config playlist-porter.json
+uv run --env-file .env playlist-porter match --config playlist-porter.json
 ```
 
 After `match` prints the run ID, paste it into `commands.review.run_id`,

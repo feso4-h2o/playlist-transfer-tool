@@ -43,10 +43,11 @@ Explicit CLI flags override values from `commands.*`.
 ## Environment Loading
 
 Copy `.env.example` to `.env` or another local environment manager. The CLI does
-not auto-load `.env`; use `uv --env-file` for local runs:
+not auto-load `.env`; use `uv run --env-file` for local runs that need
+environment credentials:
 
 ```powershell
-uv run --env-file .env playlist-porter write --config playlist-porter.json
+uv run --env-file .env playlist-porter match --config playlist-porter.json
 ```
 
 Keep `.env`, OAuth token caches, QQ Music credential JSON, SQLite databases, and
