@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from collections.abc import Mapping, Sequence
@@ -61,6 +62,7 @@ def configure_logging(
             sys.stderr,
             level="DEBUG" if verbosity >= 2 else "INFO",
             format="{time:HH:mm:ss} | {level} | {message} | {extra}",
+            filter=_is_console_record,
             colorize=False,
         )
 
@@ -69,10 +71,8 @@ def configure_logging(
         log_path = _debug_log_path(log_dir)
         log_path.parent.mkdir(parents=True, exist_ok=True)
         logger.add(
-            log_path,
+            lambda message: _write_debug_log_record(log_path, message.record),
             level="DEBUG",
-            format="{time:YYYY-MM-DDTHH:mm:ss.SSS} | {level} | {message} | {extra}",
-            encoding="utf-8",
         )
         logger.info("debug log enabled", path=str(log_path))
 
@@ -106,6 +106,27 @@ def _redact_record(record: dict[str, Any]) -> None:
     record["extra"] = redact(record["extra"])
     if record["exception"] is not None:
         record["extra"]["exception"] = redact(record["exception"])
+
+
+def _is_console_record(record: dict[str, Any]) -> bool:
+    return not bool(record["extra"].get("diagnostic"))
+
+
+def _write_debug_log_record(log_path: Path, record: dict[str, Any]) -> None:
+    extra = dict(record["extra"])
+    fields = [
+        record["time"].strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3],
+        record["level"].name,
+    ]
+    scope = extra.pop("scope", None)
+    if scope is not None:
+        fields.append(str(scope))
+    fields.append(record["message"])
+
+    extra.pop("diagnostic", None)
+    suffix = f" | {json.dumps(extra, sort_keys=True, default=str)}" if extra else ""
+    with log_path.open("a", encoding="utf-8") as handle:
+        handle.write(" | ".join(fields) + suffix + "\n")
 
 
 def _debug_log_path(log_dir: str | Path) -> Path:
