@@ -22,6 +22,7 @@ def _track(
     release_date: date | None = date(2020, 5, 1),
     release_year: int | None = None,
     explicit: bool | None = True,
+    source_position: int | None = None,
 ) -> UniversalTrack:
     return UniversalTrack(
         title=title,
@@ -34,6 +35,7 @@ def _track(
         release_date=release_date,
         release_year=release_year,
         explicit=explicit,
+        source_playlist_position=source_position,
     )
 
 
@@ -54,7 +56,13 @@ def _render_text(decision: MatchDecision) -> str:
 
 
 def test_review_output_renders_ambiguity_reason_and_candidate_metadata() -> None:
-    source = _track("Source Song", track_id="source-1")
+    source = _track(
+        "Source Song",
+        track_id="source-1",
+        album="Source Album",
+        duration=238,
+        source_position=4,
+    )
     first = _candidate(
         _track("Destination Song", track_id="spotify-track-id"),
         rank=1,
@@ -84,18 +92,23 @@ def test_review_output_renders_ambiguity_reason_and_candidate_metadata() -> None
     text = _render_text(decision)
 
     assert "ambiguous_candidates" in text
+    assert "Source Album" in text
+    assert "Position: 4" in text
     assert "Destination Song" in text
-    assert "album=Album" in text
-    assert "duration=3:01" in text
-    assert "release=2020-05-01" in text
-    assert "release=2021" in text
-    assert "explicit=yes" in text
-    assert "explicit=no" in text
-    assert "isrc=USRC17607839" in text
-    assert "id=spotify-track-id" in text
-    assert "delta=0.0200" in text
+    assert "Album: Album" in text
+    assert "Duration: 3:01" in text
+    assert "Duration: 3:58" in text
+    assert "Release: 2020-05-01" in text
+    assert "Release: 2021" in text
+    assert "Explicit: yes" in text
+    assert "Explicit: no" in text
+    assert "ISRC: USRC17607839" in text
+    assert "Platform ID: spotify-track-id" in text
+    assert "delta=" not in text
     assert "duration_mismatch" in text
-    assert "https://open.spotify.com/track/spotify-track-id" in text
+    assert "Link" in text
+    assert "https://open.spotify.com/track/spotify-track-id" not in text
+    assert text.count("├") >= 2
 
 
 def test_review_output_derives_qqmusic_songmid_url() -> None:
@@ -114,12 +127,22 @@ def test_review_output_derives_qqmusic_songmid_url() -> None:
 
     text = _render_text(decision)
 
-    assert "https://y.qq.com/n/ryqq/songDetail/qqsongmid" in text
+    assert "Link" in text
+    assert "https://y.qq.com/n/ryqq/songDetail/qqsongmid" not in text
 
 
 def test_review_output_omits_missing_optional_metadata_without_none_text() -> None:
     decision = MatchDecision(
-        source_track=_track("Source"),
+        source_track=_track(
+            "Source",
+            platform="mock",
+            track_id=None,
+            album=None,
+            isrc=None,
+            duration=None,
+            release_date=None,
+            explicit=None,
+        ),
         status=MatchStatus.NEEDS_REVIEW,
         candidates=[
             _candidate(
@@ -145,4 +168,4 @@ def test_review_output_omits_missing_optional_metadata_without_none_text() -> No
 
     assert "Sparse" in text
     assert "None" not in text
-    assert "url=" not in text
+    assert "URL:" not in text

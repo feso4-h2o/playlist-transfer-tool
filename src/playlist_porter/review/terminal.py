@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from rich.console import Console
+from rich.markup import escape
 from rich.prompt import Prompt
 from rich.table import Table
 
@@ -113,6 +114,7 @@ def apply_review_update(
     raise ValueError(f"unknown review action: {update.action}")
 
 
+
 def run_interactive_review(
     repository: TransferRepository,
     transfer_run_id: str,
@@ -193,18 +195,18 @@ def _candidate_by_rank(decision: MatchDecision, rank: int) -> TrackCandidate:
 def _render_decision(console: Console, decision: MatchDecision) -> None:
     source = decision.source_track
     REVIEW_DIAGNOSTICS.debug("review decision rendered", decision=decision_summary(decision))
-    console.print(f"\n[bold]{source.title}[/bold] - {', '.join(source.artists)}")
+    console.print(f"\n[bold]{escape(source.title)}[/bold] - {escape(', '.join(source.artists))}")
     console.print(
         f"status={decision.status.value} score={_decision_score_text(decision.score)} "
         f"reasons={','.join(reason.value for reason in decision.reason_codes) or '-'}"
     )
-    table = Table("Rank", "Track", "Score", "Metadata", "IDs", "Reasons")
-    top_score = decision.candidates[0].score if decision.candidates else None
+    console.print(_source_metadata(source))
+    table = Table("Rank", "Track", "Score", "Metadata", "IDs", "Reasons", show_lines=True)
     for candidate in decision.candidates:
         table.add_row(
             str(candidate.rank),
             _candidate_identity(candidate),
-            _score_text(candidate, top_score),
+            _score_text(candidate),
             _candidate_metadata(candidate),
             _candidate_ids(candidate),
             _candidate_reason_text(candidate),
@@ -214,41 +216,38 @@ def _render_decision(console: Console, decision: MatchDecision) -> None:
 
 def _candidate_identity(candidate: TrackCandidate) -> str:
     track = candidate.track
-    return f"{track.title}\n{', '.join(track.artists)}"
+    return f"{escape(track.title)}\n{escape(', '.join(track.artists))}"
 
 
 def _decision_score_text(score: float | None) -> str:
     return f"{score:.4f}" if score is not None else "-"
 
 
-def _score_text(candidate: TrackCandidate, top_score: float | None) -> str:
-    score = f"{candidate.score:.4f}"
-    if top_score is None:
-        return score
-    delta = top_score - candidate.score
-    return f"{score}\ndelta={delta:.4f}"
+def _score_text(candidate: TrackCandidate) -> str:
+    return f"{candidate.score:.4f}"
+
+
+def _source_metadata(track: UniversalTrack) -> str:
+    metadata = _track_metadata_fields(track, include_album=True)
+    ids = _track_id_fields(track)
+    lines = []
+    if metadata != "-":
+        lines.append(metadata)
+    if ids != "-":
+        lines.append(ids)
+    position = _position_text(track.source_playlist_position)
+    if position is not None:
+        lines.append(position)
+    return "\n".join(lines) or "-"
 
 
 def _candidate_metadata(candidate: TrackCandidate) -> str:
-    track = candidate.track
-    values = [
-        ("album", track.album),
-        ("duration", _duration_text(track.duration_seconds)),
-        ("release", _release_text(track)),
-        ("explicit", _explicit_text(track.explicit)),
-    ]
-    return _joined_fields(values)
+    return _track_metadata_fields(candidate.track, include_album=True)
 
 
 def _candidate_ids(candidate: TrackCandidate) -> str:
     track = candidate.track
-    return _joined_fields(
-        [
-            ("isrc", track.isrc),
-            ("id", track.platform_track_id),
-            ("url", _destination_url(track.platform, track.platform_track_id)),
-        ]
-    )
+    return _track_id_fields(track)
 
 
 def _candidate_reason_text(candidate: TrackCandidate) -> str:
@@ -258,12 +257,38 @@ def _candidate_reason_text(candidate: TrackCandidate) -> str:
     evidence_reasons = candidate.evidence.get("reason_codes")
     if isinstance(evidence_reasons, str):
         reasons.extend(reason for reason in evidence_reasons.split(",") if reason)
-    return ", ".join(dict.fromkeys(reasons)) or "-"
+    return escape(", ".join(dict.fromkeys(reasons))) or "-"
+
+
+def _track_metadata_fields(track: UniversalTrack, *, include_album: bool) -> str:
+    values = [
+        ("Album", track.album if include_album else None),
+        ("Duration", _duration_text(track.duration_seconds)),
+        ("Release", _release_text(track)),
+        ("Explicit", _explicit_text(track.explicit)),
+    ]
+    return _joined_fields(values)
+
+
+def _track_id_fields(track: UniversalTrack) -> str:
+    return _joined_fields(
+        [
+            ("ISRC", track.isrc),
+            ("Platform ID", track.platform_track_id),
+            ("URL", _destination_link(track.platform, track.platform_track_id)),
+        ]
+    )
 
 
 def _joined_fields(values: list[tuple[str, str | None]]) -> str:
-    fields = [f"{name}={value}" for name, value in values if value not in {None, ""}]
+    fields = [f"{name}: {value}" for name, value in values if value not in {None, ""}]
     return "\n".join(fields) or "-"
+
+
+def _position_text(position: int | None) -> str | None:
+    if position is None:
+        return None
+    return f"Position: {position}"
 
 
 def _duration_text(duration_seconds: int | None) -> str | None:
@@ -301,6 +326,13 @@ def _destination_url(platform: str | None, platform_track_id: str | None) -> str
 
 def _is_qqmusic_songmid(platform_track_id: str) -> bool:
     return ":" not in platform_track_id and not platform_track_id.isdigit()
+
+
+def _destination_link(platform: str | None, platform_track_id: str | None) -> str | None:
+    url = _destination_url(platform, platform_track_id)
+    if url is None:
+        return None
+    return f"[link={url}]Link[/link]"
 
 
 __all__ = [
