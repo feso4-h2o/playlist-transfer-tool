@@ -34,6 +34,7 @@ _ACTION_ALIASES = {
     "s": "skip",
     "skip": "skip",
 }
+_ACTION_PROMPT = r"Action \[accept/reject/skip] or \[a/r/s]"
 
 
 @dataclass(frozen=True)
@@ -149,7 +150,7 @@ def run_interactive_review(
     for decision in decisions:
         _render_decision(console, decision)
         action = Prompt.ask(
-            "Action [accept/reject/skip] or [a/r/s]",
+            _ACTION_PROMPT,
             choices=["accept", "reject", "skip", "a", "r", "s"],
             default="skip",
             show_choices=False,

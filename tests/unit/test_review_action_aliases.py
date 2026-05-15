@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+from io import StringIO
+
+from rich.console import Console
+
 from playlist_porter.cli import build_parser
 from playlist_porter.matching.status import MatchStatus, UnavailableReason
 from playlist_porter.models import MatchDecision, TrackCandidate, TransferRun, UniversalTrack
 from playlist_porter.persistence.repositories import TransferRepository
 from playlist_porter.review.terminal import (
+    _ACTION_PROMPT,
     ReviewUpdate,
     apply_review_update,
     run_interactive_review,
@@ -111,7 +116,7 @@ def test_interactive_review_prompt_separates_long_actions_from_aliases(
     assert saved_count == 0
     assert prompt_calls == [
         (
-            "Action [accept/reject/skip] or [a/r/s]",
+            _ACTION_PROMPT,
             {
                 "choices": ["accept", "reject", "skip", "a", "r", "s"],
                 "default": "skip",
@@ -120,3 +125,12 @@ def test_interactive_review_prompt_separates_long_actions_from_aliases(
             },
         )
     ]
+
+
+def test_interactive_review_prompt_renders_literal_brackets() -> None:
+    output = StringIO()
+    console = Console(file=output, force_terminal=False)
+
+    console.print(_ACTION_PROMPT)
+
+    assert output.getvalue().strip() == "Action [accept/reject/skip] or [a/r/s]"
