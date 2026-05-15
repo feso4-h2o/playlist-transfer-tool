@@ -29,6 +29,7 @@ def test_unavailable_reason_values_cover_phase_1_contract() -> None:
     assert {reason.value for reason in UnavailableReason} == {
         "no_candidates",
         "low_confidence",
+        "ambiguous_candidates",
         "duration_mismatch",
         "version_mismatch",
         "artist_mismatch",

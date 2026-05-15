@@ -79,7 +79,7 @@ def build_parser() -> argparse.ArgumentParser:
     review_parser.add_argument("--db")
     review_parser.add_argument("--run-id")
     review_parser.add_argument("--source-track-id")
-    review_parser.add_argument("--action", choices=["accept", "reject", "skip"])
+    review_parser.add_argument("--action", choices=["accept", "reject", "skip", "a", "r", "s"])
     review_parser.add_argument("--candidate-rank", type=int)
 
     write_parser = subparsers.add_parser("write", help="write approved matches from a reviewed run")

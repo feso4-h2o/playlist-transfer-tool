@@ -5,8 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from rich.console import Console
+from rich.markup import escape
 from rich.prompt import Prompt
 from rich.table import Table
+from rich.text import Text
 
 from playlist_porter.diagnostics import (
     decision_summary,
@@ -14,7 +16,7 @@ from playlist_porter.diagnostics import (
     review_update_snapshot,
 )
 from playlist_porter.matching.status import MatchStatus, UnavailableReason
-from playlist_porter.models import MatchDecision, TrackCandidate
+from playlist_porter.models import MatchDecision, TrackCandidate, UniversalTrack
 from playlist_porter.persistence.repositories import TransferRepository
 
 REVIEW_DIAGNOSTICS = diagnostic_logger("review")
@@ -24,6 +26,16 @@ REVIEWABLE_STATUSES = {
     MatchStatus.NEEDS_REVIEW,
     MatchStatus.NOT_FOUND,
 }
+
+_ACTION_ALIASES = {
+    "a": "accept",
+    "accept": "accept",
+    "r": "reject",
+    "reject": "reject",
+    "s": "skip",
+    "skip": "skip",
+}
+_ACTION_PROMPT = r"Action \[accept/reject/skip] or \[a/r/s]"
 
 
 @dataclass(frozen=True)
@@ -62,7 +74,7 @@ def apply_review_update(
         update=review_update_snapshot(update),
     )
     decision = _find_decision(repository, transfer_run_id, update.source_track_internal_id)
-    action = update.action.casefold()
+    action = _normalize_review_action(update.action)
     if action == "accept":
         candidate = _candidate_by_rank(decision, update.candidate_rank or 1)
         REVIEW_DIAGNOSTICS.debug(
@@ -113,6 +125,13 @@ def apply_review_update(
     raise ValueError(f"unknown review action: {update.action}")
 
 
+def _normalize_review_action(action: str) -> str:
+    normalized = _ACTION_ALIASES.get(action.strip().casefold())
+    if normalized is None:
+        raise ValueError(f"unknown review action: {action}")
+    return normalized
+
+
 def run_interactive_review(
     repository: TransferRepository,
     transfer_run_id: str,
@@ -132,11 +151,13 @@ def run_interactive_review(
     for decision in decisions:
         _render_decision(console, decision)
         action = Prompt.ask(
-            "Action",
-            choices=["accept", "reject", "skip"],
+            _ACTION_PROMPT,
+            choices=["accept", "reject", "skip", "a", "r", "s"],
             default="skip",
+            show_choices=False,
             console=console,
         )
+        action = _normalize_review_action(action)
         if action == "accept":
             rank_text = Prompt.ask("Candidate rank", default="1", console=console)
             update = ReviewUpdate(
@@ -193,21 +214,163 @@ def _candidate_by_rank(decision: MatchDecision, rank: int) -> TrackCandidate:
 def _render_decision(console: Console, decision: MatchDecision) -> None:
     source = decision.source_track
     REVIEW_DIAGNOSTICS.debug("review decision rendered", decision=decision_summary(decision))
-    console.print(f"\n[bold]{source.title}[/bold] - {', '.join(source.artists)}")
+    console.print(f"\n[bold]{escape(source.title)}[/bold] - {escape(', '.join(source.artists))}")
     console.print(
-        f"status={decision.status.value} score={decision.score} "
+        f"status={decision.status.value} score={_decision_score_text(decision.score)} "
         f"reasons={','.join(reason.value for reason in decision.reason_codes) or '-'}"
     )
-    table = Table("Rank", "Title", "Artists", "Score", "Reasons")
+    console.print(_source_metadata(source))
+    table = Table("Rank", "Track", "Score", "Metadata", "IDs", "Reasons", show_lines=True)
     for candidate in decision.candidates:
         table.add_row(
             str(candidate.rank),
-            candidate.track.title,
-            ", ".join(candidate.track.artists),
-            f"{candidate.score:.4f}",
-            str(candidate.unavailable_reason.value if candidate.unavailable_reason else ""),
+            _candidate_identity(candidate),
+            _score_text(candidate),
+            _candidate_metadata(candidate),
+            _candidate_ids(candidate),
+            _candidate_reason_text(candidate),
         )
     console.print(table)
+
+
+def _candidate_identity(candidate: TrackCandidate) -> str:
+    track = candidate.track
+    return f"{escape(track.title)}\n{escape(', '.join(track.artists))}"
+
+
+def _decision_score_text(score: float | None) -> str:
+    return f"{score:.4f}" if score is not None else "-"
+
+
+def _score_text(candidate: TrackCandidate) -> str:
+    return f"{candidate.score:.4f}"
+
+
+def _source_metadata(track: UniversalTrack) -> str | Text:
+    metadata = _track_metadata_fields(track, include_album=True)
+    ids = _track_id_fields(track)
+    output = Text()
+    for block in (metadata, ids):
+        _append_block(output, block)
+    position = _position_text(track.source_playlist_position)
+    if position is not None:
+        _append_block(output, position)
+    return output if output.plain else "-"
+
+
+def _candidate_metadata(candidate: TrackCandidate) -> str | Text:
+    return _track_metadata_fields(candidate.track, include_album=True)
+
+
+def _candidate_ids(candidate: TrackCandidate) -> str | Text:
+    track = candidate.track
+    return _track_id_fields(track)
+
+
+def _candidate_reason_text(candidate: TrackCandidate) -> str:
+    reasons: list[str] = []
+    if candidate.unavailable_reason is not None:
+        reasons.append(candidate.unavailable_reason.value)
+    evidence_reasons = candidate.evidence.get("reason_codes")
+    if isinstance(evidence_reasons, str):
+        reasons.extend(reason for reason in evidence_reasons.split(",") if reason)
+    return escape(", ".join(dict.fromkeys(reasons))) or "-"
+
+
+def _track_metadata_fields(track: UniversalTrack, *, include_album: bool) -> str | Text:
+    values = [
+        ("Album", track.album if include_album else None),
+        ("Duration", _duration_text(track.duration_seconds)),
+        ("Release", _release_text(track)),
+        ("Explicit", _explicit_text(track.explicit)),
+    ]
+    return _joined_fields(values)
+
+
+def _track_id_fields(track: UniversalTrack) -> str | Text:
+    return _joined_fields(
+        [
+            ("ISRC", track.isrc),
+            ("Platform ID", track.platform_track_id),
+            ("URL", _destination_link(track.platform, track.platform_track_id)),
+        ]
+    )
+
+
+def _joined_fields(values: list[tuple[str, str | Text | None]]) -> str | Text:
+    output = Text()
+    for name, value in values:
+        if value is None or value == "":
+            continue
+        if output.plain:
+            output.append("\n")
+        output.append(f"{name}: ")
+        if isinstance(value, Text):
+            output.append_text(value)
+        else:
+            output.append(str(value))
+    return output if output.plain else "-"
+
+
+def _append_block(output: Text, block: str | Text) -> None:
+    if block == "-":
+        return
+    if output.plain:
+        output.append("\n")
+    if isinstance(block, Text):
+        output.append_text(block)
+    else:
+        output.append(block)
+
+
+def _position_text(position: int | None) -> str | None:
+    if position is None:
+        return None
+    return f"Position: {position}"
+
+
+def _duration_text(duration_seconds: int | None) -> str | None:
+    if duration_seconds is None:
+        return None
+    minutes, seconds = divmod(duration_seconds, 60)
+    return f"{minutes}:{seconds:02d}"
+
+
+def _release_text(track: UniversalTrack) -> str | None:
+    if track.release_date is not None:
+        return track.release_date.isoformat()
+    if track.release_year is not None:
+        return str(track.release_year)
+    return None
+
+
+def _explicit_text(explicit: bool | None) -> str | None:
+    if explicit is None:
+        return None
+    return "yes" if explicit else "no"
+
+
+def _destination_url(platform: str | None, platform_track_id: str | None) -> str | None:
+    if platform is None or platform_track_id is None:
+        return None
+    normalized_platform = platform.casefold()
+    if normalized_platform == "spotify":
+        track_id = platform_track_id.removeprefix("spotify:track:")
+        return f"https://open.spotify.com/track/{track_id}"
+    if normalized_platform == "qqmusic" and _is_qqmusic_songmid(platform_track_id):
+        return f"https://y.qq.com/n/ryqq/songDetail/{platform_track_id}"
+    return None
+
+
+def _is_qqmusic_songmid(platform_track_id: str) -> bool:
+    return ":" not in platform_track_id and not platform_track_id.isdigit()
+
+
+def _destination_link(platform: str | None, platform_track_id: str | None) -> Text | None:
+    url = _destination_url(platform, platform_track_id)
+    if url is None:
+        return None
+    return Text("Link", style=f"link {url}")
 
 
 __all__ = [
