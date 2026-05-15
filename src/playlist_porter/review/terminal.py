@@ -26,6 +26,15 @@ REVIEWABLE_STATUSES = {
     MatchStatus.NOT_FOUND,
 }
 
+_ACTION_ALIASES = {
+    "a": "accept",
+    "accept": "accept",
+    "r": "reject",
+    "reject": "reject",
+    "s": "skip",
+    "skip": "skip",
+}
+
 
 @dataclass(frozen=True)
 class ReviewUpdate:
@@ -63,7 +72,7 @@ def apply_review_update(
         update=review_update_snapshot(update),
     )
     decision = _find_decision(repository, transfer_run_id, update.source_track_internal_id)
-    action = update.action.casefold()
+    action = _normalize_review_action(update.action)
     if action == "accept":
         candidate = _candidate_by_rank(decision, update.candidate_rank or 1)
         REVIEW_DIAGNOSTICS.debug(
@@ -114,6 +123,12 @@ def apply_review_update(
     raise ValueError(f"unknown review action: {update.action}")
 
 
+def _normalize_review_action(action: str) -> str:
+    normalized = _ACTION_ALIASES.get(action.strip().casefold())
+    if normalized is None:
+        raise ValueError(f"unknown review action: {action}")
+    return normalized
+
 
 def run_interactive_review(
     repository: TransferRepository,
@@ -134,11 +149,13 @@ def run_interactive_review(
     for decision in decisions:
         _render_decision(console, decision)
         action = Prompt.ask(
-            "Action",
-            choices=["accept", "reject", "skip"],
+            "Action [accept/reject/skip] or [a/r/s]",
+            choices=["accept", "reject", "skip", "a", "r", "s"],
             default="skip",
+            show_choices=False,
             console=console,
         )
+        action = _normalize_review_action(action)
         if action == "accept":
             rank_text = Prompt.ask("Candidate rank", default="1", console=console)
             update = ReviewUpdate(
