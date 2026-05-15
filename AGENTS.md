@@ -15,9 +15,9 @@ Key packages: `platforms/` adapters, `matching/` search/scoring, `persistence/` 
 Use `uv` locally.
 
 - `uv sync`: install.
-- `uv run playlist-porter init-config --path playlist-porter.json`: create local config.
-- `uv run playlist-porter match --config playlist-porter.json --source-platform mock --destination-platform mock --source-playlist sample-mixed --restart`: fixture-backed matching.
-- `uv run playlist-porter review --config playlist-porter.json --run-id <run-id>` and `uv run playlist-porter write --config playlist-porter.json --destination-platform mock --run-id <run-id> --create-playlist "Sample Copy"`: review/write approved matches.
+- `uv run playlist-porter init-config --path cli-config.json`: create local config.
+- `uv run playlist-porter match --config cli-config.json --source-platform mock --destination-platform mock --source-playlist sample-mixed --restart`: fixture-backed matching.
+- `uv run playlist-porter review --config cli-config.json --run-id <run-id>` and `uv run playlist-porter write --config cli-config.json --destination-platform mock --run-id <run-id> --create-playlist "Sample Copy"`: review/write approved matches.
 - `uv run ruff check .` and `uv run pytest`: required PR checks.
 
 ## Agent Operation Notes
@@ -44,4 +44,4 @@ PRs should summarize changes, validation, and related issues.
 
 ## Security & Configuration Tips
 
-Do not commit credentials, tokens, QQ Music cookies, databases, reports, caches, or local agent notes. Spotify values belong in `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REDIRECT_URI`, and `SPOTIFY_SCOPES`; QQ Music credentials belong in local JSON referenced by `QQMUSIC_CREDENTIAL_PATH`. Ignored local paths include `.agents/`, `docs/`, `playlist-porter.json`, `state/`, and `reports/`.
+Do not commit credentials, tokens, QQ Music cookies, databases, reports, caches, or local agent notes. Spotify values belong in `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REDIRECT_URI`, and `SPOTIFY_SCOPES`; QQ Music credentials belong in local JSON referenced by `QQMUSIC_CREDENTIAL_PATH`. Ignored local paths include `.agents/`, `docs/`, `cli-config.json`, `state/`, and `reports/`.

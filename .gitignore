@@ -225,7 +225,7 @@ __marimo__/
 .agents/
 
 # Playlist Porter local runtime outputs and secrets
-playlist-porter.json
+cli-config*.json
 state/
 reports/
 logs/

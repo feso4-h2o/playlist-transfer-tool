@@ -2,7 +2,7 @@
 
 Playlist Porter separates local run configuration from credentials.
 
-`playlist-porter.json` owns local paths, mock fixture paths, platform behavior
+`cli-config.json` owns local paths, mock fixture paths, platform behavior
 flags, and optional `commands.*` defaults. Spotify and QQ Music credentials are
 environment-only inputs so secrets do not end up in project config.
 
@@ -17,14 +17,14 @@ the source or destination platform.
 
 QQ Music public playlist reads and destination searches can run without
 `QQMUSIC_CREDENTIAL_PATH` when `qqmusic.allow_anonymous_read` is enabled in
-`playlist-porter.json`. QQ Music writes always require a local credential JSON.
+`cli-config.json`. QQ Music writes always require a local credential JSON.
 
 ## Starter Config
 
 Create a local config:
 
 ```powershell
-uv run playlist-porter init-config --path playlist-porter.json
+uv run playlist-porter init-config --path cli-config.json
 ```
 
 The generated file includes:
@@ -47,7 +47,7 @@ not auto-load `.env`; use `uv run --env-file` for local runs that need
 environment credentials:
 
 ```powershell
-uv run --env-file .env playlist-porter match --config playlist-porter.json
+uv run --env-file .env playlist-porter match --config cli-config.json
 ```
 
 Keep `.env`, OAuth token caches, QQ Music credential JSON, SQLite databases, and

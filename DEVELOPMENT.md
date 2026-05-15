@@ -34,16 +34,16 @@ uv run ruff check . --fix
 The tracked `fixtures/` files allow a credential-free local matching preview:
 
 ```powershell
-uv run playlist-porter init-config --path playlist-porter.json
-uv run playlist-porter match --config playlist-porter.json --source-platform mock --destination-platform mock --source-playlist sample-mixed --restart
+uv run playlist-porter init-config --path cli-config.json
+uv run playlist-porter match --config cli-config.json --source-platform mock --destination-platform mock --source-playlist sample-mixed --restart
 ```
 
 To exercise the mock write path after reviewing a run, use the run id printed
 by `match`:
 
 ```powershell
-uv run playlist-porter review --config playlist-porter.json --run-id <run-id>
-uv run playlist-porter write --config playlist-porter.json --destination-platform mock --run-id <run-id> --create-playlist "Sample Copy"
+uv run playlist-porter review --config cli-config.json --run-id <run-id>
+uv run playlist-porter write --config cli-config.json --destination-platform mock --run-id <run-id> --create-playlist "Sample Copy"
 ```
 
 Local state is written under `state/` and reports under `reports/`.

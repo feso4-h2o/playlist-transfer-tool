@@ -9,7 +9,7 @@ runs:
 3. `write`: write approved matches from that run to the destination.
 4. `export-report`: regenerate persisted reports when needed.
 
-The JSON examples below show the relevant `playlist-porter.json` sections to
+The JSON examples below show the relevant `cli-config.json` sections to
 edit after running `init-config`; they are not complete replacement config
 files.
 
@@ -52,16 +52,16 @@ Configure the source and destination defaults:
 Then run each step with the config:
 
 ```powershell
-uv run --env-file .env playlist-porter match --config playlist-porter.json
+uv run --env-file .env playlist-porter match --config cli-config.json
 ```
 
 After `match` prints the run ID, paste it into `commands.review.run_id`,
 `commands.write.run_id`, and `commands.export_report.run_id`. Then run:
 
 ```powershell
-uv run playlist-porter review --config playlist-porter.json
-uv run --env-file .env playlist-porter write --config playlist-porter.json
-uv run playlist-porter export-report --config playlist-porter.json
+uv run playlist-porter review --config cli-config.json
+uv run --env-file .env playlist-porter write --config cli-config.json
+uv run playlist-porter export-report --config cli-config.json
 ```
 
 If you do not want to edit the config between steps, pass `--run-id <run-id>` to
@@ -109,16 +109,16 @@ Configure the source and destination defaults:
 Then run each step with the config:
 
 ```powershell
-uv run --env-file .env playlist-porter match --config playlist-porter.json
+uv run --env-file .env playlist-porter match --config cli-config.json
 ```
 
 After `match` prints the run ID, paste it into `commands.review.run_id`,
 `commands.write.run_id`, and `commands.export_report.run_id`. Then run:
 
 ```powershell
-uv run playlist-porter review --config playlist-porter.json
-uv run --env-file .env playlist-porter write --config playlist-porter.json
-uv run playlist-porter export-report --config playlist-porter.json
+uv run playlist-porter review --config cli-config.json
+uv run --env-file .env playlist-porter write --config cli-config.json
+uv run playlist-porter export-report --config cli-config.json
 ```
 
 If you do not want to edit the config between steps, pass `--run-id <run-id>` to
@@ -133,7 +133,7 @@ The repository includes credential-free fixtures so a checkout can exercise the
 workflow without external services:
 
 ```powershell
-uv run playlist-porter init-config --path playlist-porter.json
+uv run playlist-porter init-config --path cli-config.json
 ```
 
 Then configure mock defaults:
@@ -172,15 +172,15 @@ Then configure mock defaults:
 Then run the mock lifecycle:
 
 ```powershell
-uv run playlist-porter match --config playlist-porter.json
+uv run playlist-porter match --config cli-config.json
 ```
 
 After `match` prints the run ID, paste it into `commands.review.run_id` and
 `commands.write.run_id`. Then run:
 
 ```powershell
-uv run playlist-porter review --config playlist-porter.json
-uv run playlist-porter write --config playlist-porter.json
+uv run playlist-porter review --config cli-config.json
+uv run playlist-porter write --config cli-config.json
 ```
 
 If you do not want to edit the config between steps, pass `--run-id <run-id>` to
@@ -192,7 +192,7 @@ report output directory, usually `reports/`.
 
 ## Config Defaults And Overrides
 
-Explicit CLI flags override defaults from `commands.*` in `playlist-porter.json`.
+Explicit CLI flags override defaults from `commands.*` in `cli-config.json`.
 
 `match` overrides:
 
@@ -228,13 +228,13 @@ For example, this command keeps the configured platforms and output directory,
 but uses a different source playlist and restart setting for one run:
 
 ```powershell
-uv run playlist-porter match --config playlist-porter.json --source-playlist <playlist-id-or-url> --restart
+uv run playlist-porter match --config cli-config.json --source-playlist <playlist-id-or-url> --restart
 ```
 
 ## Verbosity And Debug Logs
 
 Logging is flag-controlled for each command. These options are not read from
-`playlist-porter.json`:
+`cli-config.json`:
 
 - `-v`: print INFO and above to the console.
 - `-vv`: print DEBUG and above to the console.
@@ -243,8 +243,8 @@ Logging is flag-controlled for each command. These options are not read from
 The flags work before or after the subcommand:
 
 ```powershell
-uv run playlist-porter -v match --config playlist-porter.json
-uv run playlist-porter match --config playlist-porter.json -vv --log
+uv run playlist-porter -v match --config cli-config.json
+uv run playlist-porter match --config cli-config.json -vv --log
 ```
 
 ## Playlist Identifiers
@@ -295,7 +295,7 @@ playlist IDs and are not currently supported write targets.
 existing run:
 
 ```powershell
-uv run playlist-porter export-report --config playlist-porter.json --run-id <run-id> --output-dir reports --format both
+uv run playlist-porter export-report --config cli-config.json --run-id <run-id> --output-dir reports --format both
 ```
 
 Reports are grouped by short run ID and include transfer summaries plus
