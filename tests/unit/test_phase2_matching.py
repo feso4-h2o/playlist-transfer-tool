@@ -91,6 +91,23 @@ def test_multiple_close_candidates_become_needs_review() -> None:
     assert decision.status is MatchStatus.NEEDS_REVIEW
     assert len(decision.candidates) == 2
     assert decision.candidates[0].score - decision.candidates[1].score <= 0.03
+    assert UnavailableReason.AMBIGUOUS_CANDIDATES in decision.reason_codes
+
+
+def test_ambiguous_candidates_preserve_top_candidate_reasons() -> None:
+    source = _track("Song", duration=180)
+    adapter = MockAdapter(
+        catalog=[
+            _track("Song", track_id="dest-1", duration=187),
+            _track("Song", track_id="dest-2", duration=188),
+        ]
+    )
+
+    decision = match_track(source, adapter)
+
+    assert decision.status is MatchStatus.NEEDS_REVIEW
+    assert UnavailableReason.AMBIGUOUS_CANDIDATES in decision.reason_codes
+    assert UnavailableReason.DURATION_MISMATCH in decision.reason_codes
 
 
 def test_missing_destination_track_becomes_not_found_with_reason_code() -> None:

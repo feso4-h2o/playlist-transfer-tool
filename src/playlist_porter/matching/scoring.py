@@ -197,7 +197,9 @@ def decide_match(
             candidates=ranked,
             score=top.score,
             evidence=top.evidence,
-            reason_codes=_dedupe_reasons(reasons),
+            reason_codes=_dedupe_reasons(
+                [UnavailableReason.AMBIGUOUS_CANDIDATES, *reasons]
+            ),
         )
 
     if reasons & _HARD_REVIEW_REASONS:

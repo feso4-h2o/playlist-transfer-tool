@@ -24,6 +24,7 @@ class UnavailableReason(StrEnum):
 
     NO_CANDIDATES = "no_candidates"
     LOW_CONFIDENCE = "low_confidence"
+    AMBIGUOUS_CANDIDATES = "ambiguous_candidates"
     DURATION_MISMATCH = "duration_mismatch"
     VERSION_MISMATCH = "version_mismatch"
     ARTIST_MISMATCH = "artist_mismatch"
