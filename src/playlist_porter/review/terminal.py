@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.markup import escape
 from rich.prompt import Prompt
 from rich.table import Table
+from rich.text import Text
 
 from playlist_porter.diagnostics import (
     decision_summary,
@@ -245,25 +246,23 @@ def _score_text(candidate: TrackCandidate) -> str:
     return f"{candidate.score:.4f}"
 
 
-def _source_metadata(track: UniversalTrack) -> str:
+def _source_metadata(track: UniversalTrack) -> str | Text:
     metadata = _track_metadata_fields(track, include_album=True)
     ids = _track_id_fields(track)
-    lines = []
-    if metadata != "-":
-        lines.append(metadata)
-    if ids != "-":
-        lines.append(ids)
+    output = Text()
+    for block in (metadata, ids):
+        _append_block(output, block)
     position = _position_text(track.source_playlist_position)
     if position is not None:
-        lines.append(position)
-    return "\n".join(lines) or "-"
+        _append_block(output, position)
+    return output if output.plain else "-"
 
 
-def _candidate_metadata(candidate: TrackCandidate) -> str:
+def _candidate_metadata(candidate: TrackCandidate) -> str | Text:
     return _track_metadata_fields(candidate.track, include_album=True)
 
 
-def _candidate_ids(candidate: TrackCandidate) -> str:
+def _candidate_ids(candidate: TrackCandidate) -> str | Text:
     track = candidate.track
     return _track_id_fields(track)
 
@@ -278,7 +277,7 @@ def _candidate_reason_text(candidate: TrackCandidate) -> str:
     return escape(", ".join(dict.fromkeys(reasons))) or "-"
 
 
-def _track_metadata_fields(track: UniversalTrack, *, include_album: bool) -> str:
+def _track_metadata_fields(track: UniversalTrack, *, include_album: bool) -> str | Text:
     values = [
         ("Album", track.album if include_album else None),
         ("Duration", _duration_text(track.duration_seconds)),
@@ -288,7 +287,7 @@ def _track_metadata_fields(track: UniversalTrack, *, include_album: bool) -> str
     return _joined_fields(values)
 
 
-def _track_id_fields(track: UniversalTrack) -> str:
+def _track_id_fields(track: UniversalTrack) -> str | Text:
     return _joined_fields(
         [
             ("ISRC", track.isrc),
@@ -298,9 +297,30 @@ def _track_id_fields(track: UniversalTrack) -> str:
     )
 
 
-def _joined_fields(values: list[tuple[str, str | None]]) -> str:
-    fields = [f"{name}: {value}" for name, value in values if value not in {None, ""}]
-    return "\n".join(fields) or "-"
+def _joined_fields(values: list[tuple[str, str | Text | None]]) -> str | Text:
+    output = Text()
+    for name, value in values:
+        if value is None or value == "":
+            continue
+        if output.plain:
+            output.append("\n")
+        output.append(f"{name}: ")
+        if isinstance(value, Text):
+            output.append_text(value)
+        else:
+            output.append(str(value))
+    return output if output.plain else "-"
+
+
+def _append_block(output: Text, block: str | Text) -> None:
+    if block == "-":
+        return
+    if output.plain:
+        output.append("\n")
+    if isinstance(block, Text):
+        output.append_text(block)
+    else:
+        output.append(block)
 
 
 def _position_text(position: int | None) -> str | None:
@@ -346,11 +366,11 @@ def _is_qqmusic_songmid(platform_track_id: str) -> bool:
     return ":" not in platform_track_id and not platform_track_id.isdigit()
 
 
-def _destination_link(platform: str | None, platform_track_id: str | None) -> str | None:
+def _destination_link(platform: str | None, platform_track_id: str | None) -> Text | None:
     url = _destination_url(platform, platform_track_id)
     if url is None:
         return None
-    return f"[link={url}]Link[/link]"
+    return Text("Link", style=f"link {url}")
 
 
 __all__ = [

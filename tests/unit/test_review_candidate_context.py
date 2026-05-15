@@ -169,3 +169,38 @@ def test_review_output_omits_missing_optional_metadata_without_none_text() -> No
     assert "Sparse" in text
     assert "None" not in text
     assert "URL:" not in text
+
+
+def test_review_output_escapes_rich_markup_in_metadata_values() -> None:
+    decision = MatchDecision(
+        source_track=_track(
+            "Source",
+            platform="mock",
+            track_id="source[/oops]",
+            album="Source [/oops]",
+            isrc="SRC[/oops]",
+            duration=180,
+        ),
+        status=MatchStatus.NEEDS_REVIEW,
+        candidates=[
+            _candidate(
+                _track(
+                    "Candidate",
+                    platform="mock",
+                    track_id="dest[/oops]",
+                    album="Candidate [/oops]",
+                    isrc="DST[/oops]",
+                ),
+                rank=1,
+                score=0.8,
+            )
+        ],
+        reason_codes=[UnavailableReason.AMBIGUOUS_CANDIDATES],
+    )
+
+    text = _render_text(decision)
+
+    assert "Source [/oops]" in text
+    assert "Platform ID: source[/oops]" in text
+    assert "Candidate [/oops]" in text
+    assert "ISRC: DST[/oops]" in text
