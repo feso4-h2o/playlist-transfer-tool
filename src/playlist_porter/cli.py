@@ -42,7 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     init_parser = subparsers.add_parser("init-config", help="write a starter local config")
     _add_logging_arguments(init_parser)
-    init_parser.add_argument("--path", default="playlist-porter.json")
+    init_parser.add_argument("--path", default="cli-config.json")
     init_parser.add_argument("--force", action="store_true")
 
     dry_run_parser = subparsers.add_parser("dry-run", help="run mock matching without writes")

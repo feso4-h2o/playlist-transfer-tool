@@ -53,18 +53,18 @@ uv run playlist-porter --version
 Write a starter config:
 
 ```powershell
-uv run playlist-porter init-config --path playlist-porter.json
+uv run playlist-porter init-config --path cli-config.json
 ```
 
-The generated `playlist-porter.json` stores local paths, platform behavior
+The generated `cli-config.json` stores local paths, platform behavior
 flags, mock fixture paths, and optional `commands.*` defaults. Spotify and QQ
 Music credentials are read from the process environment, not from
-`playlist-porter.json`.
+`cli-config.json`.
 
 For local runs that need credentials, prefer loading them with `uv`:
 
 ```powershell
-uv run --env-file .env playlist-porter match --config playlist-porter.json
+uv run --env-file .env playlist-porter match --config cli-config.json
 ```
 
 See [docs/configuration.md](docs/configuration.md) for Spotify Developer
@@ -83,19 +83,19 @@ Use the same lifecycle for Spotify, QQ Music, and mock fixture runs:
 3. `write`: write approved matches from the reviewed run to the destination.
 4. `export-report`: regenerate reports for an existing run.
 
-With `commands.*` defaults configured in `playlist-porter.json`, the workflow
+With `commands.*` defaults configured in `cli-config.json`, the workflow
 can be run with short commands. If Spotify credentials are stored in `.env`,
 load that file for `match` as well as `write`:
 
 ```powershell
-uv run --env-file .env playlist-porter match --config playlist-porter.json
-uv run playlist-porter review --config playlist-porter.json
-uv run --env-file .env playlist-porter write --config playlist-porter.json
-uv run playlist-porter export-report --config playlist-porter.json
+uv run --env-file .env playlist-porter match --config cli-config.json
+uv run playlist-porter review --config cli-config.json
+uv run --env-file .env playlist-porter write --config cli-config.json
+uv run playlist-porter export-report --config cli-config.json
 ```
 
 See [docs/playlist-workflow.md](docs/playlist-workflow.md) for Spotify -> QQ
-Music, QQ Music -> Spotify, mock fixture examples, `playlist-porter.json`
+Music, QQ Music -> Spotify, mock fixture examples, `cli-config.json`
 examples, CLI override flags, playlist identifier support, write-target choices,
 and report export details.
 
