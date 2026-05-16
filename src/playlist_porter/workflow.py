@@ -594,16 +594,14 @@ def execute_mock_transfer(
     adapter = create_mock_adapter(config)
     adapter.authenticate()
     logger.info("mock write adapter authenticated")
-    run_record = repository.load_run(transfer_run_id)
-    destination_id = destination_playlist_id or run_record.destination_playlist_id
-    if destination_playlist_id is not None:
-        repository.update_destination_playlist_id(transfer_run_id, destination_playlist_id)
-    if destination_id is None:
-        destination_id = adapter.create_playlist(
-            create_playlist_name or f"{run_record.source_playlist_name or 'Playlist'} Copy",
-            "Created by playlist-porter mock execution",
-        )
-        repository.update_destination_playlist_id(transfer_run_id, destination_id)
+    destination_id = _resolve_destination_write_target(
+        repository,
+        adapter,
+        transfer_run_id,
+        destination_playlist_id=_optional_text(destination_playlist_id),
+        create_playlist_name=_optional_text(create_playlist_name),
+        default_create_name_suffix="mock execution",
+    )
 
     write_pairs = _eligible_write_pairs(
         repository.load_match_decisions(transfer_run_id),
@@ -668,58 +666,16 @@ def _execute_transfer_writes(
             attempted_count=0,
             skipped_count=len(write_pairs),
             metrics=repository.load_metrics(transfer_run_id),
+        )
+
+    destination_id = _resolve_destination_write_target(
+        repository,
+        destination,
+        transfer_run_id,
+        destination_playlist_id=_optional_text(destination_playlist_id),
+        create_playlist_name=_optional_text(create_playlist_name),
+        default_create_name_suffix="write",
     )
-
-    run_record = repository.load_run(transfer_run_id)
-    if (
-        destination_playlist_id is not None
-        and run_record.destination_playlist_id is not None
-        and destination_playlist_id != run_record.destination_playlist_id
-    ):
-        raise ValueError(
-            "transfer run already targets destination playlist "
-            f"{run_record.destination_playlist_id}; start a new match run to use "
-            f"{destination_playlist_id}"
-        )
-
-    destination_id = destination_playlist_id or run_record.destination_playlist_id
-    if destination_playlist_id is not None:
-        repository.update_destination_playlist_id(transfer_run_id, destination_playlist_id)
-        logger.info(
-            "destination playlist id recorded",
-            run_id=transfer_run_id,
-        )
-        WRITE_DIAGNOSTICS.debug(
-            "destination playlist id recorded",
-            run_id=transfer_run_id,
-            destination_platform=destination.platform_name,
-            destination_playlist_id=destination_playlist_id,
-        )
-    if destination_id is None:
-        destination_id = destination.create_playlist(
-            create_playlist_name or f"{run_record.source_playlist_name or 'Playlist'} Copy",
-            "Created by playlist-porter write",
-        )
-        repository.update_destination_playlist_id(transfer_run_id, destination_id)
-        logger.info(
-            "destination playlist created",
-            run_id=transfer_run_id,
-            destination_platform=destination.platform_name,
-        )
-        WRITE_DIAGNOSTICS.debug(
-            "destination playlist created",
-            run_id=transfer_run_id,
-            destination_platform=destination.platform_name,
-            destination_playlist_id=destination_id,
-            create_playlist_name=create_playlist_name,
-        )
-    else:
-        WRITE_DIAGNOSTICS.debug(
-            "destination playlist reused",
-            run_id=transfer_run_id,
-            destination_platform=destination.platform_name,
-            destination_playlist_id=destination_id,
-        )
 
     write_pairs = _eligible_write_pairs(
         repository.load_match_decisions(transfer_run_id),
@@ -757,6 +713,86 @@ def _execute_transfer_writes(
         skipped_count=len(write_pairs) - len(pending_pairs),
         metrics=repository.load_metrics(transfer_run_id),
     )
+
+
+def _resolve_destination_write_target(
+    repository: TransferRepository,
+    destination: BasePlatform,
+    transfer_run_id: str,
+    *,
+    destination_playlist_id: str | None,
+    create_playlist_name: str | None,
+    default_create_name_suffix: str,
+) -> str:
+    run_record = repository.load_run(transfer_run_id)
+    persisted_destination_id = _optional_text(run_record.destination_playlist_id)
+
+    if destination_playlist_id is not None and create_playlist_name is not None:
+        raise ValueError(
+            "choose either destination_playlist_id or create_playlist, not both"
+        )
+    if (
+        destination_playlist_id is not None
+        and persisted_destination_id is not None
+        and destination_playlist_id != persisted_destination_id
+    ):
+        raise ValueError(
+            "transfer run already targets destination playlist "
+            f"{persisted_destination_id}; start a new match run to use "
+            f"{destination_playlist_id}"
+        )
+    if destination_playlist_id is not None:
+        destination.validate_destination_playlist(destination_playlist_id)
+        repository.update_destination_playlist_id(transfer_run_id, destination_playlist_id)
+        logger.info("destination playlist id recorded", run_id=transfer_run_id)
+        WRITE_DIAGNOSTICS.debug(
+            "destination playlist id recorded",
+            run_id=transfer_run_id,
+            destination_platform=destination.platform_name,
+            destination_playlist_id=destination_playlist_id,
+        )
+        return destination_playlist_id
+
+    if persisted_destination_id is not None:
+        destination.validate_destination_playlist(persisted_destination_id)
+        WRITE_DIAGNOSTICS.debug(
+            "destination playlist reused",
+            run_id=transfer_run_id,
+            destination_platform=destination.platform_name,
+            destination_playlist_id=persisted_destination_id,
+        )
+        return persisted_destination_id
+
+    if create_playlist_name is None:
+        raise ValueError(
+            "write target is required; pass --destination-playlist-id or --create-playlist"
+        )
+
+    destination_id = destination.create_playlist(
+        create_playlist_name,
+        f"Created by playlist-porter {default_create_name_suffix}",
+    )
+    repository.update_destination_playlist_id(transfer_run_id, destination_id)
+    logger.info(
+        "destination playlist created",
+        run_id=transfer_run_id,
+        destination_platform=destination.platform_name,
+    )
+    WRITE_DIAGNOSTICS.debug(
+        "destination playlist created",
+        run_id=transfer_run_id,
+        destination_platform=destination.platform_name,
+        destination_playlist_id=destination_id,
+        create_playlist_name=create_playlist_name,
+    )
+    return destination_id
+
+
+def _optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    text = value.strip()
+    return text or None
 
 
 def render_metrics(console: Console, metrics: TransferMetrics, *, title: str) -> None:
