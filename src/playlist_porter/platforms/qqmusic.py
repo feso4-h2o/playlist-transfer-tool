@@ -348,6 +348,31 @@ class QQMusicAdapter(BasePlatform):
         if not added:
             raise ValidationFailure("QQ Music rejected one or more playlist additions")
 
+    def validate_destination_playlist(self, playlist_id: str) -> None:
+        """Fetch a QQ Music songlist before writing to fail clearly on bad targets."""
+
+        if not self.config.supports_add_tracks:
+            raise QQMusicWriteUnsupported("QQ Music add-tracks support is disabled by config")
+        numeric_playlist_id = _playlist_id_from_value(playlist_id)
+        try:
+            payload = self._policy.execute(
+                "qqmusic playlist write preflight",
+                _retryable_qqmusic_operation(
+                    lambda: self._ensure_client().get_playlist(
+                        numeric_playlist_id,
+                        page_size=self.config.page_size,
+                    )
+                ),
+                request_kind="read",
+            )
+        except Exception as exc:
+            _raise_classified_qqmusic_exception(exc)
+        if not _playlist_payload_has_metadata(payload):
+            raise ValidationFailure(
+                "QQ Music destination songlist was not found or is not readable: "
+                f"{numeric_playlist_id}"
+            )
+
     def _ensure_client(self) -> Any:
         if self._client is None:
             self._client = self._client_factory(self.config.load_credential_payload())
@@ -483,6 +508,12 @@ def _merge_playlist_pages(payload: Any) -> Any:
         "total": _first_value(first_page, "total", "total_song_num"),
         "hasmore": False,
     }
+
+
+def _playlist_payload_has_metadata(payload: Any) -> bool:
+    payload = _merge_playlist_pages(payload)
+    info = _first_value(payload, "info", "dirinfo", "songlist_info")
+    return _first_value(info, "id", "tid", "dirid", "title", "name", "dissname") is not None
 
 
 def _artist_names(payload: Any) -> list[str]:

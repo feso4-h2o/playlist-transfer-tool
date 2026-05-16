@@ -231,6 +231,33 @@ def test_qqmusic_adapter_fetches_playlist_through_rate_policy() -> None:
     assert playlist.tracks[0].platform_track_id == "1:0"
 
 
+def test_qqmusic_adapter_validates_destination_songlist_before_write() -> None:
+    client = FakeQQMusicClient(
+        playlist_payload={
+            "info": {"id": 12345, "title": "åŽè¯­æ”¶è—"},
+            "songs": [],
+        }
+    )
+    adapter = QQMusicAdapter(
+        config=QQMusicConfig(page_size=50),
+        client=client,
+        rate_limit_policy=qq_policy(),
+    )
+
+    adapter.validate_destination_playlist("12345")
+
+
+def test_qqmusic_adapter_rejects_unreadable_destination_songlist() -> None:
+    adapter = QQMusicAdapter(
+        config=QQMusicConfig(page_size=50),
+        client=FakeQQMusicClient(playlist_payload={}),
+        rate_limit_policy=qq_policy(),
+    )
+
+    with pytest.raises(ValidationFailure, match="not found or is not readable"):
+        adapter.validate_destination_playlist("12345")
+
+
 def test_qqmusic_adapter_allows_anonymous_playlist_reads() -> None:
     client = FakeQQMusicClient(
         playlist_payload={

@@ -176,6 +176,30 @@ class SpotifyAdapter(BasePlatform):
                 lambda uris=uris: client.playlist_add_items(playlist_id, uris),
             )
 
+    def validate_destination_playlist(self, playlist_id: str) -> None:
+        """Ensure an existing Spotify playlist is writable before adding items."""
+
+        client = self._write_client_or_raise()
+        spotify_playlist_id = _playlist_id_from_input(playlist_id)
+        playlist_payload = self._call(
+            "spotify playlist write preflight",
+            lambda: client.playlist(
+                spotify_playlist_id,
+                fields="id,name,owner(id),collaborative",
+            ),
+        )
+        current_user_payload = self._call("spotify current user", client.current_user)
+        current_user_id = current_user_payload.get("id")
+        if current_user_id is None:
+            raise ValidationFailure("Spotify current user response did not include an id")
+
+        owner_id = (playlist_payload.get("owner") or {}).get("id")
+        if owner_id != current_user_id and not bool(playlist_payload.get("collaborative")):
+            raise ValidationFailure(
+                "Spotify playlist is not writable by the current user: "
+                f"{spotify_playlist_id}"
+            )
+
     def add_tracks_with_progress(
         self,
         playlist_id: str,

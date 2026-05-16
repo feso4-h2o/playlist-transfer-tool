@@ -45,5 +45,13 @@ class BasePlatform(ABC):
     def add_tracks(self, playlist_id: str, track_ids: list[str]) -> None:
         """Append destination-platform track IDs to a playlist."""
 
+    def validate_destination_playlist(self, playlist_id: str) -> None:
+        """Validate that an existing destination playlist can receive writes.
+
+        Adapters that cannot check this cheaply may leave the default no-op.
+        """
+
+        del playlist_id
+
 
 __all__ = ["BasePlatform", "PlatformCapabilities"]
