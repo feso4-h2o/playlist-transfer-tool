@@ -46,11 +46,17 @@ class MockAdapter(BasePlatform):
         playlists: dict[str, Playlist] | None = None,
         catalog: list[UniversalTrack] | None = None,
         catalog_entries: list[dict[str, Any]] | None = None,
+        search_result_entries: list[dict[str, Any]] | None = None,
         writes_path: str | Path | None = None,
         min_query_score: float = 0.70,
     ) -> None:
         self._playlists = playlists or {}
         self._catalog = self._build_catalog(catalog or [], catalog_entries or [])
+        self._replay_search_results = (
+            _build_replay_search_results(search_result_entries)
+            if search_result_entries is not None
+            else None
+        )
         self._writes_path = Path(writes_path) if writes_path is not None else None
         self._writes: dict[str, dict[str, Any]] = self._load_existing_writes()
         self._min_query_score = min_query_score
@@ -62,15 +68,23 @@ class MockAdapter(BasePlatform):
         *,
         playlists_path: str | Path,
         catalog_path: str | Path,
+        search_results_path: str | Path | None = None,
         writes_path: str | Path | None = None,
     ) -> MockAdapter:
         """Load playlists and destination catalog from JSON fixture files."""
 
         playlists_payload = json.loads(Path(playlists_path).read_text(encoding="utf-8"))
         catalog_payload = json.loads(Path(catalog_path).read_text(encoding="utf-8"))
+        search_result_entries = None
+        if search_results_path is not None:
+            search_results_payload = json.loads(
+                Path(search_results_path).read_text(encoding="utf-8")
+            )
+            search_result_entries = _extract_records(search_results_payload, "results")
         return cls(
             playlists=_load_json_playlists(playlists_payload),
             catalog_entries=_extract_records(catalog_payload, "catalog"),
+            search_result_entries=search_result_entries,
             writes_path=writes_path,
         )
 
@@ -110,6 +124,10 @@ class MockAdapter(BasePlatform):
             raise ValueError(f"mock playlist not found: {playlist_id_or_url}") from exc
 
     def search_tracks(self, query: str, limit: int = 10) -> list[TrackCandidate]:
+        if self._replay_search_results is not None:
+            candidates = self._replay_search_results.get(query, [])
+            return [candidate.model_copy(deep=True) for candidate in candidates[:limit]]
+
         normalized_query_forms = normalize_text_forms(query)
         if not normalized_query_forms:
             return []
@@ -239,6 +257,32 @@ def _catalog_entry_from_record(record: dict[str, Any]) -> _CatalogEntry:
         track=_track_from_record(record, platform=record.get("platform", "mock")),
         unavailable_reason=UnavailableReason(reason_value) if reason_value else None,
         popularity=int(popularity_value) if popularity_value is not None else None,
+    )
+
+
+def _build_replay_search_results(
+    search_result_entries: list[dict[str, Any]],
+) -> dict[str, list[TrackCandidate]]:
+    replay_results: dict[str, list[TrackCandidate]] = {}
+    for search_result in search_result_entries:
+        for candidate_record in search_result.get("candidates", []):
+            candidate = _candidate_from_record(candidate_record)
+            if candidate.query is None:
+                continue
+            replay_results.setdefault(candidate.query, []).append(candidate)
+    return replay_results
+
+
+def _candidate_from_record(record: dict[str, Any]) -> TrackCandidate:
+    reason_value = _blank_to_none(record.get("unavailable_reason"))
+    track_record = record["track"]
+    return TrackCandidate(
+        track=_track_from_record(track_record, platform=track_record.get("platform", "mock")),
+        score=float(record["score"]),
+        rank=int(record["rank"]),
+        query=_optional_text(record.get("query")),
+        evidence=dict(record.get("evidence", {})),
+        unavailable_reason=UnavailableReason(reason_value) if reason_value else None,
     )
 
 
