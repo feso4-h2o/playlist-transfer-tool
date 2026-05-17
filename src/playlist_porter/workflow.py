@@ -140,6 +140,7 @@ def run_transfer(
     dry_run: bool = True,
     database_path: str | Path | None = None,
     output_dir: str | Path | None = None,
+    output_format: str | None = None,
     restart: bool = False,
     destination_playlist_id: str | None = None,
     create_playlist_name: str | None = None,
@@ -163,6 +164,7 @@ def run_transfer(
         dry_run=dry_run,
         database_path=database_path or config.database_path,
         output_dir=output_dir or config.report_output_dir,
+        output_format=output_format or config.report_format,
         restart=restart,
         destination_playlist_id=destination_playlist_id,
         create_playlist_name=create_playlist_name,
@@ -177,6 +179,7 @@ def execute_transfer_run(
     transfer_run_id: str,
     database_path: str | Path | None = None,
     output_dir: str | Path | None = None,
+    output_format: str | None = None,
     destination_playlist_id: str | None = None,
     create_playlist_name: str | None = None,
     console: Console | None = None,
@@ -195,6 +198,7 @@ def execute_transfer_run(
         transfer_run_id=transfer_run_id,
         database_path=database_path or config.database_path,
         output_dir=output_dir or config.report_output_dir,
+        output_format=output_format or config.report_format,
         destination_playlist_id=destination_playlist_id,
         create_playlist_name=create_playlist_name,
         console=console,
@@ -207,6 +211,7 @@ def execute_transfer_run_with_adapter(
     transfer_run_id: str,
     database_path: str | Path,
     output_dir: str | Path,
+    output_format: str = "json",
     destination_playlist_id: str | None = None,
     create_playlist_name: str | None = None,
     console: Console | None = None,
@@ -248,7 +253,15 @@ def execute_transfer_run_with_adapter(
         destination_playlist_id=destination_playlist_id,
         create_playlist_name=create_playlist_name,
     )
-    report_paths = tuple(export_reports(repository, transfer_run_id, output_dir))
+    report_paths = tuple(
+        export_reports(
+            repository,
+            transfer_run_id,
+            output_dir,
+            output_format=output_format,
+            command="write",
+        )
+    )
     logger.info(
         "reports exported",
         run_id=transfer_run_id,
@@ -282,6 +295,7 @@ def run_transfer_with_adapters(
     dry_run: bool,
     database_path: str | Path,
     output_dir: str | Path,
+    output_format: str = "json",
     restart: bool = False,
     destination_playlist_id: str | None = None,
     create_playlist_name: str | None = None,
@@ -391,7 +405,15 @@ def run_transfer_with_adapters(
     )
 
     repository.sync_metrics(transfer_run_id)
-    report_paths = tuple(export_reports(repository, transfer_run_id, output_dir))
+    report_paths = tuple(
+        export_reports(
+            repository,
+            transfer_run_id,
+            output_dir,
+            output_format=output_format,
+            command="match" if dry_run else "write",
+        )
+    )
     logger.info(
         "reports exported",
         run_id=transfer_run_id,

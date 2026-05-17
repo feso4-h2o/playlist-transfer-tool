@@ -121,18 +121,20 @@ def test_phase8_mock_dry_run_exports_summary_matching_metrics(tmp_path) -> None:
     )
 
     summary_path = next(
-        path for path in result.report_paths if path.name.startswith("transfer-summary-")
+        path for path in result.report_paths if path.name.startswith("summary-")
     )
     unavailable_path = next(
-        path for path in result.report_paths if path.name.startswith("unavailable-tracks-")
+        path for path in result.report_paths if path.name.startswith("unavailable-")
     )
     summary = json.loads(summary_path.read_text())
     unavailable = json.loads(unavailable_path.read_text())
 
     assert result.dry_run is True
     assert result.written_count == 0
-    assert summary_path.parent == config.report_output_dir / result.transfer_run_id[:8]
-    assert unavailable_path.parent == config.report_output_dir / result.transfer_run_id[:8]
+    assert summary_path.parent == config.report_output_dir / result.transfer_run_id
+    assert unavailable_path.parent == config.report_output_dir / result.transfer_run_id
+    assert summary_path.name.endswith("-match.json")
+    assert unavailable_path.name.endswith("-match.json")
     assert result.metrics.source_track_count == 3
     assert summary["transfer_run_id"] == result.transfer_run_id
     assert summary["source_track_count"] == result.metrics.source_track_count
