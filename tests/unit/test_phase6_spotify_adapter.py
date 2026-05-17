@@ -372,6 +372,16 @@ def test_spotify_add_tracks_batches_by_api_limit() -> None:
     assert client.added_batches[0][1][0] == "spotify:track:track-0"
 
 
+def test_spotify_destination_track_ids_read_playlist_items() -> None:
+    client = FakeSpotifyClient()
+    adapter = SpotifyAdapter(client=client)
+
+    track_ids = adapter.get_destination_track_ids("playlist-1")
+
+    assert track_ids == {"track-1", "track-2"}
+    assert client.playlist_item_offsets == [0]
+
+
 def test_spotify_validate_destination_playlist_allows_owned_playlist() -> None:
     adapter = SpotifyAdapter(client=FakeSpotifyClient())
 
