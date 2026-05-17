@@ -1,7 +1,8 @@
 # Fixture Data
 
 This directory contains sample JSON fixtures for tests, local mock transfers,
-manual QA, and future replay-style matching work.
+and manual QA. Historical replay-only search result fixtures live under
+`tests/fixtures/replay/`.
 
 The fixtures are metadata-only. They may include public track titles, artists,
 albums, durations, release dates, ISRCs, platform track IDs, sample playlist

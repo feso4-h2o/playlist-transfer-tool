@@ -14,8 +14,12 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def _replay_fixture_path(name: str) -> Path:
+    return _repo_root() / "tests" / "fixtures" / "replay" / name
+
+
 def _fixture_payload(name: str) -> dict[str, Any]:
-    return json.loads((_repo_root() / "fixtures" / name).read_text(encoding="utf-8"))
+    return json.loads(_replay_fixture_path(name).read_text(encoding="utf-8"))
 
 
 def _result_by_source_title(payload: dict[str, Any], title: str) -> dict[str, Any]:
@@ -29,7 +33,7 @@ def _spotify_replay_adapter() -> MockAdapter:
     return MockAdapter.from_json(
         playlists_path=root / "fixtures" / "qqmusic-public-playlist.json",
         catalog_path=root / "fixtures" / "spotify-search-catalog.json",
-        search_results_path=root / "fixtures" / "spotify-search-results.json",
+        search_results_path=_replay_fixture_path("spotify-search-results.json"),
     )
 
 
@@ -38,7 +42,7 @@ def _qqmusic_replay_adapter() -> MockAdapter:
     return MockAdapter.from_json(
         playlists_path=root / "fixtures" / "spotify-public-playlist.json",
         catalog_path=root / "fixtures" / "qqmusic-search-catalog.json",
-        search_results_path=root / "fixtures" / "qqmusic-search-results.json",
+        search_results_path=_replay_fixture_path("qqmusic-search-results.json"),
     )
 
 
