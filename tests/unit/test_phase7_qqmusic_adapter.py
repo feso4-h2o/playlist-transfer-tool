@@ -61,16 +61,18 @@ class FakeQQMusicClient:
         self.search_errors_before_success = search_errors_before_success
         self.search_error = search_error or TransientNetworkError("temporary QQ search failure")
         self.created_names: list[str] = []
-        self.added_songs: list[tuple[int, list[tuple[int, int]]]] = []
+        self.added_songs: list[tuple[int, int, list[tuple[int, int]]]] = []
+        self.playlist_fetches: list[tuple[int, int, int]] = []
         self.search_calls = 0
 
     def validate_session(self) -> None:
         if self.validate_error is not None:
             raise self.validate_error
 
-    def get_playlist(self, playlist_id: int, *, page_size: int) -> dict:
+    def get_playlist(self, playlist_id: int, *, page_size: int, dirid: int = 0) -> dict:
         assert playlist_id == 12345
         assert page_size == 50
+        self.playlist_fetches.append((playlist_id, page_size, dirid))
         return self.playlist_payload
 
     def search_tracks(self, query: str, *, limit: int) -> dict:
@@ -83,10 +85,16 @@ class FakeQQMusicClient:
 
     def create_playlist(self, name: str) -> dict:
         self.created_names.append(name)
-        return {"dirid": 777, "name": name}
+        return {"dirid": 777, "id": 12345, "name": name}
 
-    def add_songs(self, playlist_id: int, song_info: list[tuple[int, int]]) -> bool:
-        self.added_songs.append((playlist_id, song_info))
+    def add_songs(
+        self,
+        dirid: int,
+        song_info: list[tuple[int, int]],
+        *,
+        tid: int = 0,
+    ) -> bool:
+        self.added_songs.append((dirid, tid, song_info))
         return True
 
 
@@ -229,6 +237,83 @@ def test_qqmusic_adapter_fetches_playlist_through_rate_policy() -> None:
 
     assert playlist.name == "华语收藏"
     assert playlist.tracks[0].platform_track_id == "1:0"
+
+
+def test_qqmusic_adapter_validates_destination_songlist_before_write() -> None:
+    client = FakeQQMusicClient(
+        playlist_payload={
+            "info": {"id": 12345, "dirid": 777, "title": "åŽè¯­æ”¶è—"},
+            "songs": [],
+        }
+    )
+    adapter = QQMusicAdapter(
+        config=QQMusicConfig(page_size=50),
+        client=client,
+        rate_limit_policy=qq_policy(),
+    )
+
+    assert adapter.validate_destination_playlist("12345") == "777:12345"
+    assert client.playlist_fetches == [(12345, 50, 0)]
+
+
+def test_qqmusic_adapter_validates_resolved_destination_songlist_before_write() -> None:
+    client = FakeQQMusicClient(
+        playlist_payload={
+            "info": {"id": 12345, "dirid": 777, "title": "华语收藏"},
+            "songs": [],
+        }
+    )
+    adapter = QQMusicAdapter(
+        config=QQMusicConfig(page_size=50),
+        client=client,
+        rate_limit_policy=qq_policy(),
+    )
+
+    assert adapter.validate_destination_playlist("777:12345") == "777:12345"
+    assert client.playlist_fetches == [(12345, 50, 777)]
+
+
+def test_qqmusic_adapter_rejects_mismatched_resolved_destination_songlist() -> None:
+    adapter = QQMusicAdapter(
+        config=QQMusicConfig(page_size=50),
+        client=FakeQQMusicClient(
+            playlist_payload={
+                "info": {"id": 12345, "dirid": 888, "title": "华语收藏"},
+                "songs": [],
+            }
+        ),
+        rate_limit_policy=qq_policy(),
+    )
+
+    with pytest.raises(ValidationFailure, match="not requested 777:12345"):
+        adapter.validate_destination_playlist("777:12345")
+
+
+def test_qqmusic_adapter_rejects_destination_songlist_without_dirid() -> None:
+    adapter = QQMusicAdapter(
+        config=QQMusicConfig(page_size=50),
+        client=FakeQQMusicClient(
+            playlist_payload={
+                "info": {"id": 12345, "title": "华语收藏"},
+                "songs": [],
+            }
+        ),
+        rate_limit_policy=qq_policy(),
+    )
+
+    with pytest.raises(ValidationFailure, match="directory id required for writes"):
+        adapter.validate_destination_playlist("12345")
+
+
+def test_qqmusic_adapter_rejects_unreadable_destination_songlist() -> None:
+    adapter = QQMusicAdapter(
+        config=QQMusicConfig(page_size=50),
+        client=FakeQQMusicClient(playlist_payload={}),
+        rate_limit_policy=qq_policy(),
+    )
+
+    with pytest.raises(ValidationFailure, match="not found or is not readable"):
+        adapter.validate_destination_playlist("12345")
 
 
 def test_qqmusic_adapter_allows_anonymous_playlist_reads() -> None:
@@ -494,13 +579,28 @@ def test_qqmusic_add_tracks_sends_numeric_song_info_pairs() -> None:
     client = FakeQQMusicClient()
     adapter = QQMusicAdapter(client=client, rate_limit_policy=qq_policy())
 
-    adapter.add_tracks("777", ["1048576:0", "2048:13"])
+    adapter.add_tracks("777:12345", ["1048576:0", "2048:13"])
 
-    assert client.added_songs == [(777, [(1048576, 0), (2048, 13)])]
+    assert client.added_songs == [(777, 12345, [(1048576, 0), (2048, 13)])]
+
+
+def test_qqmusic_create_playlist_returns_resolved_write_target() -> None:
+    client = FakeQQMusicClient()
+    adapter = QQMusicAdapter(client=client, rate_limit_policy=qq_policy())
+
+    assert adapter.create_playlist("copy") == "777:12345"
+
+
+@pytest.mark.parametrize("playlist_id", ["777", "777:", "dirid:tid"])
+def test_qqmusic_add_tracks_rejects_unresolved_playlist_targets(playlist_id: str) -> None:
+    adapter = QQMusicAdapter(client=FakeQQMusicClient(), rate_limit_policy=qq_policy())
+
+    with pytest.raises(ValidationFailure, match="resolved dirid:tid"):
+        adapter.add_tracks(playlist_id, ["1048576:0"])
 
 
 def test_qqmusic_add_tracks_rejects_non_numeric_track_ids() -> None:
     adapter = QQMusicAdapter(client=FakeQQMusicClient(), rate_limit_policy=qq_policy())
 
     with pytest.raises(ValidationFailure, match="numeric song ids"):
-        adapter.add_tracks("777", ["mid-only"])
+        adapter.add_tracks("777:12345", ["mid-only"])

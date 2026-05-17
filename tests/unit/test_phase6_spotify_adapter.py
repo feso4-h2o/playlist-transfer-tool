@@ -9,7 +9,7 @@ from playlist_porter.matching.status import UnavailableReason
 from playlist_porter.models import Playlist, TransferRun, UniversalTrack
 from playlist_porter.persistence.repositories import TransferRepository
 from playlist_porter.platforms.spotify import SPOTIFY_BATCH_LIMIT, SpotifyAdapter
-from playlist_porter.rate_limit import AuthenticationFailure
+from playlist_porter.rate_limit import AuthenticationFailure, ValidationFailure
 
 
 class FakeSpotifyClient:
@@ -70,6 +70,9 @@ class FakeSpotifyClient:
     def current_user_playlist_create(self, name, public, description):
         assert public is False
         return {"id": f"created-{name}-{description}"}
+
+    def current_user(self):
+        return {"id": "owner-1"}
 
     def playlist_add_items(self, playlist_id, uris):
         self.added_batches.append((playlist_id, list(uris)))
@@ -369,6 +372,25 @@ def test_spotify_add_tracks_batches_by_api_limit() -> None:
     assert client.added_batches[0][1][0] == "spotify:track:track-0"
 
 
+def test_spotify_validate_destination_playlist_allows_owned_playlist() -> None:
+    adapter = SpotifyAdapter(client=FakeSpotifyClient())
+
+    adapter.validate_destination_playlist("playlist-1")
+
+
+def test_spotify_validate_destination_playlist_allows_collaborative_playlist() -> None:
+    adapter = SpotifyAdapter(client=CollaborativePlaylistClient())
+
+    adapter.validate_destination_playlist("playlist-1")
+
+
+def test_spotify_validate_destination_playlist_rejects_non_writable_playlist() -> None:
+    adapter = SpotifyAdapter(client=ReadOnlyPlaylistClient())
+
+    with pytest.raises(ValidationFailure, match="not writable by the current user"):
+        adapter.validate_destination_playlist("playlist-1")
+
+
 def test_spotify_write_progress_records_successful_batches_and_resumes(tmp_path) -> None:
     client = FakeSpotifyClient()
     adapter = SpotifyAdapter(client=client)
@@ -466,3 +488,19 @@ class CurrentPlaylistItemClient(FakeSpotifyClient):
                 {"item": entry["track"], "is_local": False} for entry in page["items"]
             ],
         }
+
+
+class CollaborativePlaylistClient(FakeSpotifyClient):
+    def playlist(self, playlist_id, fields=None):
+        payload = super().playlist(playlist_id, fields=fields)
+        payload["owner"] = {"id": "other-user"}
+        payload["collaborative"] = True
+        return payload
+
+
+class ReadOnlyPlaylistClient(FakeSpotifyClient):
+    def playlist(self, playlist_id, fields=None):
+        payload = super().playlist(playlist_id, fields=fields)
+        payload["owner"] = {"id": "other-user"}
+        payload["collaborative"] = False
+        return payload

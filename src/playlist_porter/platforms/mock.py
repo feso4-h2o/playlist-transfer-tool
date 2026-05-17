@@ -19,6 +19,7 @@ from playlist_porter.normalization import (
     normalize_title_forms,
 )
 from playlist_porter.platforms.base import BasePlatform, PlatformCapabilities
+from playlist_porter.rate_limit import ValidationFailure
 
 
 @dataclass(frozen=True)
@@ -188,6 +189,12 @@ class MockAdapter(BasePlatform):
             }
         self._writes[playlist_id]["track_ids"].extend(track_ids)
         self._flush_writes()
+
+    def validate_destination_playlist(self, playlist_id: str) -> None:
+        if playlist_id not in self._writes:
+            raise ValidationFailure(
+                f"mock destination playlist not found or unwritable: {playlist_id}"
+            )
 
     @property
     def writes(self) -> dict[str, dict[str, Any]]:

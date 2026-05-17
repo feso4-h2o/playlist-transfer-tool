@@ -604,6 +604,10 @@ def test_write_persists_supplied_destination_playlist_for_rerun(tmp_path) -> Non
         mock_writes_path=writes_path,
     )
     dry_run = dry_run_mock_transfer(config, source_playlist_id="source-playlist")
+    _write_json(
+        writes_path,
+        {"existing-playlist": {"name": "Existing", "description": None, "track_ids": []}},
+    )
 
     first_write = main(
         [
@@ -638,6 +642,102 @@ def test_write_persists_supplied_destination_playlist_for_rerun(tmp_path) -> Non
     ).destination_playlist_id == "existing-playlist"
     assert set(writes) == {"existing-playlist"}
     assert writes["existing-playlist"]["track_ids"] == ["dest-1"]
+
+
+def test_write_rejects_conflicting_cli_target_overrides(tmp_path, capsys) -> None:
+    config_path, database_path, writes_path, _ = _config_file(
+        tmp_path,
+        playlist_tracks=[
+            {
+                "id": "source-1",
+                "title": "Alpha",
+                "artists": ["Artist"],
+                "duration_seconds": 180,
+            }
+        ],
+        catalog_tracks=[
+            {
+                "id": "dest-1",
+                "title": "Alpha",
+                "artists": ["Artist"],
+                "duration_seconds": 180,
+            }
+        ],
+    )
+    config = PorterConfig(
+        database_path=database_path,
+        report_output_dir=tmp_path / "reports",
+        mock_source_playlists_path=tmp_path / "fixtures" / "playlists.json",
+        mock_destination_catalog_path=tmp_path / "fixtures" / "catalog.json",
+        mock_writes_path=writes_path,
+    )
+    dry_run = dry_run_mock_transfer(config, source_playlist_id="source-playlist")
+
+    exit_code = main(
+        [
+            "write",
+            "--config",
+            str(config_path),
+            "--run-id",
+            dry_run.transfer_run_id,
+            "--destination-platform",
+            "mock",
+            "--destination-playlist-id",
+            "existing-playlist",
+            "--create-playlist",
+            "Copied",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "choose either destination_playlist_id or create_playlist" in captured.out
+
+
+def test_write_rejects_conflicting_config_target_defaults(tmp_path, capsys) -> None:
+    config_path, database_path, writes_path, _ = _config_file(
+        tmp_path,
+        playlist_tracks=[
+            {
+                "id": "source-1",
+                "title": "Alpha",
+                "artists": ["Artist"],
+                "duration_seconds": 180,
+            }
+        ],
+        catalog_tracks=[
+            {
+                "id": "dest-1",
+                "title": "Alpha",
+                "artists": ["Artist"],
+                "duration_seconds": 180,
+            }
+        ],
+    )
+    config = PorterConfig(
+        database_path=database_path,
+        report_output_dir=tmp_path / "reports",
+        mock_source_playlists_path=tmp_path / "fixtures" / "playlists.json",
+        mock_destination_catalog_path=tmp_path / "fixtures" / "catalog.json",
+        mock_writes_path=writes_path,
+    )
+    dry_run = dry_run_mock_transfer(config, source_playlist_id="source-playlist")
+    payload = json.loads(config_path.read_text(encoding="utf-8"))
+    payload["commands"] = {
+        "write": {
+            "destination_platform": "mock",
+            "run_id": dry_run.transfer_run_id,
+            "destination_playlist_id": "existing-playlist",
+            "create_playlist": "Copied",
+        },
+    }
+    _write_json(config_path, payload)
+
+    exit_code = main(["write", "--config", str(config_path)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "choose either destination_playlist_id or create_playlist" in captured.out
 
 
 def test_export_reports_include_expected_columns_and_region_reason(tmp_path) -> None:

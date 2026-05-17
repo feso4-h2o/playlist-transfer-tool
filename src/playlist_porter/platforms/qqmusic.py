@@ -36,6 +36,17 @@ QQ_PLATFORM = "qqmusic"
 QQMUSIC_EMPTY_SEARCH_REFRESH_THRESHOLD = 40
 
 
+@dataclass(frozen=True)
+class QQMusicSonglistTarget:
+    """Resolved QQ Music write target identifiers."""
+
+    dirid: int
+    tid: int
+
+    def as_playlist_id(self) -> str:
+        return f"{self.dirid}:{self.tid}"
+
+
 class QQMusicAdapterError(RuntimeError):
     """Base QQ Music adapter error."""
 
@@ -134,10 +145,10 @@ class QQMusicClientFacade:
             raise AuthenticationFailure("QQ Music credentials are expired; refresh local session")
         self._execute(self._client.user.get_vip_info(credential=self._credential))
 
-    def get_playlist(self, playlist_id: int, *, page_size: int) -> Any:
+    def get_playlist(self, playlist_id: int, *, page_size: int, dirid: int = 0) -> Any:
         """Fetch a playlist detail page."""
 
-        request = self._client.songlist.get_detail(playlist_id, num=page_size)
+        request = self._client.songlist.get_detail(playlist_id, dirid=dirid, num=page_size)
         return self._run_async(_collect_paginated_request(request))
 
     def search_tracks(self, query: str, *, limit: int) -> Any:
@@ -162,14 +173,15 @@ class QQMusicClientFacade:
         request = self._client.songlist.create(name, credential=self._credential)
         return self._execute(request)
 
-    def add_songs(self, playlist_id: int, song_info: list[tuple[int, int]]) -> bool:
+    def add_songs(self, dirid: int, song_info: list[tuple[int, int]], *, tid: int = 0) -> bool:
         """Add songs to a QQ Music playlist."""
 
         return bool(
             self._run_async(
                 self._client.songlist.add_songs(
-                    playlist_id,
+                    dirid,
                     song_info,
+                    tid=tid,
                     credential=self._credential,
                 )
             )
@@ -200,6 +212,7 @@ class QQMusicAdapter(BasePlatform):
     """QQ Music adapter using conservative retry and explicit capability flags."""
 
     platform_name = QQ_PLATFORM
+    normalizes_destination_playlist_ids = True
 
     def __init__(
         self,
@@ -319,10 +332,12 @@ class QQMusicAdapter(BasePlatform):
             )
         except Exception as exc:
             _raise_classified_qqmusic_exception(exc)
-        playlist_id = _first_value(payload, "dirid", "id")
-        if playlist_id is None:
-            raise ValidationFailure("QQ Music create playlist response did not include an id")
-        return str(playlist_id)
+        target = _songlist_target_from_create_payload(payload)
+        if target is None:
+            raise ValidationFailure(
+                "QQ Music create playlist response did not include dirid and tid"
+            )
+        return target.as_playlist_id()
 
     def add_tracks(self, playlist_id: str, track_ids: list[str]) -> None:
         """Add QQ Music tracks to a playlist.
@@ -334,12 +349,17 @@ class QQMusicAdapter(BasePlatform):
 
         if not self.config.supports_add_tracks:
             raise QQMusicWriteUnsupported("QQ Music add-tracks support is disabled by config")
+        target = _songlist_target_from_pair(playlist_id)
         song_info = [_song_info_from_track_id(track_id) for track_id in track_ids]
         try:
             added = self._policy.execute(
                 "qqmusic playlist add tracks",
                 _retryable_qqmusic_operation(
-                    lambda: self._ensure_client().add_songs(int(playlist_id), song_info)
+                    lambda: self._ensure_client().add_songs(
+                        target.dirid,
+                        song_info,
+                        tid=target.tid,
+                    )
                 ),
                 request_kind="write",
             )
@@ -347,6 +367,49 @@ class QQMusicAdapter(BasePlatform):
             _raise_classified_qqmusic_exception(exc)
         if not added:
             raise ValidationFailure("QQ Music rejected one or more playlist additions")
+
+    def validate_destination_playlist(self, playlist_id: str) -> str:
+        """Fetch a QQ Music songlist before writing to fail clearly on bad targets."""
+
+        if not self.config.supports_add_tracks:
+            raise QQMusicWriteUnsupported("QQ Music add-tracks support is disabled by config")
+        target = _songlist_target_from_optional_pair(playlist_id)
+        numeric_playlist_id = (
+            target.tid if target is not None else _playlist_id_from_value(playlist_id)
+        )
+        dirid = target.dirid if target is not None else 0
+        try:
+            payload = self._policy.execute(
+                "qqmusic playlist write preflight",
+                _retryable_qqmusic_operation(
+                    lambda: self._ensure_client().get_playlist(
+                        numeric_playlist_id,
+                        page_size=self.config.page_size,
+                        dirid=dirid,
+                    )
+                ),
+                request_kind="read",
+            )
+        except Exception as exc:
+            _raise_classified_qqmusic_exception(exc)
+        if not _playlist_payload_has_metadata(payload):
+            raise ValidationFailure(
+                "QQ Music destination songlist was not found or is not readable: "
+                f"{numeric_playlist_id}"
+            )
+        resolved_target = _songlist_target_from_detail_payload(
+            payload,
+            fallback_tid=numeric_playlist_id,
+        )
+        if target is not None:
+            if resolved_target != target:
+                raise ValidationFailure(
+                    "QQ Music destination songlist resolved to "
+                    f"{resolved_target.as_playlist_id()}, not requested "
+                    f"{target.as_playlist_id()}"
+                )
+            return target.as_playlist_id()
+        return resolved_target.as_playlist_id()
 
     def _ensure_client(self) -> Any:
         if self._client is None:
@@ -483,6 +546,62 @@ def _merge_playlist_pages(payload: Any) -> Any:
         "total": _first_value(first_page, "total", "total_song_num"),
         "hasmore": False,
     }
+
+
+def _playlist_payload_has_metadata(payload: Any) -> bool:
+    payload = _merge_playlist_pages(payload)
+    info = _first_value(payload, "info", "dirinfo", "songlist_info")
+    return (
+        _first_value(info, "id", "tid", "dirid", "dirId", "title", "name", "dissname")
+        is not None
+    )
+
+
+def _songlist_target_from_create_payload(payload: Any) -> QQMusicSonglistTarget | None:
+    dirid = _optional_int(_first_value(payload, "dirid", "dirId"))
+    tid = _optional_int(_first_value(payload, "tid", "id", "dissid"))
+    if dirid is None or tid is None:
+        return None
+    return QQMusicSonglistTarget(dirid=dirid, tid=tid)
+
+
+def _songlist_target_from_detail_payload(
+    payload: Any,
+    *,
+    fallback_tid: int,
+) -> QQMusicSonglistTarget:
+    payload = _merge_playlist_pages(payload)
+    info = _first_value(payload, "info", "dirinfo", "songlist_info") or {}
+    dirid = _optional_int(_first_value(info, "dirid", "dirId"))
+    if dirid is None:
+        raise ValidationFailure(
+            "QQ Music destination songlist is readable but did not expose "
+            f"a directory id required for writes: {fallback_tid}"
+        )
+    tid = _optional_int(_first_value(info, "tid", "id", "dissid")) or fallback_tid
+    return QQMusicSonglistTarget(dirid=dirid, tid=tid)
+
+
+def _songlist_target_from_optional_pair(value: str) -> QQMusicSonglistTarget | None:
+    text = value.strip()
+    if "://" in text or ":" not in text:
+        return None
+    return _songlist_target_from_pair(value)
+
+
+def _songlist_target_from_pair(value: str) -> QQMusicSonglistTarget:
+    text = value.strip()
+    parts = text.split(":")
+    if len(parts) != 2 or not parts[0] or not parts[1]:
+        raise ValidationFailure("QQ Music writes require a resolved dirid:tid playlist target")
+    try:
+        dirid = int(parts[0])
+        tid = int(parts[1])
+    except ValueError as exc:
+        raise ValidationFailure(
+            "QQ Music writes require a resolved dirid:tid playlist target"
+        ) from exc
+    return QQMusicSonglistTarget(dirid=dirid, tid=tid)
 
 
 def _artist_names(payload: Any) -> list[str]:

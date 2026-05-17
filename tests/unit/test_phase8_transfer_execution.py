@@ -11,6 +11,7 @@ from playlist_porter.platforms.base import BasePlatform, PlatformCapabilities
 from playlist_porter.platforms.mock import MockAdapter
 from playlist_porter.platforms.qqmusic import QQMusicAdapter, QQMusicConfig
 from playlist_porter.platforms.spotify import SpotifyAdapter
+from playlist_porter.rate_limit import ValidationFailure
 from playlist_porter.workflow import (
     PreflightError,
     execute_transfer_run,
@@ -93,6 +94,14 @@ def _phase8_config(tmp_path) -> PorterConfig:
     )
 
 
+def _seed_mock_destination(config: PorterConfig, playlist_id: str) -> None:
+    assert config.mock_writes_path is not None
+    _write_json(
+        config.mock_writes_path,
+        {playlist_id: {"name": "Existing", "description": None, "track_ids": []}},
+    )
+
+
 def test_phase8_mock_dry_run_exports_summary_matching_metrics(tmp_path) -> None:
     config = _phase8_config(tmp_path)
 
@@ -164,6 +173,7 @@ def test_phase8_write_run_uses_reviewed_dry_run_approvals(tmp_path) -> None:
         status=MatchStatus.USER_APPROVED,
         selected_candidate=review_decision.candidates[0],
     )
+    _seed_mock_destination(config, "reviewed-playlist")
 
     execute = execute_transfer_run(
         config,
@@ -187,6 +197,7 @@ def test_phase8_write_run_rejects_destination_playlist_changes(tmp_path) -> None
         source_playlist_id="source-playlist",
         dry_run=True,
     )
+    _seed_mock_destination(config, "first-playlist")
     execute_transfer_run(
         config,
         destination_platform="mock",
@@ -201,6 +212,35 @@ def test_phase8_write_run_rejects_destination_playlist_changes(tmp_path) -> None
             transfer_run_id=dry_run.transfer_run_id,
             destination_playlist_id="second-playlist",
         )
+
+
+def test_phase8_write_run_allows_normalized_destination_target_upgrade(tmp_path) -> None:
+    database_path = tmp_path / "transfer.sqlite"
+    source = StaticSourceAdapter()
+    destination = NormalizingDestinationAdapter()
+
+    dry_run = run_transfer_with_adapters(
+        source,
+        destination,
+        source_playlist_id="source-playlist",
+        dry_run=True,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+        destination_playlist_id="9712240561",
+    )
+
+    result = execute_transfer_run_with_adapter(
+        destination,
+        transfer_run_id=dry_run.transfer_run_id,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+        destination_playlist_id="9712240561",
+    )
+
+    run = TransferRepository(database_path).load_run(dry_run.transfer_run_id)
+    assert result.destination_playlist_id == "35:9712240561"
+    assert run.destination_playlist_id == "35:9712240561"
+    assert destination.playlist_ids == ["35:9712240561"]
 
 
 def test_phase8_write_run_rejects_destination_platform_mismatch(tmp_path) -> None:
@@ -223,8 +263,66 @@ def test_phase8_write_run_rejects_destination_platform_mismatch(tmp_path) -> Non
         )
 
 
+def test_phase8_write_run_rejects_missing_destination_target(tmp_path) -> None:
+    config = _phase8_config(tmp_path)
+    dry_run = run_transfer(
+        config,
+        source_platform="mock",
+        destination_platform="mock",
+        source_playlist_id="source-playlist",
+        dry_run=True,
+    )
+
+    with pytest.raises(ValueError, match="write target is required"):
+        execute_transfer_run(
+            config,
+            destination_platform="mock",
+            transfer_run_id=dry_run.transfer_run_id,
+        )
+
+
+def test_phase8_write_run_rejects_conflicting_destination_targets(tmp_path) -> None:
+    config = _phase8_config(tmp_path)
+    dry_run = run_transfer(
+        config,
+        source_platform="mock",
+        destination_platform="mock",
+        source_playlist_id="source-playlist",
+        dry_run=True,
+    )
+
+    with pytest.raises(ValueError, match="choose either destination_playlist_id"):
+        execute_transfer_run(
+            config,
+            destination_platform="mock",
+            transfer_run_id=dry_run.transfer_run_id,
+            destination_playlist_id="existing-playlist",
+            create_playlist_name="Copied",
+        )
+
+
+def test_phase8_write_run_validates_existing_destination_target(tmp_path) -> None:
+    config = _phase8_config(tmp_path)
+    dry_run = run_transfer(
+        config,
+        source_platform="mock",
+        destination_platform="mock",
+        source_playlist_id="source-playlist",
+        dry_run=True,
+    )
+
+    with pytest.raises(ValidationFailure, match="mock destination playlist not found"):
+        execute_transfer_run(
+            config,
+            destination_platform="mock",
+            transfer_run_id=dry_run.transfer_run_id,
+            destination_playlist_id="missing-playlist",
+        )
+
+
 def test_phase8_resume_skips_recorded_writes(tmp_path) -> None:
     config = _phase8_config(tmp_path)
+    _seed_mock_destination(config, "existing-playlist")
     first = run_transfer(
         config,
         source_platform="mock",
@@ -664,6 +762,23 @@ class FlakyDestinationAdapter(BasePlatform):
         ):
             raise RuntimeError("simulated write failure")
         self.added_track_ids.extend(track_ids)
+
+
+class NormalizingDestinationAdapter(FlakyDestinationAdapter):
+    platform_name = "normalizing"
+    normalizes_destination_playlist_ids = True
+
+    def __init__(self) -> None:
+        super().__init__(fail_after_successes=None)
+        self.playlist_ids: list[str] = []
+
+    def validate_destination_playlist(self, playlist_id: str) -> str:
+        assert playlist_id == "9712240561"
+        return "35:9712240561"
+
+    def add_tracks(self, playlist_id: str, track_ids: list[str]) -> None:
+        self.playlist_ids.append(playlist_id)
+        super().add_tracks(playlist_id, track_ids)
 
 
 class ProgressFailureDestinationAdapter(FlakyDestinationAdapter):
