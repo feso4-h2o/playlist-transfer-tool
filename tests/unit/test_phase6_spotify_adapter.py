@@ -385,7 +385,19 @@ def test_spotify_destination_track_ids_read_playlist_items() -> None:
 def test_spotify_validate_destination_playlist_allows_owned_playlist() -> None:
     adapter = SpotifyAdapter(client=FakeSpotifyClient())
 
-    adapter.validate_destination_playlist("playlist-1")
+    assert adapter.validate_destination_playlist("playlist-1") == "playlist-1"
+
+
+def test_spotify_validate_destination_playlist_normalizes_url_and_uri() -> None:
+    adapter = SpotifyAdapter(client=FakeSpotifyClient())
+
+    assert (
+        adapter.validate_destination_playlist(
+            "https://open.spotify.com/playlist/playlist-1?si=abc"
+        )
+        == "playlist-1"
+    )
+    assert adapter.validate_destination_playlist("spotify:playlist:playlist-1") == "playlist-1"
 
 
 def test_spotify_validate_destination_playlist_allows_collaborative_playlist() -> None:

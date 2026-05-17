@@ -1,10 +1,11 @@
 # Configuration
 
-Playlist Porter separates local run configuration from credentials.
+Playlist Porter separates local workflow configuration from credentials.
 
-`cli-config.json` owns local paths, mock fixture paths, platform behavior
-flags, and optional `commands.*` defaults. Spotify and QQ Music credentials are
-environment-only inputs so secrets do not end up in project config.
+`cli-config.json` owns local paths, workflow identity, platform direction, mock
+fixture paths, platform behavior flags, and command defaults. Spotify and QQ
+Music credentials are environment-only inputs so secrets do not end up in
+project config.
 
 ## Credential Scope
 
@@ -27,18 +28,29 @@ Create a local config:
 uv run playlist-porter init-config --path cli-config.json
 ```
 
-The generated file includes:
+The generated file includes top-level workflow state:
 
-- `database_path`: SQLite transfer state path.
-- `report_output_dir`: default report output directory.
+- `database_path`: SQLite transfer state path shared by all commands.
+- `report_output_dir`: base directory for generated reports.
+- `report_format`: `json`, `csv`, or `both`; missing or empty values default to
+  `json`.
+- `run_id`: the transfer run used by `review`, `write`, and `export-report`.
+  A successful `match` updates this value automatically.
+- `source_platform` and `destination_platform`: the transfer direction used
+  throughout the run.
+
+It also includes platform and command sections:
+
 - `mock`: fixture and mock-write paths.
 - `spotify`: local Spotify behavior such as token cache path and playlist
   visibility for created playlists.
 - `qqmusic`: QQ Music adapter behavior flags and page size.
-- `commands`: optional defaults for `match`, `review`, `write`, and
-  `export-report`.
+- `commands.match`: `source_playlist` and `restart`.
+- `commands.write`: `destination_playlist_id` and `create_playlist`.
 
-Explicit CLI flags override values from `commands.*`.
+Config owns workflow identity and shared state paths. CLI options are reserved
+for command selection, logging, config file selection, `init-config` file
+management, and immediate review actions.
 
 ## Environment Loading
 

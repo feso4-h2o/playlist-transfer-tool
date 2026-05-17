@@ -39,7 +39,8 @@ reason codes.
 
 - Check spelling, artist order, and whether the track exists on the destination
   platform.
-- Inspect `reports/unavailable-tracks.csv` for attempted queries and suggested
+- Inspect the generated `unavailable-<HHMMSS>-<command>.<ext>` report under
+  `report_output_dir/<short-run-id>/` for attempted queries and suggested
   alternates.
 - Retry with a smaller or cleaner source playlist if source metadata is noisy.
 

@@ -57,7 +57,8 @@ def export_reports(
     transfer_run_id: str,
     output_dir: str | Path,
     *,
-    output_format: str = "both",
+    output_format: str = "json",
+    command: str = "export-report",
 ) -> list[Path]:
     """Export summary and unavailable reports and return written paths."""
 
@@ -68,7 +69,7 @@ def export_reports(
     output_path.mkdir(parents=True, exist_ok=True)
     summary = build_summary(repository, transfer_run_id)
     unavailable_rows = build_unavailable_rows(repository, transfer_run_id)
-    paths = _report_paths(output_path, output_format, _short_timestamp())
+    paths = _report_paths(output_path, output_format, _short_timestamp(), command)
     EXPORT_DIAGNOSTICS.debug(
         "report export prepared",
         run_id=transfer_run_id,
@@ -249,12 +250,17 @@ def _write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, Any]]) ->
             writer.writerow({field: _csv_value(row.get(field)) for field in fieldnames})
 
 
-def _report_paths(output_path: Path, output_format: str, timestamp: str) -> dict[str, Path]:
-    suffix = timestamp
+def _report_paths(
+    output_path: Path,
+    output_format: str,
+    timestamp: str,
+    command: str,
+) -> dict[str, Path]:
+    suffix = f"{timestamp}-{command}"
     counter = 2
     paths = _paths_for_suffix(output_path, suffix)
     while _has_existing_batch_file(paths):
-        suffix = f"{timestamp}-{counter}"
+        suffix = f"{timestamp}-{command}-{counter}"
         counter += 1
         paths = _paths_for_suffix(output_path, suffix)
 
@@ -267,10 +273,10 @@ def _report_paths(output_path: Path, output_format: str, timestamp: str) -> dict
 
 def _paths_for_suffix(output_path: Path, suffix: str) -> dict[str, Path]:
     return {
-        "summary_json": output_path / f"transfer-summary-{suffix}.json",
-        "unavailable_json": output_path / f"unavailable-tracks-{suffix}.json",
-        "summary_csv": output_path / f"transfer-summary-{suffix}.csv",
-        "unavailable_csv": output_path / f"unavailable-tracks-{suffix}.csv",
+        "summary_json": output_path / f"summary-{suffix}.json",
+        "unavailable_json": output_path / f"unavailable-{suffix}.json",
+        "summary_csv": output_path / f"summary-{suffix}.csv",
+        "unavailable_csv": output_path / f"unavailable-{suffix}.csv",
     }
 
 

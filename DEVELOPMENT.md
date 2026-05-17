@@ -31,22 +31,28 @@ uv run ruff check . --fix
 
 ## Mock Workflow Smoke Test
 
-The tracked `fixtures/` files allow a credential-free local matching preview:
+The tracked `fixtures/` files allow a credential-free local workflow:
 
 ```powershell
 uv run playlist-porter init-config --path cli-config.json
-uv run playlist-porter match --config cli-config.json --source-platform mock --destination-platform mock --source-playlist sample-mixed --restart
 ```
 
-To exercise the mock write path after reviewing a run, use the run id printed
-by `match`:
+Set `commands.match.source_playlist` to `sample-mixed` in `cli-config.json`.
+Set `commands.match.restart` to `true` when you want a fresh run, and set
+`commands.write.create_playlist` to a local mock playlist name such as
+`Sample Copy`.
+
+Then run the workflow:
 
 ```powershell
-uv run playlist-porter review --config cli-config.json --run-id <run-id>
-uv run playlist-porter write --config cli-config.json --destination-platform mock --run-id <run-id> --create-playlist "Sample Copy"
+uv run playlist-porter match --config cli-config.json
+uv run playlist-porter review --config cli-config.json
+uv run playlist-porter write --config cli-config.json
 ```
 
-Local state is written under `state/` and reports under `reports/`.
+`match` writes the current run ID back to top-level `run_id`, so the later
+commands use the same persisted run. Local state is written under `state/` and
+reports under `reports/`.
 
 ## VCR Cassettes
 

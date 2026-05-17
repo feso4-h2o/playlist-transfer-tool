@@ -75,9 +75,15 @@ def test_default_config_keeps_credentials_out_of_platform_blocks() -> None:
     assert "transfer" not in payload["commands"]
     assert "execute" not in payload["commands"]
     assert "resume" not in payload["commands"]
+    assert "review" not in payload["commands"]
+    assert "export_report" not in payload["commands"]
+    assert payload["source_platform"] == "mock"
+    assert payload["destination_platform"] == "mock"
+    assert payload["report_format"] == "json"
+    assert payload["run_id"] == ""
     assert "dry_run" not in payload["commands"]["match"]
-    assert payload["commands"]["write"]["destination_platform"] == "mock"
-    assert payload["commands"]["export_report"]["format"] == "both"
+    assert set(payload["commands"]["match"]) == {"source_playlist", "restart"}
+    assert set(payload["commands"]["write"]) == {"destination_playlist_id", "create_playlist"}
 
 
 def test_spotify_config_expands_scope_environment_placeholder(tmp_path, monkeypatch) -> None:
@@ -199,43 +205,28 @@ def test_qqmusic_config_uses_env_credentials_and_json_behavior(tmp_path, monkeyp
     assert config.qqmusic.allow_anonymous_read is False
 
 
-def test_command_defaults_load_and_resolve_paths(tmp_path) -> None:
+def test_command_defaults_load_config_oriented_values(tmp_path) -> None:
     config_path = tmp_path / "porter.json"
     config_path.write_text(
         json.dumps(
             {
                 "database_path": "state/playlist.sqlite",
+                "source_platform": "spotify",
+                "destination_platform": "mock",
+                "run_id": "review-run",
+                "report_format": "both",
                 "mock": {
                     "source_playlists_path": "fixtures/playlists.json",
                     "destination_catalog_path": "fixtures/catalog.json",
                 },
                 "commands": {
                     "match": {
-                        "source_platform": "spotify",
-                        "destination_platform": "mock",
                         "source_playlist": "playlist-url",
                         "restart": True,
-                        "database_path": "state/transfer.sqlite",
-                        "output_dir": "reports/spotify-test",
                     },
                     "write": {
-                        "destination_platform": "spotify",
-                        "database_path": "state/write.sqlite",
-                        "run_id": "write-run",
-                        "output_dir": "reports/write",
                         "destination_playlist_id": "dest",
                         "create_playlist": "Copy",
-                    },
-                    "review": {
-                        "database_path": "state/review.sqlite",
-                        "run_id": "review-run",
-                        "candidate_rank": 2,
-                    },
-                    "export_report": {
-                        "database_path": "state/export.sqlite",
-                        "run_id": "export-run",
-                        "output_dir": "reports/export",
-                        "format": "json",
                     },
                 },
             }
@@ -245,22 +236,33 @@ def test_command_defaults_load_and_resolve_paths(tmp_path) -> None:
 
     config = load_config(config_path)
 
-    assert config.commands.match.source_platform == "spotify"
-    assert config.commands.match.destination_platform == "mock"
+    assert config.database_path == tmp_path / "state" / "playlist.sqlite"
+    assert config.source_platform == "spotify"
+    assert config.destination_platform == "mock"
+    assert config.run_id == "review-run"
+    assert config.report_format == "both"
     assert config.commands.match.source_playlist == "playlist-url"
     assert config.commands.match.restart is True
-    assert config.commands.match.database_path == tmp_path / "state" / "transfer.sqlite"
-    assert config.commands.match.output_dir == tmp_path / "reports" / "spotify-test"
-    assert config.commands.write.destination_platform == "spotify"
-    assert config.commands.write.database_path == tmp_path / "state" / "write.sqlite"
-    assert config.commands.write.run_id == "write-run"
-    assert config.commands.write.output_dir == tmp_path / "reports" / "write"
     assert config.commands.write.destination_playlist_id == "dest"
     assert config.commands.write.create_playlist == "Copy"
-    assert config.commands.review.database_path == tmp_path / "state" / "review.sqlite"
-    assert config.commands.review.run_id == "review-run"
-    assert config.commands.review.candidate_rank == 2
-    assert config.commands.export_report.database_path == tmp_path / "state" / "export.sqlite"
-    assert config.commands.export_report.run_id == "export-run"
-    assert config.commands.export_report.output_dir == tmp_path / "reports" / "export"
-    assert config.commands.export_report.output_format == "json"
+
+
+def test_empty_report_format_defaults_to_json(tmp_path) -> None:
+    config_path = tmp_path / "porter.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "database_path": "state/playlist.sqlite",
+                "report_format": "",
+                "mock": {
+                    "source_playlists_path": "fixtures/playlists.json",
+                    "destination_catalog_path": "fixtures/catalog.json",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.report_format == "json"

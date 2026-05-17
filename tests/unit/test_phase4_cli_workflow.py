@@ -10,7 +10,7 @@ from playlist_porter.persistence import exports as exports_module
 from playlist_porter.persistence.exports import build_unavailable_rows
 from playlist_porter.persistence.repositories import TransferRepository
 from playlist_porter.rate_limit import AuthenticationFailure
-from playlist_porter.workflow import dry_run_mock_transfer
+from playlist_porter.workflow import run_transfer
 
 
 def _write_json(path, payload) -> None:
@@ -40,17 +40,44 @@ def _config_file(tmp_path, *, playlist_tracks, catalog_tracks, commands=None) ->
     _write_json(catalog_path, {"catalog": catalog_tracks})
     payload = {
         "database_path": str(database_path),
+        "destination_platform": "mock",
         "report_output_dir": str(reports_path),
+        "report_format": "json",
+        "run_id": "",
+        "source_platform": "mock",
         "mock": {
             "source_playlists_path": str(playlists_path),
             "destination_catalog_path": str(catalog_path),
             "writes_path": str(writes_path),
+        },
+        "commands": {
+            "match": {
+                "source_playlist": "source-playlist",
+                "restart": False,
+            }
         },
     }
     if commands is not None:
         payload["commands"] = commands
     _write_json(config_path, payload)
     return config_path, database_path, writes_path, reports_path
+
+
+def _run_mock_match(config: PorterConfig, source_playlist_id: str = "source-playlist"):
+    return run_transfer(
+        config,
+        source_platform="mock",
+        destination_platform="mock",
+        source_playlist_id=source_playlist_id,
+        dry_run=True,
+    )
+
+
+def _set_config_values(config_path, **values) -> dict:
+    payload = json.loads(config_path.read_text(encoding="utf-8"))
+    payload.update(values)
+    _write_json(config_path, payload)
+    return payload
 
 
 def _phase4_fixture(tmp_path):
@@ -108,18 +135,10 @@ def _phase4_fixture(tmp_path):
     )
 
 
-def test_cli_dry_run_persists_decisions_without_writes(tmp_path) -> None:
+def test_cli_match_persists_decisions_without_writes(tmp_path) -> None:
     config_path, database_path, writes_path, _ = _phase4_fixture(tmp_path)
 
-    exit_code = main(
-        [
-            "dry-run",
-            "--config",
-            str(config_path),
-            "--source-playlist",
-            "source-playlist",
-        ]
-    )
+    exit_code = main(["match", "--config", str(config_path)])
 
     repo = TransferRepository(database_path)
     run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
@@ -128,6 +147,7 @@ def test_cli_dry_run_persists_decisions_without_writes(tmp_path) -> None:
 
     assert exit_code == 0
     assert writes_path.exists() is False
+    assert json.loads(config_path.read_text(encoding="utf-8"))["run_id"] == run_id
     assert [decision.status for decision in decisions] == [
         MatchStatus.ISRC_EXACT,
         MatchStatus.NEEDS_REVIEW,
@@ -139,13 +159,13 @@ def test_cli_dry_run_persists_decisions_without_writes(tmp_path) -> None:
 def test_repeated_dry_run_refreshes_existing_fixture_tracks(tmp_path) -> None:
     config_path, database_path, _, _ = _phase4_fixture(tmp_path)
 
-    main(["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"])
+    main(["match", "--config", str(config_path)])
     repo = TransferRepository(database_path)
     run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
     assert run_id is not None
     first_metrics = repo.load_metrics(run_id)
 
-    main(["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"])
+    main(["match", "--config", str(config_path)])
 
     second_metrics = repo.load_metrics(run_id)
     assert second_metrics.source_track_count == first_metrics.source_track_count
@@ -156,7 +176,7 @@ def test_repeated_dry_run_refreshes_existing_fixture_tracks(tmp_path) -> None:
 
 def test_repeated_dry_run_removes_stale_playlist_tracks(tmp_path) -> None:
     config_path, database_path, writes_path, _ = _phase4_fixture(tmp_path)
-    main(["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"])
+    main(["match", "--config", str(config_path)])
     repo = TransferRepository(database_path)
     run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
     assert run_id is not None
@@ -180,7 +200,7 @@ def test_repeated_dry_run_removes_stale_playlist_tracks(tmp_path) -> None:
         if track["id"] != "source-missing"
     ]
     _write_json(playlists_path, playlist_payload)
-    main(["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"])
+    main(["match", "--config", str(config_path)])
 
     metrics = repo.load_metrics(run_id)
     assert metrics.source_track_count == 3
@@ -204,7 +224,7 @@ def test_repeated_dry_run_removes_stale_playlist_tracks(tmp_path) -> None:
 
 def test_repeated_dry_run_preserves_current_review_and_write_state(tmp_path) -> None:
     config_path, database_path, _, _ = _phase4_fixture(tmp_path)
-    main(["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"])
+    main(["match", "--config", str(config_path)])
     repo = TransferRepository(database_path)
     run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
     assert run_id is not None
@@ -232,7 +252,7 @@ def test_repeated_dry_run_preserves_current_review_and_write_state(tmp_path) -> 
         exact_decision.source_track.internal_id,
         "dest-exact",
     )
-    main(["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"])
+    main(["match", "--config", str(config_path)])
 
     metrics = repo.load_metrics(run_id)
     assert metrics.user_approved_count == 1
@@ -250,16 +270,16 @@ def test_repeated_dry_run_preserves_current_review_and_write_state(tmp_path) -> 
 
 def test_review_action_updates_sqlite_override(tmp_path) -> None:
     config_path, database_path, _, _ = _phase4_fixture(tmp_path)
-    result = dry_run_mock_transfer(
+    result = _run_mock_match(
         PorterConfig(
             database_path=database_path,
             report_output_dir=tmp_path / "reports",
             mock_source_playlists_path=tmp_path / "fixtures" / "playlists.json",
             mock_destination_catalog_path=tmp_path / "fixtures" / "catalog.json",
             mock_writes_path=tmp_path / "state" / "writes.json",
-        ),
-        source_playlist_id="source-playlist",
+        )
     )
+    _set_config_values(config_path, run_id=result.transfer_run_id)
     repo = TransferRepository(database_path)
     review_decision = next(
         decision
@@ -270,10 +290,8 @@ def test_review_action_updates_sqlite_override(tmp_path) -> None:
     exit_code = main(
         [
             "review",
-            "--db",
-            str(database_path),
-            "--run-id",
-            result.transfer_run_id,
+            "--config",
+            str(config_path),
             "--source-track-id",
             str(review_decision.source_track.internal_id),
             "--action",
@@ -301,24 +319,13 @@ def test_cli_prints_operational_errors_without_traceback(tmp_path, monkeypatch, 
 
     monkeypatch.setattr("playlist_porter.cli.run_transfer", fail_transfer)
 
-    exit_code = main(
-        [
-            "match",
-            "--config",
-            str(config_path),
-            "--source-platform",
-            "spotify",
-            "--destination-platform",
-            "mock",
-            "--source-playlist",
-            "source-playlist",
-        ]
-    )
+    exit_code = main(["match", "--config", str(config_path)])
 
     captured = capsys.readouterr()
     assert exit_code == 1
     assert captured.out == "clear spotify auth error\n"
     assert "Traceback" not in captured.err
+    assert json.loads(config_path.read_text(encoding="utf-8"))["run_id"] == ""
 
 
 def test_match_uses_config_defaults_when_cli_args_are_omitted(tmp_path) -> None:
@@ -342,11 +349,8 @@ def test_match_uses_config_defaults_when_cli_args_are_omitted(tmp_path) -> None:
         ],
         commands={
             "match": {
-                "source_platform": "mock",
-                "destination_platform": "mock",
                 "source_playlist": "source-playlist",
                 "restart": False,
-                "output_dir": "reports/config-match",
             }
         },
     )
@@ -357,12 +361,13 @@ def test_match_uses_config_defaults_when_cli_args_are_omitted(tmp_path) -> None:
     run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
     assert exit_code == 0
     assert run_id is not None
-    report_dir = reports_path.parent / "reports" / "config-match" / run_id[:8]
-    assert list(report_dir.glob("transfer-summary-*.json"))
+    report_dir = reports_path / run_id[:8]
+    assert list(report_dir.glob("summary-*-match.json"))
+    assert json.loads(config_path.read_text(encoding="utf-8"))["run_id"] == run_id
 
 
-def test_match_cli_args_override_config_defaults(tmp_path) -> None:
-    config_path, database_path, _, _ = _config_file(
+def test_config_owned_match_cli_args_are_rejected(tmp_path) -> None:
+    config_path, _, _, _ = _config_file(
         tmp_path,
         playlist_tracks=[
             {
@@ -382,39 +387,23 @@ def test_match_cli_args_override_config_defaults(tmp_path) -> None:
         ],
         commands={
             "match": {
-                "source_platform": "spotify",
-                "destination_platform": "spotify",
-                "source_playlist": "wrong-playlist",
-                "restart": True,
+                "source_playlist": "source-playlist",
+                "restart": False,
             }
         },
     )
 
-    exit_code = main(
-        [
-            "match",
-            "--config",
-            str(config_path),
-            "--source-platform",
-            "mock",
-            "--destination-platform",
-            "mock",
-            "--source-playlist",
-            "source-playlist",
-            "--no-restart",
-        ]
-    )
+    with pytest.raises(SystemExit) as exc_info:
+        main(["match", "--config", str(config_path), "--source-platform", "mock"])
 
-    repo = TransferRepository(database_path)
-    assert exit_code == 0
-    assert repo.find_run_id("mock|mock|source-playlist||dry-run") is not None
+    assert exc_info.value.code == 2
 
 
 def test_removed_write_commands_are_not_parser_choices(capsys) -> None:
     parser = build_parser()
     command_action = next(action for action in parser._actions if action.dest == "command")
 
-    assert {"transfer", "execute", "resume"}.isdisjoint(command_action.choices)
+    assert {"dry-run", "transfer", "execute", "resume"}.isdisjoint(command_action.choices)
 
     with pytest.raises(SystemExit) as exc_info:
         main(["hello"])
@@ -434,8 +423,6 @@ def test_match_requires_source_playlist_from_config_or_cli(tmp_path) -> None:
         catalog_tracks=[],
         commands={
             "match": {
-                "source_platform": "mock",
-                "destination_platform": "mock",
             }
         },
     )
@@ -456,7 +443,7 @@ def test_write_requires_run_id_from_config_or_cli(tmp_path) -> None:
         },
     )
 
-    with pytest.raises(SystemExit, match="write.run_id is required"):
+    with pytest.raises(SystemExit, match="run_id is required"):
         main(["write", "--config", str(config_path)])
 
 
@@ -493,32 +480,15 @@ def test_write_skips_duplicate_destination_writes(tmp_path) -> None:
         mock_destination_catalog_path=tmp_path / "fixtures" / "catalog.json",
         mock_writes_path=writes_path,
     )
-    dry_run = dry_run_mock_transfer(config, source_playlist_id="source-playlist")
+    dry_run = _run_mock_match(config)
+    _set_config_values(
+        config_path,
+        run_id=dry_run.transfer_run_id,
+        commands={"write": {"create_playlist": "Copied"}},
+    )
 
-    first_write = main(
-        [
-            "write",
-            "--config",
-            str(config_path),
-            "--run-id",
-            dry_run.transfer_run_id,
-            "--destination-platform",
-            "mock",
-            "--create-playlist",
-            "Copied",
-        ]
-    )
-    second_write = main(
-        [
-            "write",
-            "--config",
-            str(config_path),
-            "--run-id",
-            dry_run.transfer_run_id,
-            "--destination-platform",
-            "mock",
-        ]
-    )
+    first_write = main(["write", "--config", str(config_path)])
+    second_write = main(["write", "--config", str(config_path)])
 
     writes = json.loads(writes_path.read_text(encoding="utf-8"))
     assert first_write == 0
@@ -556,16 +526,12 @@ def test_write_uses_configured_run_defaults(tmp_path) -> None:
         mock_destination_catalog_path=tmp_path / "fixtures" / "catalog.json",
         mock_writes_path=writes_path,
     )
-    dry_run = dry_run_mock_transfer(config, source_playlist_id="source-playlist")
-    payload = json.loads(config_path.read_text(encoding="utf-8"))
-    payload["commands"] = {
-        "write": {
-            "destination_platform": "mock",
-            "run_id": dry_run.transfer_run_id,
-            "create_playlist": "Copied",
-        },
-    }
-    _write_json(config_path, payload)
+    dry_run = _run_mock_match(config)
+    _set_config_values(
+        config_path,
+        run_id=dry_run.transfer_run_id,
+        commands={"write": {"create_playlist": "Copied"}},
+    )
 
     write = main(["write", "--config", str(config_path)])
     rerun = main(["write", "--config", str(config_path)])
@@ -603,36 +569,19 @@ def test_write_persists_supplied_destination_playlist_for_rerun(tmp_path) -> Non
         mock_destination_catalog_path=tmp_path / "fixtures" / "catalog.json",
         mock_writes_path=writes_path,
     )
-    dry_run = dry_run_mock_transfer(config, source_playlist_id="source-playlist")
+    dry_run = _run_mock_match(config)
     _write_json(
         writes_path,
         {"existing-playlist": {"name": "Existing", "description": None, "track_ids": []}},
     )
+    _set_config_values(
+        config_path,
+        run_id=dry_run.transfer_run_id,
+        commands={"write": {"destination_playlist_id": "existing-playlist"}},
+    )
 
-    first_write = main(
-        [
-            "write",
-            "--config",
-            str(config_path),
-            "--run-id",
-            dry_run.transfer_run_id,
-            "--destination-platform",
-            "mock",
-            "--destination-playlist-id",
-            "existing-playlist",
-        ]
-    )
-    second_write = main(
-        [
-            "write",
-            "--config",
-            str(config_path),
-            "--run-id",
-            dry_run.transfer_run_id,
-            "--destination-platform",
-            "mock",
-        ]
-    )
+    first_write = main(["write", "--config", str(config_path)])
+    second_write = main(["write", "--config", str(config_path)])
 
     writes = json.loads(writes_path.read_text(encoding="utf-8"))
     assert first_write == 0
@@ -644,8 +593,8 @@ def test_write_persists_supplied_destination_playlist_for_rerun(tmp_path) -> Non
     assert writes["existing-playlist"]["track_ids"] == ["dest-1"]
 
 
-def test_write_rejects_conflicting_cli_target_overrides(tmp_path, capsys) -> None:
-    config_path, database_path, writes_path, _ = _config_file(
+def test_config_owned_write_cli_args_are_rejected(tmp_path) -> None:
+    config_path, _, _, _ = _config_file(
         tmp_path,
         playlist_tracks=[
             {
@@ -664,34 +613,11 @@ def test_write_rejects_conflicting_cli_target_overrides(tmp_path, capsys) -> Non
             }
         ],
     )
-    config = PorterConfig(
-        database_path=database_path,
-        report_output_dir=tmp_path / "reports",
-        mock_source_playlists_path=tmp_path / "fixtures" / "playlists.json",
-        mock_destination_catalog_path=tmp_path / "fixtures" / "catalog.json",
-        mock_writes_path=writes_path,
-    )
-    dry_run = dry_run_mock_transfer(config, source_playlist_id="source-playlist")
 
-    exit_code = main(
-        [
-            "write",
-            "--config",
-            str(config_path),
-            "--run-id",
-            dry_run.transfer_run_id,
-            "--destination-platform",
-            "mock",
-            "--destination-playlist-id",
-            "existing-playlist",
-            "--create-playlist",
-            "Copied",
-        ]
-    )
+    with pytest.raises(SystemExit) as exc_info:
+        main(["write", "--config", str(config_path), "--run-id", "run"])
 
-    captured = capsys.readouterr()
-    assert exit_code == 1
-    assert "choose either destination_playlist_id or create_playlist" in captured.out
+    assert exc_info.value.code == 2
 
 
 def test_write_rejects_conflicting_config_target_defaults(tmp_path, capsys) -> None:
@@ -721,17 +647,17 @@ def test_write_rejects_conflicting_config_target_defaults(tmp_path, capsys) -> N
         mock_destination_catalog_path=tmp_path / "fixtures" / "catalog.json",
         mock_writes_path=writes_path,
     )
-    dry_run = dry_run_mock_transfer(config, source_playlist_id="source-playlist")
-    payload = json.loads(config_path.read_text(encoding="utf-8"))
-    payload["commands"] = {
-        "write": {
-            "destination_platform": "mock",
-            "run_id": dry_run.transfer_run_id,
-            "destination_playlist_id": "existing-playlist",
-            "create_playlist": "Copied",
+    dry_run = _run_mock_match(config)
+    _set_config_values(
+        config_path,
+        run_id=dry_run.transfer_run_id,
+        commands={
+            "write": {
+                "destination_playlist_id": "existing-playlist",
+                "create_playlist": "Copied",
+            },
         },
-    }
-    _write_json(config_path, payload)
+    )
 
     exit_code = main(["write", "--config", str(config_path)])
 
@@ -742,29 +668,18 @@ def test_write_rejects_conflicting_config_target_defaults(tmp_path, capsys) -> N
 
 def test_export_reports_include_expected_columns_and_region_reason(tmp_path) -> None:
     config_path, database_path, _, reports_path = _phase4_fixture(tmp_path)
-    main(["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"])
+    main(["match", "--config", str(config_path)])
     repo = TransferRepository(database_path)
     run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
     assert run_id is not None
+    _set_config_values(config_path, run_id=run_id, report_format="both")
 
-    exit_code = main(
-        [
-            "export-report",
-            "--db",
-            str(database_path),
-            "--run-id",
-            run_id,
-            "--output-dir",
-            str(reports_path),
-            "--format",
-            "both",
-        ]
-    )
+    exit_code = main(["export-report", "--config", str(config_path)])
 
     rows = build_unavailable_rows(repo, run_id)
     report_dir = reports_path / run_id[:8]
-    csv_path = next(report_dir.glob("unavailable-tracks-*.csv"))
-    json_path = next(report_dir.glob("unavailable-tracks-*.json"))
+    csv_path = next(report_dir.glob("unavailable-*-export-report.csv"))
+    json_path = next(report_dir.glob("unavailable-*-export-report.json"))
     csv_rows = list(csv.DictReader(csv_path.open()))
     json_rows = json.loads(json_path.read_text())
     assert exit_code == 0
@@ -777,7 +692,7 @@ def test_export_reports_include_expected_columns_and_region_reason(tmp_path) -> 
 
 def test_review_and_export_report_use_config_defaults(tmp_path) -> None:
     config_path, database_path, _, reports_path = _phase4_fixture(tmp_path)
-    main(["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"])
+    main(["match", "--config", str(config_path)])
     repo = TransferRepository(database_path)
     run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
     assert run_id is not None
@@ -786,19 +701,7 @@ def test_review_and_export_report_use_config_defaults(tmp_path) -> None:
         for decision in repo.load_match_decisions(run_id)
         if decision.status is MatchStatus.NEEDS_REVIEW
     )
-    payload = json.loads(config_path.read_text(encoding="utf-8"))
-    payload["commands"] = {
-        "review": {
-            "run_id": run_id,
-            "candidate_rank": 1,
-        },
-        "export_report": {
-            "run_id": run_id,
-            "output_dir": "reports/config-export",
-            "format": "json",
-        },
-    }
-    _write_json(config_path, payload)
+    _set_config_values(config_path, run_id=run_id, report_format="json")
 
     review = main(
         [
@@ -815,47 +718,39 @@ def test_review_and_export_report_use_config_defaults(tmp_path) -> None:
 
     assert review == 0
     assert export == 0
-    report_dir = reports_path.parent / "reports" / "config-export" / run_id[:8]
-    assert list(report_dir.glob("unavailable-tracks-*.json"))
+    report_dir = reports_path / run_id[:8]
+    assert list(report_dir.glob("unavailable-*-export-report.json"))
 
 
 def test_export_reports_do_not_overwrite_same_second_snapshot(tmp_path, monkeypatch) -> None:
     config_path, database_path, _, reports_path = _phase4_fixture(tmp_path)
-    main(["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"])
+    main(["match", "--config", str(config_path)])
     repo = TransferRepository(database_path)
     run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
     assert run_id is not None
+    _set_config_values(config_path, run_id=run_id, report_format="json")
     monkeypatch.setattr(exports_module, "_short_timestamp", lambda: "143022")
 
-    first = main(
-        [
-            "export-report",
-            "--db",
-            str(database_path),
-            "--run-id",
-            run_id,
-            "--output-dir",
-            str(reports_path),
-            "--format",
-            "json",
-        ]
-    )
-    second = main(
-        [
-            "export-report",
-            "--db",
-            str(database_path),
-            "--run-id",
-            run_id,
-            "--output-dir",
-            str(reports_path),
-            "--format",
-            "json",
-        ]
-    )
+    first = main(["export-report", "--config", str(config_path)])
+    second = main(["export-report", "--config", str(config_path)])
 
     report_dir = reports_path / run_id[:8]
     assert first == 0
     assert second == 0
-    assert (report_dir / "transfer-summary-143022.json").exists()
-    assert (report_dir / "transfer-summary-143022-2.json").exists()
+    assert (report_dir / "summary-143022-export-report.json").exists()
+    assert (report_dir / "summary-143022-export-report-2.json").exists()
+
+
+def test_existing_run_direction_must_match_top_level_config(tmp_path, capsys) -> None:
+    config_path, database_path, _, _ = _phase4_fixture(tmp_path)
+    main(["match", "--config", str(config_path)])
+    repo = TransferRepository(database_path)
+    run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
+    assert run_id is not None
+    _set_config_values(config_path, run_id=run_id, destination_platform="spotify")
+
+    exit_code = main(["export-report", "--config", str(config_path)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "configured destination_platform spotify does not match" in captured.out

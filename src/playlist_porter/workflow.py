@@ -47,15 +47,6 @@ WRITE_DIAGNOSTICS = diagnostic_logger("write")
 
 
 @dataclass(frozen=True)
-class DryRunResult:
-    """Result from a dry-run command."""
-
-    transfer_run_id: str
-    created: bool
-    metrics: TransferMetrics
-
-
-@dataclass(frozen=True)
 class PreflightResult:
     """Validation result for a planned transfer run."""
 
@@ -140,6 +131,7 @@ def run_transfer(
     dry_run: bool = True,
     database_path: str | Path | None = None,
     output_dir: str | Path | None = None,
+    output_format: str | None = None,
     restart: bool = False,
     destination_playlist_id: str | None = None,
     create_playlist_name: str | None = None,
@@ -163,6 +155,7 @@ def run_transfer(
         dry_run=dry_run,
         database_path=database_path or config.database_path,
         output_dir=output_dir or config.report_output_dir,
+        output_format=output_format or config.report_format,
         restart=restart,
         destination_playlist_id=destination_playlist_id,
         create_playlist_name=create_playlist_name,
@@ -177,6 +170,7 @@ def execute_transfer_run(
     transfer_run_id: str,
     database_path: str | Path | None = None,
     output_dir: str | Path | None = None,
+    output_format: str | None = None,
     destination_playlist_id: str | None = None,
     create_playlist_name: str | None = None,
     console: Console | None = None,
@@ -195,6 +189,7 @@ def execute_transfer_run(
         transfer_run_id=transfer_run_id,
         database_path=database_path or config.database_path,
         output_dir=output_dir or config.report_output_dir,
+        output_format=output_format or config.report_format,
         destination_playlist_id=destination_playlist_id,
         create_playlist_name=create_playlist_name,
         console=console,
@@ -207,6 +202,7 @@ def execute_transfer_run_with_adapter(
     transfer_run_id: str,
     database_path: str | Path,
     output_dir: str | Path,
+    output_format: str = "json",
     destination_playlist_id: str | None = None,
     create_playlist_name: str | None = None,
     console: Console | None = None,
@@ -248,7 +244,15 @@ def execute_transfer_run_with_adapter(
         destination_playlist_id=destination_playlist_id,
         create_playlist_name=create_playlist_name,
     )
-    report_paths = tuple(export_reports(repository, transfer_run_id, output_dir))
+    report_paths = tuple(
+        export_reports(
+            repository,
+            transfer_run_id,
+            output_dir,
+            output_format=output_format,
+            command="write",
+        )
+    )
     logger.info(
         "reports exported",
         run_id=transfer_run_id,
@@ -282,6 +286,7 @@ def run_transfer_with_adapters(
     dry_run: bool,
     database_path: str | Path,
     output_dir: str | Path,
+    output_format: str = "json",
     restart: bool = False,
     destination_playlist_id: str | None = None,
     create_playlist_name: str | None = None,
@@ -391,7 +396,15 @@ def run_transfer_with_adapters(
     )
 
     repository.sync_metrics(transfer_run_id)
-    report_paths = tuple(export_reports(repository, transfer_run_id, output_dir))
+    report_paths = tuple(
+        export_reports(
+            repository,
+            transfer_run_id,
+            output_dir,
+            output_format=output_format,
+            command="match" if dry_run else "write",
+        )
+    )
     logger.info(
         "reports exported",
         run_id=transfer_run_id,
@@ -500,84 +513,6 @@ def validate_execute_preflight(
         output_dir=str(output_dir),
     )
     return result
-
-
-def dry_run_mock_transfer(
-    config: PorterConfig,
-    *,
-    source_playlist_id: str,
-    database_path: str | Path | None = None,
-    restart: bool = False,
-    console: Console | None = None,
-) -> DryRunResult:
-    """Run mock matching, persist decisions, and perform no destination writes."""
-
-    console = console or Console()
-    repository = TransferRepository(database_path or config.database_path)
-    adapter = create_mock_adapter(config)
-    adapter.authenticate()
-    logger.info(
-        "mock adapter authenticated",
-        database_path=str(database_path or config.database_path),
-    )
-    playlist = adapter.get_playlist(source_playlist_id)
-    logger.info("mock source playlist loaded", track_count=len(playlist.tracks))
-    WORKFLOW_DIAGNOSTICS.debug(
-        "mock source playlist loaded",
-        playlist_name=playlist.name,
-        playlist_platform=playlist.platform,
-        playlist_id=playlist.platform_playlist_id,
-        track_count=len(playlist.tracks),
-    )
-    for track in playlist.tracks:
-        WORKFLOW_DIAGNOSTICS.debug(
-            "mock source playlist track loaded",
-            track=track_summary(track),
-        )
-    run = TransferRun(
-        source_platform="mock",
-        destination_platform="mock",
-        source_playlist=playlist,
-        dry_run=True,
-    )
-
-    if restart:
-        transfer_run_id = repository.create_run(run)
-        created = True
-        logger.info("dry run created", run_id=transfer_run_id, restart=True)
-    else:
-        transfer_run_id, created = repository.get_or_create_run(run)
-        logger.info("dry run resolved", run_id=transfer_run_id, created=created)
-        if not created:
-            logger.info("pruning stale dry-run transfer state", run_id=transfer_run_id)
-            repository.prune_transfer_state(
-                transfer_run_id,
-                [track.internal_id for track in playlist.tracks],
-            )
-
-    repository.save_source_playlist(transfer_run_id, playlist)
-    decisions = match_playlist(playlist, adapter)
-    logger.info(
-        "mock match decisions generated",
-        run_id=transfer_run_id,
-        decision_count=len(decisions),
-        candidate_count=sum(len(decision.candidates) for decision in decisions),
-    )
-    WORKFLOW_DIAGNOSTICS.debug(
-        "mock match decisions generated",
-        run_id=transfer_run_id,
-        decision_count=len(decisions),
-        candidate_count=sum(len(decision.candidates) for decision in decisions),
-    )
-    repository.save_match_decisions(transfer_run_id, decisions)
-    metrics = repository.load_metrics(transfer_run_id)
-    WORKFLOW_DIAGNOSTICS.debug(
-        "mock dry-run metrics loaded",
-        run_id=transfer_run_id,
-        metrics=metrics_snapshot(metrics),
-    )
-    render_metrics(console, metrics, title="Dry run summary")
-    return DryRunResult(transfer_run_id=transfer_run_id, created=created, metrics=metrics)
 
 
 def execute_mock_transfer(
@@ -755,24 +690,33 @@ def _resolve_destination_write_target(
             f"{destination_playlist_id}"
         )
     if destination_playlist_id is not None:
-        normalized_destination_id = (
-            _optional_text(destination.validate_destination_playlist(destination_playlist_id))
-            or destination_playlist_id
+        normalized_destination_id = _normalize_destination_playlist_id(
+            destination,
+            destination_playlist_id,
         )
+        normalized_persisted_destination_id = persisted_destination_id
         if (
             persisted_destination_id is not None
-            and normalized_destination_id != persisted_destination_id
-            and not (
-                destination.normalizes_destination_playlist_ids
-                and destination_playlist_id == persisted_destination_id
+            and destination.normalizes_destination_playlist_ids
+        ):
+            normalized_persisted_destination_id = _normalize_destination_playlist_id(
+                destination,
+                persisted_destination_id,
             )
+        if (
+            normalized_persisted_destination_id is not None
+            and normalized_destination_id != normalized_persisted_destination_id
         ):
             raise ValueError(
                 "transfer run already targets destination playlist "
                 f"{persisted_destination_id}; start a new match run to use "
                 f"{normalized_destination_id}"
             )
-        repository.update_destination_playlist_id(transfer_run_id, normalized_destination_id)
+        if normalized_destination_id != persisted_destination_id:
+            repository.update_destination_playlist_id(
+                transfer_run_id,
+                normalized_destination_id,
+            )
         logger.info("destination playlist id recorded", run_id=transfer_run_id)
         WRITE_DIAGNOSTICS.debug(
             "destination playlist id recorded",
@@ -783,9 +727,9 @@ def _resolve_destination_write_target(
         return normalized_destination_id
 
     if persisted_destination_id is not None:
-        normalized_destination_id = (
-            _optional_text(destination.validate_destination_playlist(persisted_destination_id))
-            or persisted_destination_id
+        normalized_destination_id = _normalize_destination_playlist_id(
+            destination,
+            persisted_destination_id,
         )
         if normalized_destination_id != persisted_destination_id:
             repository.update_destination_playlist_id(transfer_run_id, normalized_destination_id)
@@ -827,6 +771,10 @@ def _optional_text(value: str | None) -> str | None:
         return None
     text = value.strip()
     return text or None
+
+
+def _normalize_destination_playlist_id(destination: BasePlatform, playlist_id: str) -> str:
+    return _optional_text(destination.validate_destination_playlist(playlist_id)) or playlist_id
 
 
 def render_metrics(console: Console, metrics: TransferMetrics, *, title: str) -> None:
@@ -1157,7 +1105,6 @@ def _writable_path_issues(
 
 
 __all__ = [
-    "DryRunResult",
     "ExecuteResult",
     "PlatformName",
     "PreflightError",
@@ -1165,7 +1112,6 @@ __all__ = [
     "TransferResult",
     "create_mock_adapter",
     "create_platform_adapter",
-    "dry_run_mock_transfer",
     "execute_transfer_run",
     "execute_transfer_run_with_adapter",
     "execute_mock_transfer",
