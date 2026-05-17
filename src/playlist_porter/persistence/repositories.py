@@ -35,6 +35,8 @@ from playlist_porter.persistence.database import (
 )
 
 WRITE_TRACK_STEP = "write_track"
+WRITE_SKIP_EXISTING_STEP = "write_skip_existing"
+WRITE_SKIP_RESUME_STEP = "write_skip_resume"
 
 
 @dataclass(frozen=True)
@@ -473,6 +475,44 @@ class TransferRepository:
             error=error,
             retry_count=retry_count,
         )
+
+    def record_write_skip(
+        self,
+        transfer_run_id: str | UUID,
+        source_track_id: str | UUID,
+        destination_track_id: str,
+        *,
+        step_type: str,
+    ) -> None:
+        """Record a skipped destination write without counting it as a success."""
+
+        self._record_write_step(
+            transfer_run_id,
+            source_track_id,
+            destination_track_id,
+            step_type=step_type,
+            status="skipped",
+        )
+
+    def count_write_steps(
+        self,
+        transfer_run_id: str | UUID,
+        *,
+        step_type: str,
+        status: str,
+    ) -> int:
+        """Count persisted write-step rows for reports."""
+
+        with self.engine.connect() as connection:
+            return int(
+                connection.execute(
+                    select(func.count())
+                    .select_from(transfer_steps)
+                    .where(transfer_steps.c.transfer_run_id == str(transfer_run_id))
+                    .where(transfer_steps.c.step_type == step_type)
+                    .where(transfer_steps.c.status == status)
+                ).scalar_one()
+            )
 
     def should_write_track(
         self,
@@ -1049,5 +1089,7 @@ __all__ = [
     "TransferRepository",
     "TransferRunRecord",
     "UserOverride",
+    "WRITE_SKIP_EXISTING_STEP",
+    "WRITE_SKIP_RESUME_STEP",
     "WRITE_TRACK_STEP",
 ]

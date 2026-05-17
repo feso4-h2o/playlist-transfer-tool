@@ -25,6 +25,8 @@ from playlist_porter.matching.status import MatchStatus
 from playlist_porter.models import MatchDecision, TrackCandidate, TransferRun
 from playlist_porter.persistence.exports import export_reports
 from playlist_porter.persistence.repositories import (
+    WRITE_SKIP_EXISTING_STEP,
+    WRITE_SKIP_RESUME_STEP,
     TransferMetrics,
     TransferRepository,
     UserOverride,
@@ -607,22 +609,26 @@ def execute_mock_transfer(
         repository.load_match_decisions(transfer_run_id),
         repository.load_user_overrides(transfer_run_id),
     )
-    pending_destination_ids = repository.pending_write_track_ids(
-        transfer_run_id,
-        [pair[1] for pair in write_pairs],
-        source_track_ids=[pair[0] for pair in write_pairs],
-    )
     pending_pairs = _pending_pairs(
         write_pairs,
-        pending_destination_ids,
         repository,
         transfer_run_id,
     )
+    write_ready_pairs = _filter_destination_duplicate_pairs(
+        adapter,
+        destination_id,
+        pending_pairs,
+        repository=repository,
+        transfer_run_id=transfer_run_id,
+    )
 
-    if pending_pairs:
-        adapter.add_tracks(destination_id, [destination_id for _, destination_id in pending_pairs])
-        for source_track_id, track_id in pending_pairs:
-            repository.record_write_success(transfer_run_id, source_track_id, track_id)
+    written_count = _write_pending_pairs(
+        adapter,
+        destination_id,
+        write_ready_pairs,
+        repository=repository,
+        transfer_run_id=transfer_run_id,
+    )
 
     repository.mark_run_completed(transfer_run_id)
     metrics = repository.load_metrics(transfer_run_id)
@@ -635,8 +641,8 @@ def execute_mock_transfer(
     return ExecuteResult(
         transfer_run_id=transfer_run_id,
         destination_playlist_id=destination_id,
-        attempted_count=len(pending_pairs),
-        skipped_count=len(write_pairs) - len(pending_pairs),
+        attempted_count=written_count,
+        skipped_count=len(write_pairs) - written_count,
         metrics=metrics,
     )
 
@@ -681,27 +687,29 @@ def _execute_transfer_writes(
         repository.load_match_decisions(transfer_run_id),
         repository.load_user_overrides(transfer_run_id),
     )
-    pending_destination_ids = repository.pending_write_track_ids(
-        transfer_run_id,
-        [pair[1] for pair in write_pairs],
-        source_track_ids=[pair[0] for pair in write_pairs],
-    )
     pending_pairs = _pending_pairs(
         write_pairs,
-        pending_destination_ids,
         repository,
         transfer_run_id,
+    )
+    write_ready_pairs = _filter_destination_duplicate_pairs(
+        destination,
+        destination_id,
+        pending_pairs,
+        repository=repository,
+        transfer_run_id=transfer_run_id,
     )
     logger.info(
         "pending writes resolved",
         run_id=transfer_run_id,
         eligible_write_count=len(write_pairs),
         pending_write_count=len(pending_pairs),
+        write_ready_count=len(write_ready_pairs),
     )
     written_count = _write_pending_pairs(
         destination,
         destination_id,
-        pending_pairs,
+        write_ready_pairs,
         repository=repository,
         transfer_run_id=transfer_run_id,
     )
@@ -710,7 +718,7 @@ def _execute_transfer_writes(
         transfer_run_id=transfer_run_id,
         destination_playlist_id=destination_id,
         attempted_count=written_count,
-        skipped_count=len(write_pairs) - len(pending_pairs),
+        skipped_count=len(write_pairs) - written_count,
         metrics=repository.load_metrics(transfer_run_id),
     )
 
@@ -896,7 +904,6 @@ def _candidate_by_internal_id(
 
 def _pending_pairs(
     write_pairs: list[tuple[str, str]],
-    pending_destination_ids: list[str],
     repository: TransferRepository,
     transfer_run_id: str,
 ) -> list[tuple[str, str]]:
@@ -911,21 +918,61 @@ def _pending_pairs(
         )
         if should_write:
             pending_pairs.append(pair)
+        else:
+            repository.record_write_skip(
+                transfer_run_id,
+                pair[0],
+                pair[1],
+                step_type=WRITE_SKIP_RESUME_STEP,
+            )
     WRITE_DIAGNOSTICS.debug(
         "pending write pairs resolved",
         run_id=transfer_run_id,
         eligible_write_count=len(write_pairs),
         pending_write_count=len(pending_pairs),
     )
-    if [destination_id for _, destination_id in pending_pairs] != pending_destination_ids:
-        WRITE_DIAGNOSTICS.debug(
-            "pending write filter mismatch",
-            run_id=transfer_run_id,
-            pending_pair_count=len(pending_pairs),
-            pending_destination_id_count=len(pending_destination_ids),
-        )
-        raise RuntimeError("pending write filter returned inconsistent source-aware results")
     return pending_pairs
+
+
+def _filter_destination_duplicate_pairs(
+    destination: BasePlatform,
+    destination_playlist_id: str,
+    pending_pairs: list[tuple[str, str]],
+    *,
+    repository: TransferRepository,
+    transfer_run_id: str,
+) -> list[tuple[str, str]]:
+    existing_destination_ids = destination.get_destination_track_ids(destination_playlist_id)
+    seen_destination_ids = set(existing_destination_ids)
+    write_ready_pairs: list[tuple[str, str]] = []
+    for source_track_id, track_id in pending_pairs:
+        if track_id in seen_destination_ids:
+            repository.record_write_skip(
+                transfer_run_id,
+                source_track_id,
+                track_id,
+                step_type=WRITE_SKIP_EXISTING_STEP,
+            )
+            WRITE_DIAGNOSTICS.debug(
+                "destination duplicate write skipped",
+                run_id=transfer_run_id,
+                destination_platform=destination.platform_name,
+                destination_playlist_id=destination_playlist_id,
+                pair=write_pair_snapshot(source_track_id, track_id),
+            )
+            continue
+        seen_destination_ids.add(track_id)
+        write_ready_pairs.append((source_track_id, track_id))
+    WRITE_DIAGNOSTICS.debug(
+        "destination duplicate filter resolved",
+        run_id=transfer_run_id,
+        destination_platform=destination.platform_name,
+        destination_playlist_id=destination_playlist_id,
+        existing_destination_track_count=len(existing_destination_ids),
+        pending_write_count=len(pending_pairs),
+        write_ready_count=len(write_ready_pairs),
+    )
+    return write_ready_pairs
 
 
 def _write_pending_pairs(

@@ -190,6 +190,11 @@ class MockAdapter(BasePlatform):
         self._writes[playlist_id]["track_ids"].extend(track_ids)
         self._flush_writes()
 
+    def get_destination_track_ids(self, playlist_id: str) -> set[str]:
+        if playlist_id not in self._writes:
+            return set()
+        return {str(track_id) for track_id in self._writes[playlist_id].get("track_ids", [])}
+
     def validate_destination_playlist(self, playlist_id: str) -> None:
         if playlist_id not in self._writes:
             raise ValidationFailure(

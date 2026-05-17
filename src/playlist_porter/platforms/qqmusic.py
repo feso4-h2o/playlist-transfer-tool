@@ -368,6 +368,33 @@ class QQMusicAdapter(BasePlatform):
         if not added:
             raise ValidationFailure("QQ Music rejected one or more playlist additions")
 
+    def get_destination_track_ids(self, playlist_id: str) -> set[str]:
+        """Read existing QQ Music song IDs in the numeric format used for writes."""
+
+        target = _songlist_target_from_pair(playlist_id)
+        try:
+            payload = self._policy.execute(
+                "qqmusic destination playlist items",
+                _retryable_qqmusic_operation(
+                    lambda: self._ensure_client().get_playlist(
+                        target.tid,
+                        page_size=self.config.page_size,
+                        dirid=target.dirid,
+                    )
+                ),
+                request_kind="read",
+            )
+        except Exception as exc:
+            _raise_classified_qqmusic_exception(exc)
+        return {
+            track.platform_track_id
+            for track in playlist_from_qqmusic_payload(
+                payload,
+                fallback_playlist_id=str(target.tid),
+            ).tracks
+            if track.platform_track_id is not None
+        }
+
     def validate_destination_playlist(self, playlist_id: str) -> str:
         """Fetch a QQ Music songlist before writing to fail clearly on bad targets."""
 

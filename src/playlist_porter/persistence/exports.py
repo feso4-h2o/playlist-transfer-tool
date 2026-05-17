@@ -11,7 +11,12 @@ from typing import Any
 from playlist_porter.diagnostics import diagnostic_logger, metrics_snapshot, path_values
 from playlist_porter.matching.status import MatchStatus
 from playlist_porter.models import MatchDecision
-from playlist_porter.persistence.repositories import TransferRepository, UserOverride
+from playlist_porter.persistence.repositories import (
+    WRITE_SKIP_EXISTING_STEP,
+    WRITE_SKIP_RESUME_STEP,
+    TransferRepository,
+    UserOverride,
+)
 
 EXPORT_DIAGNOSTICS = diagnostic_logger("export")
 
@@ -26,6 +31,8 @@ SUMMARY_FIELDS = [
     "user_rejected_count",
     "write_success_count",
     "write_failure_count",
+    "write_skipped_resume_count",
+    "write_skipped_existing_count",
     "retry_count",
     "status_counts",
     "unavailable_reason_counts",
@@ -131,6 +138,16 @@ def build_summary(repository: TransferRepository, transfer_run_id: str) -> dict[
         "user_rejected_count": metrics.user_rejected_count,
         "write_success_count": metrics.write_success_count,
         "write_failure_count": metrics.write_failure_count,
+        "write_skipped_resume_count": repository.count_write_steps(
+            transfer_run_id,
+            step_type=WRITE_SKIP_RESUME_STEP,
+            status="skipped",
+        ),
+        "write_skipped_existing_count": repository.count_write_steps(
+            transfer_run_id,
+            step_type=WRITE_SKIP_EXISTING_STEP,
+            status="skipped",
+        ),
         "retry_count": metrics.retry_count,
         "status_counts": metrics.status_counts,
         "unavailable_reason_counts": metrics.unavailable_reason_counts,
