@@ -273,6 +273,22 @@ def test_qqmusic_adapter_validates_resolved_destination_songlist_before_write() 
     assert client.playlist_fetches == [(12345, 50, 777)]
 
 
+def test_qqmusic_adapter_rejects_mismatched_resolved_destination_songlist() -> None:
+    adapter = QQMusicAdapter(
+        config=QQMusicConfig(page_size=50),
+        client=FakeQQMusicClient(
+            playlist_payload={
+                "info": {"id": 12345, "dirid": 888, "title": "华语收藏"},
+                "songs": [],
+            }
+        ),
+        rate_limit_policy=qq_policy(),
+    )
+
+    with pytest.raises(ValidationFailure, match="not requested 777:12345"):
+        adapter.validate_destination_playlist("777:12345")
+
+
 def test_qqmusic_adapter_rejects_destination_songlist_without_dirid() -> None:
     adapter = QQMusicAdapter(
         config=QQMusicConfig(page_size=50),

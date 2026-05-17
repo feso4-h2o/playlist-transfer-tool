@@ -397,12 +397,19 @@ class QQMusicAdapter(BasePlatform):
                 "QQ Music destination songlist was not found or is not readable: "
                 f"{numeric_playlist_id}"
             )
-        if target is not None:
-            return target.as_playlist_id()
-        return _songlist_target_from_detail_payload(
+        resolved_target = _songlist_target_from_detail_payload(
             payload,
             fallback_tid=numeric_playlist_id,
-        ).as_playlist_id()
+        )
+        if target is not None:
+            if resolved_target != target:
+                raise ValidationFailure(
+                    "QQ Music destination songlist resolved to "
+                    f"{resolved_target.as_playlist_id()}, not requested "
+                    f"{target.as_playlist_id()}"
+                )
+            return target.as_playlist_id()
+        return resolved_target.as_playlist_id()
 
     def _ensure_client(self) -> Any:
         if self._client is None:
