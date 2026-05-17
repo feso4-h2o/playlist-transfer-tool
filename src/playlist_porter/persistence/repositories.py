@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.engine import Connection, Engine, RowMapping
 
@@ -35,6 +35,8 @@ from playlist_porter.persistence.database import (
 )
 
 WRITE_TRACK_STEP = "write_track"
+WRITE_SKIP_EXISTING_STEP = "write_skip_existing"
+WRITE_SKIP_RESUME_STEP = "write_skip_resume"
 
 
 @dataclass(frozen=True)
@@ -474,6 +476,44 @@ class TransferRepository:
             retry_count=retry_count,
         )
 
+    def record_write_skip(
+        self,
+        transfer_run_id: str | UUID,
+        source_track_id: str | UUID,
+        destination_track_id: str,
+        *,
+        step_type: str,
+    ) -> None:
+        """Record a skipped destination write without counting it as a success."""
+
+        self._record_write_step(
+            transfer_run_id,
+            source_track_id,
+            destination_track_id,
+            step_type=step_type,
+            status="skipped",
+        )
+
+    def count_write_steps(
+        self,
+        transfer_run_id: str | UUID,
+        *,
+        step_type: str,
+        status: str,
+    ) -> int:
+        """Count persisted write-step rows for reports."""
+
+        with self.engine.connect() as connection:
+            return int(
+                connection.execute(
+                    select(func.count())
+                    .select_from(transfer_steps)
+                    .where(transfer_steps.c.transfer_run_id == str(transfer_run_id))
+                    .where(transfer_steps.c.step_type == step_type)
+                    .where(transfer_steps.c.status == status)
+                ).scalar_one()
+            )
+
     def should_write_track(
         self,
         transfer_run_id: str | UUID,
@@ -482,16 +522,28 @@ class TransferRepository:
         *,
         step_type: str = WRITE_TRACK_STEP,
     ) -> bool:
-        """Return false when a successful write was already recorded."""
+        """Return false when write work for this source/destination pair is already resolved."""
 
+        terminal_steps = [(step_type, "completed")]
+        if step_type == WRITE_TRACK_STEP:
+            terminal_steps.append((WRITE_SKIP_EXISTING_STEP, "skipped"))
         with self.engine.connect() as connection:
             row = connection.execute(
                 select(transfer_steps.c.id)
                 .where(transfer_steps.c.transfer_run_id == str(transfer_run_id))
-                .where(transfer_steps.c.step_type == step_type)
                 .where(transfer_steps.c.source_track_internal_id == str(source_track_id))
                 .where(transfer_steps.c.destination_track_id == destination_track_id)
-                .where(transfer_steps.c.status == "completed")
+                .where(
+                    or_(
+                        *(
+                            and_(
+                                transfer_steps.c.step_type == persisted_step_type,
+                                transfer_steps.c.status == persisted_status,
+                            )
+                            for persisted_step_type, persisted_status in terminal_steps
+                        )
+                    )
+                )
             ).first()
         return row is None
 
@@ -1049,5 +1101,7 @@ __all__ = [
     "TransferRepository",
     "TransferRunRecord",
     "UserOverride",
+    "WRITE_SKIP_EXISTING_STEP",
+    "WRITE_SKIP_RESUME_STEP",
     "WRITE_TRACK_STEP",
 ]

@@ -102,6 +102,13 @@ def _seed_mock_destination(config: PorterConfig, playlist_id: str) -> None:
     )
 
 
+def _summary_report(result) -> dict:
+    summary_path = next(
+        path for path in result.report_paths if path.name.startswith("transfer-summary-")
+    )
+    return json.loads(summary_path.read_text(encoding="utf-8"))
+
+
 def test_phase8_mock_dry_run_exports_summary_matching_metrics(tmp_path) -> None:
     config = _phase8_config(tmp_path)
 
@@ -150,6 +157,38 @@ def test_phase8_write_mode_writes_only_auto_accepted_tracks(tmp_path) -> None:
     assert result.skipped_count == 0
     assert result.metrics.write_success_count == 1
     assert writes[result.destination_playlist_id]["track_ids"] == ["dest-exact"]
+
+
+def test_phase8_write_mode_skips_existing_destination_tracks(tmp_path) -> None:
+    config = _phase8_config(tmp_path)
+    _write_json(
+        config.mock_writes_path,
+        {
+            "existing-playlist": {
+                "name": "Existing",
+                "description": None,
+                "track_ids": ["dest-exact"],
+            }
+        },
+    )
+
+    result = run_transfer(
+        config,
+        source_platform="mock",
+        destination_platform="mock",
+        source_playlist_id="source-playlist",
+        dry_run=False,
+        destination_playlist_id="existing-playlist",
+    )
+
+    writes = json.loads(config.mock_writes_path.read_text(encoding="utf-8"))
+    summary = _summary_report(result)
+    assert result.written_count == 0
+    assert result.skipped_count == 1
+    assert result.metrics.write_success_count == 0
+    assert writes["existing-playlist"]["track_ids"] == ["dest-exact"]
+    assert summary["write_skipped_existing_count"] == 1
+    assert summary["write_skipped_resume_count"] == 0
 
 
 def test_phase8_write_run_uses_reviewed_dry_run_approvals(tmp_path) -> None:
@@ -342,13 +381,48 @@ def test_phase8_resume_skips_recorded_writes(tmp_path) -> None:
     )
 
     writes = json.loads(config.mock_writes_path.read_text(encoding="utf-8"))
+    summary = _summary_report(second)
     assert first.transfer_run_id == second.transfer_run_id
     assert second.written_count == 0
     assert second.skipped_count == 1
     assert writes["existing-playlist"]["track_ids"] == ["dest-exact"]
+    assert summary["write_skipped_resume_count"] == 1
+    assert summary["write_skipped_existing_count"] == 0
     assert TransferRepository(config.database_path).load_metrics(
         first.transfer_run_id
     ).write_success_count == 1
+
+
+def test_phase8_resume_skips_recorded_destination_duplicate_proofs(tmp_path) -> None:
+    database_path = tmp_path / "transfer.sqlite"
+    destination = ReadableDestinationAdapter(existing_track_ids={"dest-1"})
+
+    first = run_transfer_with_adapters(
+        StaticSourceAdapter(),
+        destination,
+        source_playlist_id="source-playlist",
+        dry_run=False,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+        destination_playlist_id="existing-playlist",
+    )
+    second = run_transfer_with_adapters(
+        StaticSourceAdapter(),
+        destination,
+        source_playlist_id="source-playlist",
+        dry_run=False,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+        destination_playlist_id="existing-playlist",
+    )
+
+    summary = _summary_report(second)
+    assert first.transfer_run_id == second.transfer_run_id
+    assert second.written_count == 0
+    assert second.skipped_count == 1
+    assert destination.destination_read_count == 1
+    assert summary["write_skipped_existing_count"] == 1
+    assert summary["write_skipped_resume_count"] == 1
 
 
 def test_phase8_partial_write_failure_records_success_before_resume(tmp_path) -> None:
@@ -762,6 +836,25 @@ class FlakyDestinationAdapter(BasePlatform):
         ):
             raise RuntimeError("simulated write failure")
         self.added_track_ids.extend(track_ids)
+
+
+class ReadableDestinationAdapter(FlakyDestinationAdapter):
+    capabilities = PlatformCapabilities(
+        supports_read=True,
+        supports_search=True,
+        supports_write=True,
+    )
+    platform_name = "readable"
+
+    def __init__(self, *, existing_track_ids: set[str]) -> None:
+        super().__init__(fail_after_successes=None)
+        self.existing_track_ids = existing_track_ids
+        self.destination_read_count = 0
+
+    def get_destination_track_ids(self, playlist_id: str) -> set[str]:
+        assert playlist_id == "existing-playlist"
+        self.destination_read_count += 1
+        return self.existing_track_ids | set(self.added_track_ids)
 
 
 class NormalizingDestinationAdapter(FlakyDestinationAdapter):

@@ -46,6 +46,16 @@ class BasePlatform(ABC):
     def add_tracks(self, playlist_id: str, track_ids: list[str]) -> None:
         """Append destination-platform track IDs to a playlist."""
 
+    def get_destination_track_ids(self, playlist_id: str) -> set[str]:
+        """Return destination-platform track IDs already present in a playlist.
+
+        Platforms that cannot read destination contents may leave this as an
+        empty no-op; the write path still remains resume-safe from local state.
+        """
+
+        del playlist_id
+        return set()
+
     def validate_destination_playlist(self, playlist_id: str) -> str | None:
         """Validate that an existing destination playlist can receive writes.
 

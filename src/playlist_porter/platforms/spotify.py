@@ -176,6 +176,19 @@ class SpotifyAdapter(BasePlatform):
                 lambda uris=uris: client.playlist_add_items(playlist_id, uris),
             )
 
+    def get_destination_track_ids(self, playlist_id: str) -> set[str]:
+        """Read existing Spotify playlist track IDs before appending."""
+
+        spotify_playlist_id = _playlist_id_from_input(playlist_id)
+        track_ids = set()
+        for item in self._iter_playlist_items(spotify_playlist_id):
+            track = _playlist_item_track_payload(item)
+            if track is not None:
+                track_id = _optional_text(track.get("id"))
+                if track_id is not None:
+                    track_ids.add(track_id)
+        return track_ids
+
     def validate_destination_playlist(self, playlist_id: str) -> None:
         """Ensure an existing Spotify playlist is writable before adding items."""
 

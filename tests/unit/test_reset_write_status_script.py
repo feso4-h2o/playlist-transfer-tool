@@ -46,8 +46,11 @@ def _create_database(path: Path) -> None:
             ) values
                 ('run-1', 'write_track', 'source-1', 'dest-1', 'completed'),
                 ('run-1', 'write_track', 'source-2', 'dest-2', 'failed'),
+                ('run-1', 'write_skip_existing', 'source-3', 'dest-3', 'skipped'),
+                ('run-1', 'write_skip_resume', 'source-4', 'dest-4', 'skipped'),
                 ('run-1', 'other_step', 'source-3', 'dest-3', 'completed'),
-                ('run-2', 'write_track', 'source-4', 'dest-4', 'completed');
+                ('run-2', 'write_track', 'source-5', 'dest-5', 'completed'),
+                ('run-2', 'write_skip_existing', 'source-6', 'dest-6', 'skipped');
             insert into transfer_metrics values ('run-1', 1);
             insert into transfer_metrics values ('run-2', 1);
             """
@@ -67,12 +70,15 @@ def test_reset_write_status_dry_run_does_not_delete_rows(tmp_path, capsys) -> No
     exit_code = module.main(["--database", str(database_path), "--run-id", "run-1"])
 
     assert exit_code == 0
-    assert "dry run only" in capsys.readouterr().out
-    assert _count_rows(database_path, "transfer_steps") == 4
+    output = capsys.readouterr().out
+    assert "write_track:completed=1" in output
+    assert "write_skip_existing:skipped=1" in output
+    assert "dry run only" in output
+    assert _count_rows(database_path, "transfer_steps") == 7
     assert _count_rows(database_path, "transfer_metrics") == 2
 
 
-def test_reset_write_status_deletes_only_selected_run_write_markers(tmp_path) -> None:
+def test_reset_write_status_deletes_selected_run_write_status_markers(tmp_path) -> None:
     module = _load_script_module()
     database_path = tmp_path / "state.sqlite"
     _create_database(database_path)
@@ -90,9 +96,47 @@ def test_reset_write_status_deletes_only_selected_run_write_markers(tmp_path) ->
 
     assert exit_code == 0
     assert _count_rows(database_path, "transfer_steps", "transfer_run_id = 'run-1'") == 1
-    assert _count_rows(database_path, "transfer_steps", "transfer_run_id = 'run-2'") == 1
+    assert _count_rows(database_path, "transfer_steps", "transfer_run_id = 'run-2'") == 2
     assert _count_rows(database_path, "transfer_metrics", "transfer_run_id = 'run-1'") == 0
     assert _count_rows(database_path, "transfer_metrics", "transfer_run_id = 'run-2'") == 1
+
+
+def test_reset_write_status_can_delete_only_explicit_step_type(tmp_path) -> None:
+    module = _load_script_module()
+    database_path = tmp_path / "state.sqlite"
+    _create_database(database_path)
+
+    exit_code = module.main(
+        [
+            "--database",
+            str(database_path),
+            "--run-id",
+            "run-1",
+            "--step-type",
+            "write_track",
+            "--yes",
+            "--no-backup",
+        ]
+    )
+
+    assert exit_code == 0
+    assert _count_rows(database_path, "transfer_steps", "transfer_run_id = 'run-1'") == 3
+    assert (
+        _count_rows(
+            database_path,
+            "transfer_steps",
+            "transfer_run_id = 'run-1' and step_type = 'write_skip_existing'",
+        )
+        == 1
+    )
+    assert (
+        _count_rows(
+            database_path,
+            "transfer_steps",
+            "transfer_run_id = 'run-1' and step_type = 'write_skip_resume'",
+        )
+        == 1
+    )
 
 
 def test_reset_write_status_returns_error_for_unknown_run(tmp_path, capsys) -> None:

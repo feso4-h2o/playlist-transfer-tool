@@ -577,11 +577,37 @@ def test_qqmusic_search_circuit_breaker_is_preserved() -> None:
 
 def test_qqmusic_add_tracks_sends_numeric_song_info_pairs() -> None:
     client = FakeQQMusicClient()
-    adapter = QQMusicAdapter(client=client, rate_limit_policy=qq_policy())
+    adapter = QQMusicAdapter(
+        config=QQMusicConfig(page_size=50),
+        client=client,
+        rate_limit_policy=qq_policy(),
+    )
 
     adapter.add_tracks("777:12345", ["1048576:0", "2048:13"])
 
     assert client.added_songs == [(777, 12345, [(1048576, 0), (2048, 13)])]
+
+
+def test_qqmusic_destination_track_ids_use_numeric_write_ids() -> None:
+    client = FakeQQMusicClient(
+        playlist_payload={
+            "info": {"id": 12345, "dirid": 777, "title": "Existing"},
+            "songs": [
+                song_payload(id=1048576, type=0),
+                song_payload(id=2048, type=13, title="Beta"),
+            ],
+        }
+    )
+    adapter = QQMusicAdapter(
+        config=QQMusicConfig(page_size=50),
+        client=client,
+        rate_limit_policy=qq_policy(),
+    )
+
+    track_ids = adapter.get_destination_track_ids("777:12345")
+
+    assert track_ids == {"1048576:0", "2048:13"}
+    assert client.playlist_fetches == [(12345, 50, 777)]
 
 
 def test_qqmusic_create_playlist_returns_resolved_write_target() -> None:

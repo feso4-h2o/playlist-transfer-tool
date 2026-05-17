@@ -460,7 +460,7 @@ def test_write_requires_run_id_from_config_or_cli(tmp_path) -> None:
         main(["write", "--config", str(config_path)])
 
 
-def test_write_skips_recorded_duplicate_destination_writes(tmp_path) -> None:
+def test_write_skips_duplicate_destination_writes(tmp_path) -> None:
     config_path, database_path, writes_path, _ = _config_file(
         tmp_path,
         playlist_tracks=[
@@ -523,10 +523,10 @@ def test_write_skips_recorded_duplicate_destination_writes(tmp_path) -> None:
     writes = json.loads(writes_path.read_text(encoding="utf-8"))
     assert first_write == 0
     assert second_write == 0
-    assert list(writes.values())[0]["track_ids"] == ["dest-shared", "dest-shared"]
+    assert list(writes.values())[0]["track_ids"] == ["dest-shared"]
     assert TransferRepository(database_path).load_metrics(
         dry_run.transfer_run_id
-    ).write_success_count == 2
+    ).write_success_count == 1
 
 
 def test_write_uses_configured_run_defaults(tmp_path) -> None:
