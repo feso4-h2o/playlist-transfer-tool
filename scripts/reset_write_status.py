@@ -1,8 +1,9 @@
 """Reset local write resume markers for one transfer run.
 
-This script removes only ``write_track`` rows from ``transfer_steps`` for the
-selected run. Match decisions, review overrides, source tracks, candidates, and
-the destination playlist target are left intact.
+By default this removes all local write-status rows from ``transfer_steps`` for
+the selected run, including successful writes and destination/resume skips.
+Match decisions, review overrides, source tracks, candidates, and the
+destination playlist target are left intact.
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 DEFAULT_DATABASE = Path("state/playlist-porter.sqlite")
-DEFAULT_STEP_TYPE = "write_track"
+DEFAULT_STEP_TYPES = ("write_track", "write_skip_existing", "write_skip_resume")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -28,7 +29,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error(f"database does not exist: {database_path}")
 
     try:
-        summary = _load_summary(database_path, run_id=args.run_id, step_type=args.step_type)
+        step_types = tuple(args.step_type) if args.step_type else DEFAULT_STEP_TYPES
+        summary = _load_summary(database_path, run_id=args.run_id, step_types=step_types)
     except sqlite3.Error as exc:
         print(f"failed to inspect database: {exc}", file=sys.stderr)
         return 1
@@ -51,7 +53,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         deleted_count = _reset_write_status(
             database_path,
             run_id=args.run_id,
-            step_type=args.step_type,
+            step_types=step_types,
         )
     except sqlite3.Error as exc:
         print(f"failed to reset write status: {exc}", file=sys.stderr)
@@ -75,8 +77,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--step-type",
-        default=DEFAULT_STEP_TYPE,
-        help=f"Transfer step type to remove. Defaults to {DEFAULT_STEP_TYPE}.",
+        action="append",
+        choices=DEFAULT_STEP_TYPES,
+        help=(
+            "Transfer step type to remove. May be passed more than once. "
+            f"Defaults to all write status step types: {', '.join(DEFAULT_STEP_TYPES)}."
+        ),
     )
     parser.add_argument(
         "--yes",
@@ -95,8 +101,9 @@ def _load_summary(
     database_path: Path,
     *,
     run_id: str,
-    step_type: str,
+    step_types: Sequence[str],
 ) -> dict[str, object] | None:
+    placeholders = _step_type_placeholders(step_types)
     with sqlite3.connect(database_path) as connection:
         run_row = connection.execute(
             """
@@ -110,14 +117,14 @@ def _load_summary(
             return None
 
         step_rows = connection.execute(
-            """
-            select status, count(*)
+            f"""
+            select step_type, status, count(*)
             from transfer_steps
-            where transfer_run_id = ? and step_type = ?
-            group by status
-            order by status
+            where transfer_run_id = ? and step_type in ({placeholders})
+            group by step_type, status
+            order by step_type, status
             """,
-            (run_id, step_type),
+            (run_id, *step_types),
         ).fetchall()
 
     return {
@@ -125,16 +132,22 @@ def _load_summary(
         "source_platform": run_row[1],
         "destination_platform": run_row[2],
         "destination_playlist_id": run_row[3],
-        "step_type": step_type,
-        "status_counts": dict(step_rows),
-        "total_steps": sum(count for _, count in step_rows),
+        "step_types": step_types,
+        "status_counts": {(step_type, status): count for step_type, status, count in step_rows},
+        "total_steps": sum(count for _, _, count in step_rows),
     }
 
 
 def _print_summary(summary: dict[str, object], *, dry_run: bool) -> None:
     status_counts = summary["status_counts"]
     assert isinstance(status_counts, dict)
-    counts = ", ".join(f"{status}={count}" for status, count in status_counts.items()) or "none"
+    counts = (
+        ", ".join(
+            f"{step_type}:{status}={count}"
+            for (step_type, status), count in status_counts.items()
+        )
+        or "none"
+    )
     mode = "dry run" if dry_run else "reset"
     print(f"mode: {mode}")
     print(f"run id: {summary['run_id']}")
@@ -143,18 +156,21 @@ def _print_summary(summary: dict[str, object], *, dry_run: bool) -> None:
         f"{summary['source_platform']} -> {summary['destination_platform']}"
     )
     print(f"destination playlist: {summary['destination_playlist_id'] or '(none)'}")
-    print(f"step type: {summary['step_type']}")
+    step_types = summary["step_types"]
+    assert isinstance(step_types, Sequence)
+    print(f"step types: {', '.join(step_types)}")
     print(f"write markers found: {summary['total_steps']} ({counts})")
 
 
-def _reset_write_status(database_path: Path, *, run_id: str, step_type: str) -> int:
+def _reset_write_status(database_path: Path, *, run_id: str, step_types: Sequence[str]) -> int:
+    placeholders = _step_type_placeholders(step_types)
     with sqlite3.connect(database_path) as connection:
         cursor = connection.execute(
-            """
+            f"""
             delete from transfer_steps
-            where transfer_run_id = ? and step_type = ?
+            where transfer_run_id = ? and step_type in ({placeholders})
             """,
-            (run_id, step_type),
+            (run_id, *step_types),
         )
         deleted_count = cursor.rowcount
         connection.execute(
@@ -163,6 +179,12 @@ def _reset_write_status(database_path: Path, *, run_id: str, step_type: str) -> 
         )
         connection.commit()
     return deleted_count
+
+
+def _step_type_placeholders(step_types: Sequence[str]) -> str:
+    if not step_types:
+        raise ValueError("at least one step type is required")
+    return ", ".join("?" for _ in step_types)
 
 
 def _backup_path(database_path: Path) -> Path:
