@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.engine import Connection, Engine, RowMapping
 
@@ -522,16 +522,28 @@ class TransferRepository:
         *,
         step_type: str = WRITE_TRACK_STEP,
     ) -> bool:
-        """Return false when a successful write was already recorded."""
+        """Return false when write work for this source/destination pair is already resolved."""
 
+        terminal_steps = [(step_type, "completed")]
+        if step_type == WRITE_TRACK_STEP:
+            terminal_steps.append((WRITE_SKIP_EXISTING_STEP, "skipped"))
         with self.engine.connect() as connection:
             row = connection.execute(
                 select(transfer_steps.c.id)
                 .where(transfer_steps.c.transfer_run_id == str(transfer_run_id))
-                .where(transfer_steps.c.step_type == step_type)
                 .where(transfer_steps.c.source_track_internal_id == str(source_track_id))
                 .where(transfer_steps.c.destination_track_id == destination_track_id)
-                .where(transfer_steps.c.status == "completed")
+                .where(
+                    or_(
+                        *(
+                            and_(
+                                transfer_steps.c.step_type == persisted_step_type,
+                                transfer_steps.c.status == persisted_status,
+                            )
+                            for persisted_step_type, persisted_status in terminal_steps
+                        )
+                    )
+                )
             ).first()
         return row is None
 

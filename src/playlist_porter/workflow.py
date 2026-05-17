@@ -692,12 +692,16 @@ def _execute_transfer_writes(
         repository,
         transfer_run_id,
     )
-    write_ready_pairs = _filter_destination_duplicate_pairs(
-        destination,
-        destination_id,
-        pending_pairs,
-        repository=repository,
-        transfer_run_id=transfer_run_id,
+    write_ready_pairs = (
+        _filter_destination_duplicate_pairs(
+            destination,
+            destination_id,
+            pending_pairs,
+            repository=repository,
+            transfer_run_id=transfer_run_id,
+        )
+        if pending_pairs
+        else []
     )
     logger.info(
         "pending writes resolved",
