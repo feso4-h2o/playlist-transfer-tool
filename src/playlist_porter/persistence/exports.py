@@ -65,7 +65,7 @@ def export_reports(
     if output_format not in {"csv", "json", "both"}:
         raise ValueError("output_format must be csv, json, or both")
 
-    output_path = Path(output_dir) / transfer_run_id
+    output_path = Path(output_dir) / _short_run_id(transfer_run_id)
     output_path.mkdir(parents=True, exist_ok=True)
     summary = build_summary(repository, transfer_run_id)
     unavailable_rows = build_unavailable_rows(repository, transfer_run_id)
@@ -282,6 +282,10 @@ def _paths_for_suffix(output_path: Path, suffix: str) -> dict[str, Path]:
 
 def _has_existing_batch_file(paths: dict[str, Path]) -> bool:
     return any(path.exists() for path in paths.values())
+
+
+def _short_run_id(transfer_run_id: str) -> str:
+    return transfer_run_id[:8]
 
 
 def _short_timestamp() -> str:

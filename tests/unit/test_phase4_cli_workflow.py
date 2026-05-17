@@ -361,7 +361,7 @@ def test_match_uses_config_defaults_when_cli_args_are_omitted(tmp_path) -> None:
     run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
     assert exit_code == 0
     assert run_id is not None
-    report_dir = reports_path / run_id
+    report_dir = reports_path / run_id[:8]
     assert list(report_dir.glob("summary-*-match.json"))
     assert json.loads(config_path.read_text(encoding="utf-8"))["run_id"] == run_id
 
@@ -677,7 +677,7 @@ def test_export_reports_include_expected_columns_and_region_reason(tmp_path) -> 
     exit_code = main(["export-report", "--config", str(config_path)])
 
     rows = build_unavailable_rows(repo, run_id)
-    report_dir = reports_path / run_id
+    report_dir = reports_path / run_id[:8]
     csv_path = next(report_dir.glob("unavailable-*-export-report.csv"))
     json_path = next(report_dir.glob("unavailable-*-export-report.json"))
     csv_rows = list(csv.DictReader(csv_path.open()))
@@ -718,7 +718,7 @@ def test_review_and_export_report_use_config_defaults(tmp_path) -> None:
 
     assert review == 0
     assert export == 0
-    report_dir = reports_path / run_id
+    report_dir = reports_path / run_id[:8]
     assert list(report_dir.glob("unavailable-*-export-report.json"))
 
 
@@ -734,7 +734,7 @@ def test_export_reports_do_not_overwrite_same_second_snapshot(tmp_path, monkeypa
     first = main(["export-report", "--config", str(config_path)])
     second = main(["export-report", "--config", str(config_path)])
 
-    report_dir = reports_path / run_id
+    report_dir = reports_path / run_id[:8]
     assert first == 0
     assert second == 0
     assert (report_dir / "summary-143022-export-report.json").exists()

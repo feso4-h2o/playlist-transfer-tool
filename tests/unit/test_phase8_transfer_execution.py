@@ -131,8 +131,8 @@ def test_phase8_mock_dry_run_exports_summary_matching_metrics(tmp_path) -> None:
 
     assert result.dry_run is True
     assert result.written_count == 0
-    assert summary_path.parent == config.report_output_dir / result.transfer_run_id
-    assert unavailable_path.parent == config.report_output_dir / result.transfer_run_id
+    assert summary_path.parent == config.report_output_dir / result.transfer_run_id[:8]
+    assert unavailable_path.parent == config.report_output_dir / result.transfer_run_id[:8]
     assert summary_path.name.endswith("-match.json")
     assert unavailable_path.name.endswith("-match.json")
     assert result.metrics.source_track_count == 3
