@@ -93,17 +93,33 @@ def _config_file(tmp_path, *, extra_payload=None):
     )
     payload = {
         "database_path": str(database_path),
+        "destination_platform": "mock",
         "report_output_dir": str(reports_path),
+        "report_format": "json",
+        "run_id": "",
+        "source_platform": "mock",
         "mock": {
             "source_playlists_path": str(playlists_path),
             "destination_catalog_path": str(catalog_path),
             "writes_path": str(writes_path),
+        },
+        "commands": {
+            "match": {
+                "source_playlist": "source-playlist",
+                "restart": False,
+            }
         },
     }
     if extra_payload:
         payload.update(extra_payload)
     _write_json(config_path, payload)
     return config_path
+
+
+def _set_config_values(config_path, **values) -> None:
+    payload = json.loads(config_path.read_text(encoding="utf-8"))
+    payload.update(values)
+    _write_json(config_path, payload)
 
 
 def test_logging_flags_parse_before_or_after_subcommand() -> None:
@@ -116,12 +132,6 @@ def test_logging_flags_parse_before_or_after_subcommand() -> None:
             "match",
             "--config",
             "porter.json",
-            "--source-platform",
-            "mock",
-            "--destination-platform",
-            "mock",
-            "--source-playlist",
-            "source",
         ]
     )
     after = parser.parse_args(
@@ -129,12 +139,6 @@ def test_logging_flags_parse_before_or_after_subcommand() -> None:
             "match",
             "--config",
             "porter.json",
-            "--source-platform",
-            "mock",
-            "--destination-platform",
-            "mock",
-            "--source-playlist",
-            "source",
             "-vv",
             "-l",
         ]
@@ -150,9 +154,7 @@ def test_default_logging_does_not_create_log_files(tmp_path, monkeypatch) -> Non
     monkeypatch.chdir(tmp_path)
     config_path = _config_file(tmp_path)
 
-    exit_code = main(
-        ["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"]
-    )
+    exit_code = main(["match", "--config", str(config_path)])
 
     assert exit_code == 0
     assert not (tmp_path / "logs").exists()
@@ -165,9 +167,7 @@ def test_config_logging_payload_does_not_enable_log_files(tmp_path, monkeypatch)
         extra_payload={"logging": {"verbosity": 2, "debug_log": True, "log_dir": "logs"}},
     )
 
-    exit_code = main(
-        ["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"]
-    )
+    exit_code = main(["match", "--config", str(config_path)])
 
     assert exit_code == 0
     assert not (tmp_path / "logs").exists()
@@ -181,9 +181,7 @@ def test_debug_log_flag_creates_debug_log_without_debug_console(
     monkeypatch.chdir(tmp_path)
     config_path = _config_file(tmp_path)
 
-    exit_code = main(
-        ["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist", "-l"]
-    )
+    exit_code = main(["match", "--config", str(config_path), "-l"])
 
     captured = capsys.readouterr()
     log_files = list((tmp_path / "logs").glob("playlist-porter-debug-*.log"))
@@ -237,11 +235,9 @@ def test_debug_log_includes_match_diagnostics(tmp_path, monkeypatch, capsys) -> 
 
     exit_code = main(
         [
-            "dry-run",
+            "match",
             "--config",
             str(config_path),
-            "--source-playlist",
-            "source-playlist",
             "-vv",
             "-l",
         ]
@@ -270,9 +266,7 @@ def test_debug_log_includes_match_diagnostics(tmp_path, monkeypatch, capsys) -> 
 def test_debug_log_includes_review_diagnostics(tmp_path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     config_path = _config_file(tmp_path)
-    assert main(
-        ["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"]
-    ) == 0
+    assert main(["match", "--config", str(config_path)]) == 0
     repo = TransferRepository(tmp_path / "state" / "transfer.sqlite")
     run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
     assert run_id is not None
@@ -281,10 +275,8 @@ def test_debug_log_includes_review_diagnostics(tmp_path, monkeypatch) -> None:
     exit_code = main(
         [
             "review",
-            "--db",
-            str(tmp_path / "state" / "transfer.sqlite"),
-            "--run-id",
-            run_id,
+            "--config",
+            str(config_path),
             "--source-track-id",
             str(decision.source_track.internal_id),
             "--action",
@@ -308,27 +300,17 @@ def test_debug_log_includes_review_diagnostics(tmp_path, monkeypatch) -> None:
 def test_debug_log_includes_write_diagnostics(tmp_path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     config_path = _config_file(tmp_path)
-    assert main(
-        ["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"]
-    ) == 0
+    assert main(["match", "--config", str(config_path)]) == 0
     repo = TransferRepository(tmp_path / "state" / "transfer.sqlite")
     run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
     assert run_id is not None
-
-    exit_code = main(
-        [
-            "write",
-            "--config",
-            str(config_path),
-            "--destination-platform",
-            "mock",
-            "--run-id",
-            run_id,
-            "--create-playlist",
-            "Copied",
-            "-l",
-        ]
+    _set_config_values(
+        config_path,
+        run_id=run_id,
+        commands={"write": {"create_playlist": "Copied"}},
     )
+
+    exit_code = main(["write", "--config", str(config_path), "-l"])
 
     records = _log_records(_latest_log_file(tmp_path))
     messages = _messages(records)
@@ -350,27 +332,13 @@ def test_debug_log_includes_write_diagnostics(tmp_path, monkeypatch) -> None:
 def test_debug_log_includes_export_diagnostics(tmp_path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     config_path = _config_file(tmp_path)
-    assert main(
-        ["dry-run", "--config", str(config_path), "--source-playlist", "source-playlist"]
-    ) == 0
+    assert main(["match", "--config", str(config_path)]) == 0
     repo = TransferRepository(tmp_path / "state" / "transfer.sqlite")
     run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
     assert run_id is not None
+    _set_config_values(config_path, run_id=run_id)
 
-    exit_code = main(
-        [
-            "export-report",
-            "--db",
-            str(tmp_path / "state" / "transfer.sqlite"),
-            "--run-id",
-            run_id,
-            "--output-dir",
-            str(tmp_path / "reports"),
-            "--format",
-            "json",
-            "-l",
-        ]
-    )
+    exit_code = main(["export-report", "--config", str(config_path), "-l"])
 
     records = _log_records(_latest_log_file(tmp_path))
     export_record = next(

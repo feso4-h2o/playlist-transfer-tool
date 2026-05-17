@@ -54,7 +54,7 @@ def test_review_cli_accepts_action_aliases() -> None:
     parser = build_parser()
 
     for action in ("a", "r", "s"):
-        args = parser.parse_args(["review", "--action", action])
+        args = parser.parse_args(["review", "--config", "porter.json", "--action", action])
         assert args.action == action
 
 

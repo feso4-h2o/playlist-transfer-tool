@@ -47,15 +47,6 @@ WRITE_DIAGNOSTICS = diagnostic_logger("write")
 
 
 @dataclass(frozen=True)
-class DryRunResult:
-    """Result from a dry-run command."""
-
-    transfer_run_id: str
-    created: bool
-    metrics: TransferMetrics
-
-
-@dataclass(frozen=True)
 class PreflightResult:
     """Validation result for a planned transfer run."""
 
@@ -522,84 +513,6 @@ def validate_execute_preflight(
         output_dir=str(output_dir),
     )
     return result
-
-
-def dry_run_mock_transfer(
-    config: PorterConfig,
-    *,
-    source_playlist_id: str,
-    database_path: str | Path | None = None,
-    restart: bool = False,
-    console: Console | None = None,
-) -> DryRunResult:
-    """Run mock matching, persist decisions, and perform no destination writes."""
-
-    console = console or Console()
-    repository = TransferRepository(database_path or config.database_path)
-    adapter = create_mock_adapter(config)
-    adapter.authenticate()
-    logger.info(
-        "mock adapter authenticated",
-        database_path=str(database_path or config.database_path),
-    )
-    playlist = adapter.get_playlist(source_playlist_id)
-    logger.info("mock source playlist loaded", track_count=len(playlist.tracks))
-    WORKFLOW_DIAGNOSTICS.debug(
-        "mock source playlist loaded",
-        playlist_name=playlist.name,
-        playlist_platform=playlist.platform,
-        playlist_id=playlist.platform_playlist_id,
-        track_count=len(playlist.tracks),
-    )
-    for track in playlist.tracks:
-        WORKFLOW_DIAGNOSTICS.debug(
-            "mock source playlist track loaded",
-            track=track_summary(track),
-        )
-    run = TransferRun(
-        source_platform="mock",
-        destination_platform="mock",
-        source_playlist=playlist,
-        dry_run=True,
-    )
-
-    if restart:
-        transfer_run_id = repository.create_run(run)
-        created = True
-        logger.info("dry run created", run_id=transfer_run_id, restart=True)
-    else:
-        transfer_run_id, created = repository.get_or_create_run(run)
-        logger.info("dry run resolved", run_id=transfer_run_id, created=created)
-        if not created:
-            logger.info("pruning stale dry-run transfer state", run_id=transfer_run_id)
-            repository.prune_transfer_state(
-                transfer_run_id,
-                [track.internal_id for track in playlist.tracks],
-            )
-
-    repository.save_source_playlist(transfer_run_id, playlist)
-    decisions = match_playlist(playlist, adapter)
-    logger.info(
-        "mock match decisions generated",
-        run_id=transfer_run_id,
-        decision_count=len(decisions),
-        candidate_count=sum(len(decision.candidates) for decision in decisions),
-    )
-    WORKFLOW_DIAGNOSTICS.debug(
-        "mock match decisions generated",
-        run_id=transfer_run_id,
-        decision_count=len(decisions),
-        candidate_count=sum(len(decision.candidates) for decision in decisions),
-    )
-    repository.save_match_decisions(transfer_run_id, decisions)
-    metrics = repository.load_metrics(transfer_run_id)
-    WORKFLOW_DIAGNOSTICS.debug(
-        "mock dry-run metrics loaded",
-        run_id=transfer_run_id,
-        metrics=metrics_snapshot(metrics),
-    )
-    render_metrics(console, metrics, title="Dry run summary")
-    return DryRunResult(transfer_run_id=transfer_run_id, created=created, metrics=metrics)
 
 
 def execute_mock_transfer(
@@ -1179,7 +1092,6 @@ def _writable_path_issues(
 
 
 __all__ = [
-    "DryRunResult",
     "ExecuteResult",
     "PlatformName",
     "PreflightError",
@@ -1187,7 +1099,6 @@ __all__ = [
     "TransferResult",
     "create_mock_adapter",
     "create_platform_adapter",
-    "dry_run_mock_transfer",
     "execute_transfer_run",
     "execute_transfer_run_with_adapter",
     "execute_mock_transfer",
