@@ -2,9 +2,11 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from playlist_porter.matching.candidates import match_track
 from playlist_porter.matching.status import MatchStatus, UnavailableReason
-from playlist_porter.models import UniversalTrack
+from playlist_porter.models import MatchDecision, UniversalTrack
 from playlist_porter.platforms.mock import MockAdapter
 
 
@@ -38,6 +40,18 @@ def _qqmusic_replay_adapter() -> MockAdapter:
         catalog_path=root / "fixtures" / "qqmusic-search-catalog.json",
         search_results_path=root / "fixtures" / "qqmusic-search-results.json",
     )
+
+
+def _decision_from_replay_fixture(fixture_name: str, source_title: str) -> MatchDecision:
+    payload = _fixture_payload(fixture_name)
+    source_record = _result_by_source_title(payload, source_title)["source_track"]
+    source_track = UniversalTrack.model_validate(source_record)
+    adapter = (
+        _spotify_replay_adapter()
+        if fixture_name == "spotify-search-results.json"
+        else _qqmusic_replay_adapter()
+    )
+    return match_track(source_track, adapter)
 
 
 def test_spotify_replay_search_fixture_returns_historical_exact_query_candidates() -> None:
@@ -100,3 +114,71 @@ def test_spotify_replay_fixture_covers_historical_low_confidence_regression() ->
     assert decision.score == 0.658
     assert decision.selected_candidate is None
     assert UnavailableReason.LOW_CONFIDENCE in decision.reason_codes
+
+
+def test_spotify_replay_fixture_covers_historical_version_mismatch_candidate_reasons() -> None:
+    decision = _decision_from_replay_fixture("spotify-search-results.json", "Deja Vu (Explicit)")
+
+    assert decision.status is MatchStatus.NEEDS_REVIEW
+    assert UnavailableReason.VERSION_MISMATCH in decision.reason_codes
+    assert decision.candidates[0].evidence["reason_codes"] == "version_mismatch"
+    assert decision.candidates[4].evidence["reason_codes"] == "artist_mismatch,version_mismatch"
+
+
+@pytest.mark.parametrize(
+    ("source_title", "expected_decision_reasons", "expected_top_candidate_reasons"),
+    [
+        (
+            "\u7f8e\u4eba",
+            [
+                UnavailableReason.LOW_CONFIDENCE,
+                UnavailableReason.DURATION_MISMATCH,
+                UnavailableReason.ARTIST_MISMATCH,
+            ],
+            "artist_mismatch,duration_mismatch",
+        ),
+        (
+            "Barricades (\u67b7\u9501)",
+            [UnavailableReason.LOW_CONFIDENCE, UnavailableReason.ARTIST_MISMATCH],
+            "artist_mismatch",
+        ),
+    ],
+)
+def test_spotify_replay_fixture_covers_non_english_artist_reason_regressions(
+    source_title: str,
+    expected_decision_reasons: list[UnavailableReason],
+    expected_top_candidate_reasons: str,
+) -> None:
+    decision = _decision_from_replay_fixture("spotify-search-results.json", source_title)
+
+    assert decision.status is MatchStatus.NOT_FOUND
+    assert decision.reason_codes == expected_decision_reasons
+    assert decision.candidates[0].evidence["reason_codes"] == expected_top_candidate_reasons
+
+
+def test_qqmusic_replay_fixture_covers_cross_language_ambiguous_title_candidates() -> None:
+    decision = _decision_from_replay_fixture(
+        "qqmusic-search-results.json",
+        "\ub208,\ucf54,\uc785 (Eyes, Nose, Lips)",
+    )
+
+    assert decision.status is MatchStatus.NEEDS_REVIEW
+    assert decision.reason_codes == [UnavailableReason.AMBIGUOUS_CANDIDATES]
+    assert decision.candidates[0].track.platform_track_id == "5665639:1"
+    assert decision.candidates[1].track.platform_track_id == "233031271:1"
+    assert decision.candidates[3].evidence["reason_codes"] == "duration_mismatch,version_mismatch"
+
+
+def test_qqmusic_replay_fixture_covers_translated_artist_name_mismatch_candidate() -> None:
+    decision = _decision_from_replay_fixture(
+        "qqmusic-search-results.json",
+        "Dance with STEEL BALL RUN",
+    )
+
+    assert decision.status is MatchStatus.NOT_FOUND
+    assert decision.reason_codes == [
+        UnavailableReason.LOW_CONFIDENCE,
+        UnavailableReason.ARTIST_MISMATCH,
+    ]
+    assert decision.candidates[0].track.platform_track_id == "650091207:1"
+    assert decision.candidates[0].evidence["reason_codes"] == "artist_mismatch"
