@@ -735,6 +735,7 @@ def _resolve_destination_write_target(
         destination_playlist_id is not None
         and persisted_destination_id is not None
         and destination_playlist_id != persisted_destination_id
+        and not destination.normalizes_destination_playlist_ids
     ):
         raise ValueError(
             "transfer run already targets destination playlist "
@@ -742,26 +743,47 @@ def _resolve_destination_write_target(
             f"{destination_playlist_id}"
         )
     if destination_playlist_id is not None:
-        destination.validate_destination_playlist(destination_playlist_id)
-        repository.update_destination_playlist_id(transfer_run_id, destination_playlist_id)
+        normalized_destination_id = (
+            _optional_text(destination.validate_destination_playlist(destination_playlist_id))
+            or destination_playlist_id
+        )
+        if (
+            persisted_destination_id is not None
+            and normalized_destination_id != persisted_destination_id
+            and not (
+                destination.normalizes_destination_playlist_ids
+                and destination_playlist_id == persisted_destination_id
+            )
+        ):
+            raise ValueError(
+                "transfer run already targets destination playlist "
+                f"{persisted_destination_id}; start a new match run to use "
+                f"{normalized_destination_id}"
+            )
+        repository.update_destination_playlist_id(transfer_run_id, normalized_destination_id)
         logger.info("destination playlist id recorded", run_id=transfer_run_id)
         WRITE_DIAGNOSTICS.debug(
             "destination playlist id recorded",
             run_id=transfer_run_id,
             destination_platform=destination.platform_name,
-            destination_playlist_id=destination_playlist_id,
+            destination_playlist_id=normalized_destination_id,
         )
-        return destination_playlist_id
+        return normalized_destination_id
 
     if persisted_destination_id is not None:
-        destination.validate_destination_playlist(persisted_destination_id)
+        normalized_destination_id = (
+            _optional_text(destination.validate_destination_playlist(persisted_destination_id))
+            or persisted_destination_id
+        )
+        if normalized_destination_id != persisted_destination_id:
+            repository.update_destination_playlist_id(transfer_run_id, normalized_destination_id)
         WRITE_DIAGNOSTICS.debug(
             "destination playlist reused",
             run_id=transfer_run_id,
             destination_platform=destination.platform_name,
-            destination_playlist_id=persisted_destination_id,
+            destination_playlist_id=normalized_destination_id,
         )
-        return persisted_destination_id
+        return normalized_destination_id
 
     if create_playlist_name is None:
         raise ValueError(

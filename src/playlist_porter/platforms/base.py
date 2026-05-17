@@ -24,6 +24,7 @@ class BasePlatform(ABC):
 
     platform_name: str
     capabilities: PlatformCapabilities
+    normalizes_destination_playlist_ids: bool = False
 
     @abstractmethod
     def authenticate(self) -> None:
@@ -45,13 +46,15 @@ class BasePlatform(ABC):
     def add_tracks(self, playlist_id: str, track_ids: list[str]) -> None:
         """Append destination-platform track IDs to a playlist."""
 
-    def validate_destination_playlist(self, playlist_id: str) -> None:
+    def validate_destination_playlist(self, playlist_id: str) -> str | None:
         """Validate that an existing destination playlist can receive writes.
 
         Adapters that cannot check this cheaply may leave the default no-op.
+        Adapters that normalize write targets may return the target to persist.
         """
 
         del playlist_id
+        return None
 
 
 __all__ = ["BasePlatform", "PlatformCapabilities"]
