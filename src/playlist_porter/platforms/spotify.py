@@ -36,6 +36,7 @@ class SpotifyAdapter(BasePlatform):
     """Official Spotify adapter backed by Spotipy."""
 
     platform_name = "spotify"
+    normalizes_destination_playlist_ids = True
     capabilities = PlatformCapabilities(
         supports_read=True,
         supports_search=True,
@@ -189,7 +190,7 @@ class SpotifyAdapter(BasePlatform):
                     track_ids.add(track_id)
         return track_ids
 
-    def validate_destination_playlist(self, playlist_id: str) -> None:
+    def validate_destination_playlist(self, playlist_id: str) -> str:
         """Ensure an existing Spotify playlist is writable before adding items."""
 
         client = self._write_client_or_raise()
@@ -212,6 +213,7 @@ class SpotifyAdapter(BasePlatform):
                 "Spotify playlist is not writable by the current user: "
                 f"{spotify_playlist_id}"
             )
+        return spotify_playlist_id
 
     def add_tracks_with_progress(
         self,

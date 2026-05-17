@@ -690,24 +690,33 @@ def _resolve_destination_write_target(
             f"{destination_playlist_id}"
         )
     if destination_playlist_id is not None:
-        normalized_destination_id = (
-            _optional_text(destination.validate_destination_playlist(destination_playlist_id))
-            or destination_playlist_id
+        normalized_destination_id = _normalize_destination_playlist_id(
+            destination,
+            destination_playlist_id,
         )
+        normalized_persisted_destination_id = persisted_destination_id
         if (
             persisted_destination_id is not None
-            and normalized_destination_id != persisted_destination_id
-            and not (
-                destination.normalizes_destination_playlist_ids
-                and destination_playlist_id == persisted_destination_id
+            and destination.normalizes_destination_playlist_ids
+        ):
+            normalized_persisted_destination_id = _normalize_destination_playlist_id(
+                destination,
+                persisted_destination_id,
             )
+        if (
+            normalized_persisted_destination_id is not None
+            and normalized_destination_id != normalized_persisted_destination_id
         ):
             raise ValueError(
                 "transfer run already targets destination playlist "
                 f"{persisted_destination_id}; start a new match run to use "
                 f"{normalized_destination_id}"
             )
-        repository.update_destination_playlist_id(transfer_run_id, normalized_destination_id)
+        if normalized_destination_id != persisted_destination_id:
+            repository.update_destination_playlist_id(
+                transfer_run_id,
+                normalized_destination_id,
+            )
         logger.info("destination playlist id recorded", run_id=transfer_run_id)
         WRITE_DIAGNOSTICS.debug(
             "destination playlist id recorded",
@@ -718,9 +727,9 @@ def _resolve_destination_write_target(
         return normalized_destination_id
 
     if persisted_destination_id is not None:
-        normalized_destination_id = (
-            _optional_text(destination.validate_destination_playlist(persisted_destination_id))
-            or persisted_destination_id
+        normalized_destination_id = _normalize_destination_playlist_id(
+            destination,
+            persisted_destination_id,
         )
         if normalized_destination_id != persisted_destination_id:
             repository.update_destination_playlist_id(transfer_run_id, normalized_destination_id)
@@ -762,6 +771,10 @@ def _optional_text(value: str | None) -> str | None:
         return None
     text = value.strip()
     return text or None
+
+
+def _normalize_destination_playlist_id(destination: BasePlatform, playlist_id: str) -> str:
+    return _optional_text(destination.validate_destination_playlist(playlist_id)) or playlist_id
 
 
 def render_metrics(console: Console, metrics: TransferMetrics, *, title: str) -> None:

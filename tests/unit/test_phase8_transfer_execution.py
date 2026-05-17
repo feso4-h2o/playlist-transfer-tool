@@ -104,7 +104,7 @@ def _seed_mock_destination(config: PorterConfig, playlist_id: str) -> None:
 
 def _summary_report(result) -> dict:
     summary_path = next(
-        path for path in result.report_paths if path.name.startswith("transfer-summary-")
+        path for path in result.report_paths if path.name.startswith("summary-")
     )
     return json.loads(summary_path.read_text(encoding="utf-8"))
 
@@ -282,6 +282,35 @@ def test_phase8_write_run_allows_normalized_destination_target_upgrade(tmp_path)
     assert result.destination_playlist_id == "35:9712240561"
     assert run.destination_playlist_id == "35:9712240561"
     assert destination.playlist_ids == ["35:9712240561"]
+
+
+def test_phase8_write_run_allows_normalized_destination_target_reuse(tmp_path) -> None:
+    database_path = tmp_path / "transfer.sqlite"
+    source = StaticSourceAdapter()
+    destination = UrlNormalizingDestinationAdapter()
+
+    dry_run = run_transfer_with_adapters(
+        source,
+        destination,
+        source_playlist_id="source-playlist",
+        dry_run=True,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+        destination_playlist_id="https://open.spotify.com/playlist/playlist-1",
+    )
+
+    result = execute_transfer_run_with_adapter(
+        destination,
+        transfer_run_id=dry_run.transfer_run_id,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+        destination_playlist_id="playlist-1",
+    )
+
+    run = TransferRepository(database_path).load_run(dry_run.transfer_run_id)
+    assert result.destination_playlist_id == "playlist-1"
+    assert run.destination_playlist_id == "playlist-1"
+    assert destination.playlist_ids == ["playlist-1"]
 
 
 def test_phase8_write_run_rejects_destination_platform_mismatch(tmp_path) -> None:
@@ -870,6 +899,25 @@ class NormalizingDestinationAdapter(FlakyDestinationAdapter):
     def validate_destination_playlist(self, playlist_id: str) -> str:
         assert playlist_id == "9712240561"
         return "35:9712240561"
+
+    def add_tracks(self, playlist_id: str, track_ids: list[str]) -> None:
+        self.playlist_ids.append(playlist_id)
+        super().add_tracks(playlist_id, track_ids)
+
+
+class UrlNormalizingDestinationAdapter(FlakyDestinationAdapter):
+    platform_name = "url-normalizing"
+    normalizes_destination_playlist_ids = True
+
+    def __init__(self) -> None:
+        super().__init__(fail_after_successes=None)
+        self.playlist_ids: list[str] = []
+
+    def validate_destination_playlist(self, playlist_id: str) -> str:
+        if playlist_id == "https://open.spotify.com/playlist/playlist-1":
+            return "playlist-1"
+        assert playlist_id == "playlist-1"
+        return playlist_id
 
     def add_tracks(self, playlist_id: str, track_ids: list[str]) -> None:
         self.playlist_ids.append(playlist_id)
