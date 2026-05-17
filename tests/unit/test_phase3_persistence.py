@@ -10,7 +10,7 @@ from playlist_porter.models import (
     TransferRun,
     UniversalTrack,
 )
-from playlist_porter.persistence.repositories import TransferRepository
+from playlist_porter.persistence.repositories import WRITE_SKIP_EXISTING_STEP, TransferRepository
 from playlist_porter.platforms.mock import MockAdapter
 
 
@@ -232,6 +232,30 @@ def test_resume_state_skips_completed_write_steps(tmp_path) -> None:
     assert str(source.internal_id) in resume_state.completed_write_source_track_ids
     assert resume_state.completed_destination_track_ids == frozenset({"dest-1"})
     assert repo.load_metrics(run_id).write_success_count == 1
+
+
+def test_resume_state_skips_existing_destination_write_steps(tmp_path) -> None:
+    repo = _repo(tmp_path)
+    source = _track("Song", track_id="source-1")
+    playlist = Playlist(name="Source", tracks=[source])
+    run_id = repo.create_run(_run(playlist))
+
+    repo.save_source_playlist(run_id, playlist)
+    repo.record_write_skip(
+        run_id,
+        source.internal_id,
+        "dest-1",
+        step_type=WRITE_SKIP_EXISTING_STEP,
+    )
+
+    assert repo.should_write_track(run_id, source.internal_id, "dest-1") is False
+    assert repo.should_write_track(run_id, source.internal_id, "dest-2") is True
+    assert repo.pending_write_track_ids(
+        run_id,
+        ["dest-1", "dest-2"],
+        source_track_ids=[source.internal_id, source.internal_id],
+    ) == ["dest-2"]
+    assert repo.load_metrics(run_id).write_success_count == 0
 
 
 def test_pending_write_filter_keeps_duplicate_destination_tracks_source_aware(tmp_path) -> None:

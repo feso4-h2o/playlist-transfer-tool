@@ -393,6 +393,38 @@ def test_phase8_resume_skips_recorded_writes(tmp_path) -> None:
     ).write_success_count == 1
 
 
+def test_phase8_resume_skips_recorded_destination_duplicate_proofs(tmp_path) -> None:
+    database_path = tmp_path / "transfer.sqlite"
+    destination = ReadableDestinationAdapter(existing_track_ids={"dest-1"})
+
+    first = run_transfer_with_adapters(
+        StaticSourceAdapter(),
+        destination,
+        source_playlist_id="source-playlist",
+        dry_run=False,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+        destination_playlist_id="existing-playlist",
+    )
+    second = run_transfer_with_adapters(
+        StaticSourceAdapter(),
+        destination,
+        source_playlist_id="source-playlist",
+        dry_run=False,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+        destination_playlist_id="existing-playlist",
+    )
+
+    summary = _summary_report(second)
+    assert first.transfer_run_id == second.transfer_run_id
+    assert second.written_count == 0
+    assert second.skipped_count == 1
+    assert destination.destination_read_count == 1
+    assert summary["write_skipped_existing_count"] == 1
+    assert summary["write_skipped_resume_count"] == 1
+
+
 def test_phase8_partial_write_failure_records_success_before_resume(tmp_path) -> None:
     database_path = tmp_path / "transfer.sqlite"
     destination = FlakyDestinationAdapter(fail_after_successes=1)
@@ -804,6 +836,25 @@ class FlakyDestinationAdapter(BasePlatform):
         ):
             raise RuntimeError("simulated write failure")
         self.added_track_ids.extend(track_ids)
+
+
+class ReadableDestinationAdapter(FlakyDestinationAdapter):
+    capabilities = PlatformCapabilities(
+        supports_read=True,
+        supports_search=True,
+        supports_write=True,
+    )
+    platform_name = "readable"
+
+    def __init__(self, *, existing_track_ids: set[str]) -> None:
+        super().__init__(fail_after_successes=None)
+        self.existing_track_ids = existing_track_ids
+        self.destination_read_count = 0
+
+    def get_destination_track_ids(self, playlist_id: str) -> set[str]:
+        assert playlist_id == "existing-playlist"
+        self.destination_read_count += 1
+        return self.existing_track_ids | set(self.added_track_ids)
 
 
 class NormalizingDestinationAdapter(FlakyDestinationAdapter):
