@@ -156,6 +156,36 @@ def test_cli_match_persists_decisions_without_writes(tmp_path) -> None:
     ]
 
 
+def test_mock_source_track_link_evidence_persists_to_match_decision(tmp_path) -> None:
+    config_path, database_path, _, _ = _config_file(
+        tmp_path,
+        playlist_tracks=[
+            {
+                "id": "200030089:1",
+                "platform": "qqmusic",
+                "title": "Source",
+                "artists": ["Artist"],
+                "duration_seconds": 180,
+                "qqmusic_songmid": "001abcDEFghi",
+            }
+        ],
+        catalog_tracks=[],
+    )
+
+    main(["match", "--config", str(config_path)])
+
+    repo = TransferRepository(database_path)
+    run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
+    assert run_id is not None
+    decision = repo.load_match_decisions(run_id)[0]
+    assert decision.source_track.platform_track_id == "200030089:1"
+    assert decision.evidence["qqmusic_songmid"] == "001abcDEFghi"
+    assert (
+        decision.evidence["qqmusic_url"]
+        == "https://y.qq.com/n/ryqq/songDetail/001abcDEFghi"
+    )
+
+
 def test_repeated_dry_run_refreshes_existing_fixture_tracks(tmp_path) -> None:
     config_path, database_path, _, _ = _phase4_fixture(tmp_path)
 
