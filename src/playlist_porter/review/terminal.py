@@ -264,7 +264,7 @@ def _candidate_metadata(candidate: TrackCandidate) -> str | Text:
 
 def _candidate_ids(candidate: TrackCandidate) -> str | Text:
     track = candidate.track
-    return _track_id_fields(track)
+    return _track_id_fields(track, url=_candidate_destination_url(candidate))
 
 
 def _candidate_reason_text(candidate: TrackCandidate) -> str:
@@ -287,12 +287,13 @@ def _track_metadata_fields(track: UniversalTrack, *, include_album: bool) -> str
     return _joined_fields(values)
 
 
-def _track_id_fields(track: UniversalTrack) -> str | Text:
+def _track_id_fields(track: UniversalTrack, *, url: str | None = None) -> str | Text:
+    destination_url = url or _destination_url(track.platform, track.platform_track_id)
     return _joined_fields(
         [
             ("ISRC", track.isrc),
             ("Platform ID", track.platform_track_id),
-            ("URL", _destination_link(track.platform, track.platform_track_id)),
+            ("URL", _destination_link(destination_url)),
         ]
     )
 
@@ -362,15 +363,33 @@ def _destination_url(platform: str | None, platform_track_id: str | None) -> str
     return None
 
 
+def _candidate_destination_url(candidate: TrackCandidate) -> str | None:
+    if candidate.track.platform is None or candidate.track.platform.casefold() != "qqmusic":
+        return _destination_url(candidate.track.platform, candidate.track.platform_track_id)
+    evidence_url = _optional_text(candidate.evidence.get("qqmusic_url"))
+    if evidence_url is not None:
+        return evidence_url
+    songmid = _optional_text(candidate.evidence.get("qqmusic_songmid"))
+    if songmid is not None:
+        return f"https://y.qq.com/n/ryqq/songDetail/{songmid}"
+    return _destination_url(candidate.track.platform, candidate.track.platform_track_id)
+
+
 def _is_qqmusic_songmid(platform_track_id: str) -> bool:
     return ":" not in platform_track_id and not platform_track_id.isdigit()
 
 
-def _destination_link(platform: str | None, platform_track_id: str | None) -> Text | None:
-    url = _destination_url(platform, platform_track_id)
+def _destination_link(url: str | None) -> Text | None:
     if url is None:
         return None
     return Text("Link", style=f"link {url}")
+
+
+def _optional_text(value: object) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
 
 
 __all__ = [

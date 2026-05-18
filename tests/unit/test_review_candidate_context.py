@@ -39,12 +39,21 @@ def _track(
     )
 
 
-def _candidate(track: UniversalTrack, *, rank: int, score: float) -> TrackCandidate:
+def _candidate(
+    track: UniversalTrack,
+    *,
+    rank: int,
+    score: float,
+    evidence: dict[str, str | None] | None = None,
+) -> TrackCandidate:
+    candidate_evidence = {"reason_codes": "duration_mismatch" if rank == 2 else None}
+    if evidence:
+        candidate_evidence.update(evidence)
     return TrackCandidate(
         track=track,
         rank=rank,
         score=score,
-        evidence={"reason_codes": "duration_mismatch" if rank == 2 else None},
+        evidence=candidate_evidence,
     )
 
 
@@ -129,6 +138,72 @@ def test_review_output_derives_qqmusic_songmid_url() -> None:
 
     assert "Link" in text
     assert "https://y.qq.com/n/ryqq/songDetail/qqsongmid" not in text
+
+
+def test_review_output_uses_qqmusic_url_evidence_for_numeric_track_id() -> None:
+    decision = MatchDecision(
+        source_track=_track("Source", platform="mock", track_id="source-id"),
+        status=MatchStatus.NEEDS_REVIEW,
+        candidates=[
+            _candidate(
+                _track("Destination", platform="qqmusic", track_id="200030089:1"),
+                rank=1,
+                score=0.9,
+                evidence={
+                    "qqmusic_url": "https://y.qq.com/n/ryqq/songDetail/001abcDEFghi",
+                },
+            )
+        ],
+        reason_codes=[UnavailableReason.AMBIGUOUS_CANDIDATES],
+    )
+
+    text = _render_text(decision)
+
+    assert "Platform ID: 200030089:1" in text
+    assert "Link" in text
+    assert "https://y.qq.com/n/ryqq/songDetail/001abcDEFghi" not in text
+
+
+def test_review_output_derives_qqmusic_url_from_songmid_evidence() -> None:
+    decision = MatchDecision(
+        source_track=_track("Source", platform="spotify", track_id="source-id"),
+        status=MatchStatus.NEEDS_REVIEW,
+        candidates=[
+            _candidate(
+                _track("Destination", platform="qqmusic", track_id="200030089:1"),
+                rank=1,
+                score=0.9,
+                evidence={"qqmusic_songmid": "001abcDEFghi"},
+            )
+        ],
+        reason_codes=[UnavailableReason.AMBIGUOUS_CANDIDATES],
+    )
+
+    text = _render_text(decision)
+
+    assert "Platform ID: 200030089:1" in text
+    assert "Link" in text
+    assert "https://y.qq.com/n/ryqq/songDetail/001abcDEFghi" not in text
+
+
+def test_review_output_keeps_numeric_qqmusic_track_id_without_link_evidence() -> None:
+    decision = MatchDecision(
+        source_track=_track("Source", platform="mock", track_id="source-id"),
+        status=MatchStatus.NEEDS_REVIEW,
+        candidates=[
+            _candidate(
+                _track("Destination", platform="qqmusic", track_id="200030089:1"),
+                rank=1,
+                score=0.9,
+            )
+        ],
+        reason_codes=[UnavailableReason.AMBIGUOUS_CANDIDATES],
+    )
+
+    text = _render_text(decision)
+
+    assert "Platform ID: 200030089:1" in text
+    assert "URL:" not in text
 
 
 def test_review_output_omits_missing_optional_metadata_without_none_text() -> None:
