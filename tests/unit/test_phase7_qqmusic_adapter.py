@@ -419,6 +419,26 @@ def test_qqmusic_adapter_search_retries_transient_failures() -> None:
     assert candidates[0].evidence["qqmusic_capability"] == "search_by_type"
 
 
+def test_qqmusic_adapter_search_preserves_public_song_link_evidence() -> None:
+    client = FakeQQMusicClient(
+        search_payload={
+            "song": [
+                song_payload(id=650091207, mid="001abcDEFghi", type=1),
+            ]
+        },
+    )
+    adapter = QQMusicAdapter(client=client, rate_limit_policy=qq_policy())
+
+    candidates = adapter.search_tracks("\u4e03\u91cc\u9999 \u5468\u6770\u4f26", limit=2)
+
+    assert candidates[0].track.platform_track_id == "650091207:1"
+    assert candidates[0].evidence["qqmusic_songmid"] == "001abcDEFghi"
+    assert (
+        candidates[0].evidence["qqmusic_url"]
+        == "https://y.qq.com/n/ryqq/songDetail/001abcDEFghi"
+    )
+
+
 def test_qqmusic_search_refreshes_client_for_late_empty_result() -> None:
     first_client = SearchPayloadClient(
         [

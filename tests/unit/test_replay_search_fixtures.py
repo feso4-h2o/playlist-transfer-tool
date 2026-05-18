@@ -90,6 +90,11 @@ def test_qqmusic_replay_search_fixture_returns_historical_exact_query_candidates
     assert candidates[0].track.platform_track_id == "213221025:1"
     assert candidates[0].evidence["search_rank"] == 1
     assert candidates[0].evidence["qqmusic_capability"] == "search_by_type"
+    assert candidates[0].evidence["qqmusic_songmid"] == "001PrologueMid"
+    assert (
+        candidates[0].evidence["qqmusic_url"]
+        == "https://y.qq.com/n/ryqq/songDetail/001PrologueMid"
+    )
 
 
 def test_spotify_replay_fixture_covers_historical_ambiguous_match_regression() -> None:

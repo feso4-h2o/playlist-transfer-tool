@@ -285,11 +285,13 @@ class QQMusicAdapter(BasePlatform):
         """Search QQ Music and return ranked internal candidates."""
 
         payload = self._search_tracks_payload(query, limit=limit)
-        tracks = search_tracks_from_qqmusic_payload(payload)
+        songs = _song_items_from_search_payload(payload)
+        tracks = [track_from_qqmusic_payload(song) for song in songs]
         if not tracks and self._should_retry_empty_search():
             self._refresh_client()
             payload = self._search_tracks_payload(query, limit=limit)
-            tracks = search_tracks_from_qqmusic_payload(payload)
+            songs = _song_items_from_search_payload(payload)
+            tracks = [track_from_qqmusic_payload(song) for song in songs]
         return [
             TrackCandidate(
                 track=track,
@@ -299,9 +301,13 @@ class QQMusicAdapter(BasePlatform):
                 evidence={
                     "search_rank": rank,
                     "qqmusic_capability": "search_by_type",
+                    **_qqmusic_public_link_evidence(song),
                 },
             )
-            for rank, track in enumerate(tracks[:limit], start=1)
+            for rank, (track, song) in enumerate(
+                zip(tracks[:limit], songs[:limit], strict=False),
+                start=1,
+            )
         ]
 
     def _search_tracks_payload(self, query: str, *, limit: int) -> Any:
@@ -496,8 +502,7 @@ def playlist_from_qqmusic_payload(
 def search_tracks_from_qqmusic_payload(payload: Any) -> list[UniversalTrack]:
     """Map a QQ Music search response into internal tracks."""
 
-    songs = _first_value(payload, "song", "songs", "list") or []
-    return [track_from_qqmusic_payload(song) for song in songs]
+    return [track_from_qqmusic_payload(song) for song in _song_items_from_search_payload(payload)]
 
 
 def track_from_qqmusic_payload(
@@ -547,6 +552,27 @@ def _song_items_from_playlist_payload(payload: Any) -> Sequence[Any]:
     if not isinstance(songs, Sequence) or isinstance(songs, str | bytes):
         raise ValidationFailure("QQ Music playlist response did not include a song list")
     return songs
+
+
+def _song_items_from_search_payload(payload: Any) -> Sequence[Any]:
+    songs = _first_value(payload, "song", "songs", "list") or []
+    if not isinstance(songs, Sequence) or isinstance(songs, str | bytes):
+        raise ValidationFailure("QQ Music search response did not include a song list")
+    return songs
+
+
+def _qqmusic_public_link_evidence(payload: Any) -> dict[str, str]:
+    songmid = _optional_text(_first_value(payload, "mid", "songmid"))
+    if songmid is None:
+        return {}
+    return {
+        "qqmusic_songmid": songmid,
+        "qqmusic_url": _qqmusic_song_url(songmid),
+    }
+
+
+def _qqmusic_song_url(songmid: str) -> str:
+    return f"https://y.qq.com/n/ryqq/songDetail/{songmid}"
 
 
 def _merge_playlist_pages(payload: Any) -> Any:
