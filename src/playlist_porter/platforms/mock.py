@@ -164,6 +164,7 @@ class MockAdapter(BasePlatform):
                     evidence={
                         "search_query_score": round(score, 4),
                         "popularity": entry.popularity,
+                        **entry.track._public_link_evidence,
                     },
                     unavailable_reason=entry.unavailable_reason,
                 )
@@ -304,7 +305,7 @@ def _track_from_record(record: dict[str, Any], *, platform: str) -> UniversalTra
         record.get("platform_track_id"),
         record.get("id"),
     )
-    return UniversalTrack(
+    track = UniversalTrack(
         internal_id=_stable_internal_id(platform_value, platform_track_id, record),
         title=record["title"],
         artists=_parse_artists(record["artists"]),
@@ -318,6 +319,23 @@ def _track_from_record(record: dict[str, Any], *, platform: str) -> UniversalTra
         explicit=_optional_bool(record.get("explicit")),
         source_playlist_position=_optional_int(record.get("source_playlist_position")),
     )
+    track._public_link_evidence.update(_public_link_evidence_from_record(record))
+    return track
+
+
+def _public_link_evidence_from_record(record: dict[str, Any]) -> dict[str, str]:
+    evidence = {}
+    qqmusic_url = _optional_text(record.get("qqmusic_url"))
+    if qqmusic_url is not None:
+        evidence["qqmusic_url"] = qqmusic_url
+    qqmusic_songmid = _optional_text(record.get("qqmusic_songmid"))
+    if qqmusic_songmid is not None:
+        evidence["qqmusic_songmid"] = qqmusic_songmid
+        evidence.setdefault(
+            "qqmusic_url",
+            f"https://y.qq.com/n/ryqq/songDetail/{qqmusic_songmid}",
+        )
+    return evidence
 
 
 def _stable_internal_id(

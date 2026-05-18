@@ -264,6 +264,93 @@ def test_mock_adapter_loads_numeric_json_track_ids_as_strings(tmp_path) -> None:
     assert candidates[0].track.platform_track_id == "789"
 
 
+def test_mock_adapter_search_preserves_catalog_track_link_evidence(tmp_path) -> None:
+    playlists_path = tmp_path / "playlists.json"
+    catalog_path = tmp_path / "catalog.json"
+    playlists_path.write_text(
+        json.dumps(
+            {
+                "playlists": [
+                    {
+                        "id": "source-1",
+                        "name": "Source",
+                        "tracks": [
+                            {
+                                "title": "Song",
+                                "artists": ["Artist"],
+                                "duration_seconds": 180,
+                            }
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    catalog_path.write_text(
+        json.dumps(
+            {
+                "catalog": [
+                    {
+                        "id": "200030089:1",
+                        "platform": "qqmusic",
+                        "title": "Song",
+                        "artists": ["Artist"],
+                        "duration_seconds": 180,
+                        "qqmusic_songmid": "001abcDEFghi",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    adapter = MockAdapter.from_json(
+        playlists_path=playlists_path,
+        catalog_path=catalog_path,
+    )
+    candidates = adapter.search_tracks("song artist")
+
+    assert candidates[0].track.platform_track_id == "200030089:1"
+    assert candidates[0].evidence["qqmusic_songmid"] == "001abcDEFghi"
+    assert (
+        candidates[0].evidence["qqmusic_url"]
+        == "https://y.qq.com/n/ryqq/songDetail/001abcDEFghi"
+    )
+
+
+def test_source_link_evidence_is_namespaced_from_candidate_evidence() -> None:
+    source = _track("Song", track_id="650091207:1")
+    source.platform = "qqmusic"
+    source._public_link_evidence.update(
+        {
+            "qqmusic_songmid": "001SourceMid",
+            "qqmusic_url": "https://y.qq.com/n/ryqq/songDetail/001SourceMid",
+        }
+    )
+    candidate = _track("Song", track_id="200030089:1")
+    candidate.platform = "qqmusic"
+    candidate._public_link_evidence.update(
+        {
+            "qqmusic_songmid": "001CandidateMid",
+            "qqmusic_url": "https://y.qq.com/n/ryqq/songDetail/001CandidateMid",
+        }
+    )
+
+    decision = match_track(source, MockAdapter(catalog=[candidate]))
+
+    assert decision.evidence["source_qqmusic_songmid"] == "001SourceMid"
+    assert (
+        decision.evidence["source_qqmusic_url"]
+        == "https://y.qq.com/n/ryqq/songDetail/001SourceMid"
+    )
+    assert decision.evidence["qqmusic_songmid"] == "001CandidateMid"
+    assert (
+        decision.evidence["qqmusic_url"]
+        == "https://y.qq.com/n/ryqq/songDetail/001CandidateMid"
+    )
+
+
 def test_playlist_matching_runs_end_to_end_with_mock_adapter() -> None:
     playlist = Playlist(
         name="Source",

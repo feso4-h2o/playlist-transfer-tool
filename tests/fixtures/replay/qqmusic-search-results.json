@@ -25,6 +25,8 @@
             "explicit_score": 0.8,
             "primary_artist_score": 1.0,
             "qqmusic_capability": "search_by_type",
+            "qqmusic_songmid": "001PrologueMid",
+            "qqmusic_url": "https://y.qq.com/n/ryqq/songDetail/001PrologueMid",
             "rank_score": 1.0,
             "reason_codes": null,
             "release_score": 1.0,

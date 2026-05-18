@@ -84,10 +84,18 @@ class WriteCommandConfig:
 
 
 @dataclass(frozen=True)
+class ReviewCommandConfig:
+    """Optional defaults for manual review."""
+
+    pending_only: bool | None = None
+
+
+@dataclass(frozen=True)
 class CommandConfig:
     """Optional CLI command defaults loaded from local config."""
 
     match: MatchCommandConfig = field(default_factory=MatchCommandConfig)
+    review: ReviewCommandConfig = field(default_factory=ReviewCommandConfig)
     write: WriteCommandConfig = field(default_factory=WriteCommandConfig)
 
 
@@ -138,6 +146,9 @@ def default_config_payload() -> dict[str, Any]:
             "match": {
                 "source_playlist": "",
                 "restart": False,
+            },
+            "review": {
+                "pending_only": False,
             },
             "write": {
                 "destination_playlist_id": "",
@@ -263,12 +274,18 @@ def _load_qqmusic_config(base_dir: Path, payload: dict[str, Any]) -> QQMusicConf
 def _load_command_config(base_dir: Path, payload: dict[str, Any]) -> CommandConfig:
     del base_dir
     match_payload = payload.get("match", {})
+    review_payload = payload.get("review", {})
     write_payload = payload.get("write", {})
     return CommandConfig(
         match=(
             _load_match_command_config(match_payload)
             if isinstance(match_payload, dict)
             else MatchCommandConfig()
+        ),
+        review=(
+            _load_review_command_config(review_payload)
+            if isinstance(review_payload, dict)
+            else ReviewCommandConfig()
         ),
         write=(
             _load_write_command_config(write_payload)
@@ -282,6 +299,12 @@ def _load_match_command_config(payload: dict[str, Any]) -> MatchCommandConfig:
     return MatchCommandConfig(
         source_playlist=_optional_text(payload.get("source_playlist")),
         restart=_optional_bool(payload.get("restart")),
+    )
+
+
+def _load_review_command_config(payload: dict[str, Any]) -> ReviewCommandConfig:
+    return ReviewCommandConfig(
+        pending_only=_optional_bool(payload.get("pending_only")),
     )
 
 
@@ -361,6 +384,7 @@ __all__ = [
     "MatchCommandConfig",
     "PorterConfig",
     "QQMusicConfig",
+    "ReviewCommandConfig",
     "SpotifyConfig",
     "WriteCommandConfig",
     "default_config_payload",
