@@ -21,6 +21,7 @@ def test_qqmusic_search_catalog_fixture_loads_as_mock_destination() -> None:
     assert first_steps["title"] == "First Steps"
     assert first_steps["artists"] == ["Lena Raine"]
     assert first_steps["album"] == "Celeste Original Soundtrack"
+    assert first_steps["qqmusic_songmid"] == "00404MpZ2OUaEZ"
 
     adapter = MockAdapter.from_json(
         playlists_path=repo_root / "fixtures" / "spotify-public-playlist.json",
@@ -34,4 +35,14 @@ def test_qqmusic_search_catalog_fixture_loads_as_mock_destination() -> None:
     assert any(
         candidate.track.platform_track_id == "213221021:1"
         for candidate in candidates
+    )
+    first_steps_candidate = next(
+        candidate
+        for candidate in candidates
+        if candidate.track.platform_track_id == "213221021:1"
+    )
+    assert first_steps_candidate.evidence["qqmusic_songmid"] == "00404MpZ2OUaEZ"
+    assert (
+        first_steps_candidate.evidence["qqmusic_url"]
+        == "https://y.qq.com/n/ryqq/songDetail/00404MpZ2OUaEZ"
     )

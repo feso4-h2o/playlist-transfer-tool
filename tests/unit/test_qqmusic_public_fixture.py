@@ -27,5 +27,6 @@ def test_qqmusic_public_playlist_fixture_loads_as_mock_source() -> None:
     assert first_track.duration_seconds == 238
     assert first_track.release_year == 2017
     assert first_track.source_playlist_position == 1
+    assert first_track._public_link_evidence["qqmusic_songmid"] == "0024oI7g0WG0qB"
 
     assert playlist.tracks[-1].source_playlist_position == 49
