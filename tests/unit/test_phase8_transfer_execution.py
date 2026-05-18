@@ -11,6 +11,7 @@ from playlist_porter.platforms.base import BasePlatform, PlatformCapabilities
 from playlist_porter.platforms.mock import MockAdapter
 from playlist_porter.platforms.qqmusic import QQMusicAdapter, QQMusicConfig
 from playlist_porter.platforms.spotify import SpotifyAdapter
+from playlist_porter.progress import ProgressEvent
 from playlist_porter.rate_limit import ValidationFailure
 from playlist_porter.workflow import (
     PreflightError,
@@ -393,6 +394,7 @@ def test_phase8_write_run_validates_existing_destination_target(tmp_path) -> Non
 def test_phase8_resume_skips_recorded_writes(tmp_path) -> None:
     config = _phase8_config(tmp_path)
     _seed_mock_destination(config, "existing-playlist")
+    events: list[ProgressEvent] = []
     first = run_transfer(
         config,
         source_platform="mock",
@@ -400,6 +402,7 @@ def test_phase8_resume_skips_recorded_writes(tmp_path) -> None:
         source_playlist_id="source-playlist",
         dry_run=False,
         destination_playlist_id="existing-playlist",
+        progress_reporter=events.append,
     )
 
     second = run_transfer(
@@ -409,6 +412,7 @@ def test_phase8_resume_skips_recorded_writes(tmp_path) -> None:
         source_playlist_id="source-playlist",
         dry_run=False,
         destination_playlist_id="existing-playlist",
+        progress_reporter=events.append,
     )
 
     writes = json.loads(config.mock_writes_path.read_text(encoding="utf-8"))
@@ -422,11 +426,17 @@ def test_phase8_resume_skips_recorded_writes(tmp_path) -> None:
     assert TransferRepository(config.database_path).load_metrics(
         first.transfer_run_id
     ).write_success_count == 1
+    assert [
+        (event.phase, event.current, event.total, event.label)
+        for event in events
+        if event.phase == "write"
+    ][-1] == ("write", 0, 0, "No pending tracks to write")
 
 
 def test_phase8_resume_skips_recorded_destination_duplicate_proofs(tmp_path) -> None:
     database_path = tmp_path / "transfer.sqlite"
     destination = ReadableDestinationAdapter(existing_track_ids={"dest-1"})
+    events: list[ProgressEvent] = []
 
     first = run_transfer_with_adapters(
         StaticSourceAdapter(),
@@ -436,6 +446,7 @@ def test_phase8_resume_skips_recorded_destination_duplicate_proofs(tmp_path) -> 
         database_path=database_path,
         output_dir=tmp_path / "reports",
         destination_playlist_id="existing-playlist",
+        progress_reporter=events.append,
     )
     second = run_transfer_with_adapters(
         StaticSourceAdapter(),
@@ -445,6 +456,7 @@ def test_phase8_resume_skips_recorded_destination_duplicate_proofs(tmp_path) -> 
         database_path=database_path,
         output_dir=tmp_path / "reports",
         destination_playlist_id="existing-playlist",
+        progress_reporter=events.append,
     )
 
     summary = _summary_report(second)
@@ -454,6 +466,14 @@ def test_phase8_resume_skips_recorded_destination_duplicate_proofs(tmp_path) -> 
     assert destination.destination_read_count == 1
     assert summary["write_skipped_existing_count"] == 1
     assert summary["write_skipped_resume_count"] == 1
+    assert [
+        (event.phase, event.current, event.total, event.label)
+        for event in events
+        if event.phase == "write"
+    ] == [
+        ("write", 0, 0, "No new tracks to write"),
+        ("write", 0, 0, "No pending tracks to write"),
+    ]
 
 
 def test_phase8_partial_write_failure_records_success_before_resume(tmp_path) -> None:
@@ -524,6 +544,55 @@ def test_phase8_write_resume_keeps_persisted_candidate_after_search_drift(tmp_pa
 
     assert resumed.written_count == 1
     assert destination.added_track_ids == ["dest-1", "dest-2"]
+
+
+def test_phase8_emits_match_progress_events(tmp_path) -> None:
+    events: list[ProgressEvent] = []
+
+    run_transfer_with_adapters(
+        TwoTrackSourceAdapter(),
+        FlakyDestinationAdapter(fail_after_successes=None),
+        source_playlist_id="source-playlist",
+        dry_run=True,
+        database_path=tmp_path / "transfer.sqlite",
+        output_dir=tmp_path / "reports",
+        progress_reporter=events.append,
+    )
+
+    assert [
+        (event.phase, event.current, event.total, event.label)
+        for event in events
+        if event.phase == "match"
+    ] == [
+        ("match", 0, 2, None),
+        ("match", 1, 2, "Alpha"),
+        ("match", 2, 2, "Beta"),
+    ]
+
+
+def test_phase8_emits_write_progress_events(tmp_path) -> None:
+    events: list[ProgressEvent] = []
+
+    run_transfer_with_adapters(
+        TwoTrackSourceAdapter(),
+        FlakyDestinationAdapter(fail_after_successes=None),
+        source_playlist_id="source-playlist",
+        dry_run=False,
+        database_path=tmp_path / "transfer.sqlite",
+        output_dir=tmp_path / "reports",
+        destination_playlist_id="existing-playlist",
+        progress_reporter=events.append,
+    )
+
+    assert [
+        (event.phase, event.current, event.total, event.label)
+        for event in events
+        if event.phase == "write"
+    ] == [
+        ("write", 0, 2, None),
+        ("write", 1, 2, "Alpha"),
+        ("write", 2, 2, "Beta"),
+    ]
 
 
 def test_phase8_progress_writer_failure_records_first_incomplete_track(tmp_path) -> None:
