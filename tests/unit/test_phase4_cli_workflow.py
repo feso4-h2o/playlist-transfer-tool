@@ -179,9 +179,9 @@ def test_mock_source_track_link_evidence_persists_to_match_decision(tmp_path) ->
     assert run_id is not None
     decision = repo.load_match_decisions(run_id)[0]
     assert decision.source_track.platform_track_id == "200030089:1"
-    assert decision.evidence["qqmusic_songmid"] == "001abcDEFghi"
+    assert decision.evidence["source_qqmusic_songmid"] == "001abcDEFghi"
     assert (
-        decision.evidence["qqmusic_url"]
+        decision.evidence["source_qqmusic_url"]
         == "https://y.qq.com/n/ryqq/songDetail/001abcDEFghi"
     )
 

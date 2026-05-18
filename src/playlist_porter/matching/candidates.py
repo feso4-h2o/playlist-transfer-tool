@@ -166,7 +166,10 @@ def match_track(
 
 
 def _source_public_link_evidence(source_track: UniversalTrack) -> dict[str, object]:
-    return dict(source_track._public_link_evidence)
+    return {
+        f"source_{key}": value
+        for key, value in source_track._public_link_evidence.items()
+    }
 
 
 def match_playlist(

@@ -319,6 +319,38 @@ def test_mock_adapter_search_preserves_catalog_track_link_evidence(tmp_path) -> 
     )
 
 
+def test_source_link_evidence_is_namespaced_from_candidate_evidence() -> None:
+    source = _track("Song", track_id="650091207:1")
+    source.platform = "qqmusic"
+    source._public_link_evidence.update(
+        {
+            "qqmusic_songmid": "001SourceMid",
+            "qqmusic_url": "https://y.qq.com/n/ryqq/songDetail/001SourceMid",
+        }
+    )
+    candidate = _track("Song", track_id="200030089:1")
+    candidate.platform = "qqmusic"
+    candidate._public_link_evidence.update(
+        {
+            "qqmusic_songmid": "001CandidateMid",
+            "qqmusic_url": "https://y.qq.com/n/ryqq/songDetail/001CandidateMid",
+        }
+    )
+
+    decision = match_track(source, MockAdapter(catalog=[candidate]))
+
+    assert decision.evidence["source_qqmusic_songmid"] == "001SourceMid"
+    assert (
+        decision.evidence["source_qqmusic_url"]
+        == "https://y.qq.com/n/ryqq/songDetail/001SourceMid"
+    )
+    assert decision.evidence["qqmusic_songmid"] == "001CandidateMid"
+    assert (
+        decision.evidence["qqmusic_url"]
+        == "https://y.qq.com/n/ryqq/songDetail/001CandidateMid"
+    )
+
+
 def test_playlist_matching_runs_end_to_end_with_mock_adapter() -> None:
     playlist = Playlist(
         name="Source",

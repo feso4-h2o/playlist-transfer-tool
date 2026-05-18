@@ -13,6 +13,7 @@ from playlist_porter.review.terminal import (
     _candidate_metadata,
     _candidate_row_style,
     _render_decision,
+    _source_id_fields,
 )
 
 
@@ -300,7 +301,9 @@ def test_review_output_uses_qqmusic_source_url_evidence() -> None:
                 score=0.9,
             )
         ],
-        evidence={"qqmusic_url": "https://y.qq.com/n/ryqq/songDetail/001abcDEFghi"},
+        evidence={
+            "source_qqmusic_url": "https://y.qq.com/n/ryqq/songDetail/001abcDEFghi"
+        },
         reason_codes=[UnavailableReason.AMBIGUOUS_CANDIDATES],
     )
 
@@ -308,6 +311,30 @@ def test_review_output_uses_qqmusic_source_url_evidence() -> None:
 
     assert "Platform ID: 200030089:1 | URL: Link" in text
     assert "https://y.qq.com/n/ryqq/songDetail/001abcDEFghi" not in text
+
+
+def test_review_source_url_ignores_candidate_qqmusic_url_evidence() -> None:
+    source = _track("Source", platform="qqmusic", track_id="200030089:1")
+    candidate = _candidate(
+        _track("Destination", platform="qqmusic", track_id="650091207:1"),
+        rank=1,
+        score=0.9,
+        evidence={"qqmusic_url": "https://y.qq.com/n/ryqq/songDetail/001CandidateMid"},
+    )
+    source_ids = _source_id_fields(
+        source,
+        evidence={
+            "source_qqmusic_url": "https://y.qq.com/n/ryqq/songDetail/001SourceMid",
+            **candidate.evidence,
+        },
+    )
+    candidate_ids = _candidate_ids(candidate)
+
+    assert source_ids.spans[0].style == "link https://y.qq.com/n/ryqq/songDetail/001SourceMid"
+    assert (
+        candidate_ids.spans[0].style
+        == "link https://y.qq.com/n/ryqq/songDetail/001CandidateMid"
+    )
 
 
 def test_review_output_keeps_numeric_qqmusic_source_id_without_url_evidence() -> None:

@@ -501,10 +501,10 @@ def _destination_url(platform: str | None, platform_track_id: str | None) -> str
 def _source_destination_url(track: UniversalTrack, evidence: dict[str, object]) -> str | None:
     if track.platform is None or track.platform.casefold() != "qqmusic":
         return _destination_url(track.platform, track.platform_track_id)
-    evidence_url = _optional_text(evidence.get("qqmusic_url"))
+    evidence_url = _optional_text(evidence.get("source_qqmusic_url"))
     if evidence_url is not None:
         return evidence_url
-    songmid = _optional_text(evidence.get("qqmusic_songmid"))
+    songmid = _optional_text(evidence.get("source_qqmusic_songmid"))
     if songmid is not None:
         return f"https://y.qq.com/n/ryqq/songDetail/{songmid}"
     return _destination_url(track.platform, track.platform_track_id)
