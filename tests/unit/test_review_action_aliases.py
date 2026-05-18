@@ -129,6 +129,50 @@ def test_interactive_review_prompt_separates_long_actions_from_aliases(
     ]
 
 
+def test_interactive_review_shows_current_review_position(tmp_path, monkeypatch) -> None:
+    repository, run_id, _ = _repository_with_review_decision(tmp_path)
+
+    def ask(prompt, **kwargs):
+        del prompt, kwargs
+        return "s"
+
+    output = StringIO()
+    console = Console(file=output, force_terminal=False)
+    monkeypatch.setattr("playlist_porter.review.terminal.Prompt.ask", ask)
+
+    saved_count = run_interactive_review(repository, run_id, console=console)
+    lines = output.getvalue().splitlines()
+
+    assert saved_count == 0
+    assert any(
+        line.startswith("(Review 1/1) |") and "Current decision: none" in line
+        for line in lines
+    )
+    assert not any(line.strip() == "Review 1/1" for line in lines)
+
+
+def test_interactive_review_can_hide_current_review_position(tmp_path, monkeypatch) -> None:
+    repository, run_id, _ = _repository_with_review_decision(tmp_path)
+
+    def ask(prompt, **kwargs):
+        del prompt, kwargs
+        return "s"
+
+    output = StringIO()
+    console = Console(file=output, force_terminal=False)
+    monkeypatch.setattr("playlist_porter.review.terminal.Prompt.ask", ask)
+
+    saved_count = run_interactive_review(
+        repository,
+        run_id,
+        console=console,
+        show_position=False,
+    )
+
+    assert saved_count == 0
+    assert "Review 1/1" not in output.getvalue()
+
+
 def test_interactive_review_prompt_shows_existing_decision_and_skip_keeps_it(
     tmp_path,
     monkeypatch,

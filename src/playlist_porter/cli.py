@@ -3,8 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import sys
+from contextlib import AbstractContextManager, nullcontext
+from types import TracebackType
 
 from loguru import logger
+from rich.console import Console
+from rich.progress import BarColumn, Progress, TextColumn, TimeElapsedColumn
+from rich.table import Column
 
 from playlist_porter import __version__
 from playlist_porter.config import (
@@ -16,6 +22,7 @@ from playlist_porter.config import (
 from playlist_porter.logging_config import configure_logging
 from playlist_porter.persistence.exports import export_reports
 from playlist_porter.persistence.repositories import TransferRepository
+from playlist_porter.progress import ProgressEvent, ProgressReporter
 from playlist_porter.rate_limit import (
     AuthenticationFailure,
     RateLimitExceeded,
@@ -136,14 +143,16 @@ def _main(argv: list[str] | None = None) -> int:
             output_format=config.report_format,
             restart=bool(_coalesce(defaults.restart, False)),
         )
-        result = run_transfer(
-            config,
-            source_platform=source_platform,
-            destination_platform=destination_platform,
-            source_playlist_id=source_playlist,
-            dry_run=True,
-            restart=_coalesce(defaults.restart, False),
-        )
+        with _progress_context(logging_setup) as progress_reporter:
+            result = run_transfer(
+                config,
+                source_platform=source_platform,
+                destination_platform=destination_platform,
+                source_playlist_id=source_playlist,
+                dry_run=True,
+                restart=_coalesce(defaults.restart, False),
+                progress_reporter=progress_reporter,
+            )
         update_config_run_id(args.config, result.transfer_run_id)
         logger.info(
             "match command finished",
@@ -190,6 +199,7 @@ def _main(argv: list[str] | None = None) -> int:
                 repository,
                 run_id,
                 pending_only=bool(defaults.pending_only),
+                show_position=_should_show_progress(logging_setup),
             )
             logger.info("interactive review finished", run_id=run_id, saved_count=saved_count)
             print(f"saved review updates: {saved_count}")
@@ -213,13 +223,15 @@ def _main(argv: list[str] | None = None) -> int:
             output_dir=str(config.report_output_dir),
             output_format=config.report_format,
         )
-        result = execute_transfer_run(
-            config,
-            destination_platform=destination_platform,
-            transfer_run_id=run_id,
-            destination_playlist_id=defaults.destination_playlist_id,
-            create_playlist_name=defaults.create_playlist,
-        )
+        with _progress_context(logging_setup) as progress_reporter:
+            result = execute_transfer_run(
+                config,
+                destination_platform=destination_platform,
+                transfer_run_id=run_id,
+                destination_playlist_id=defaults.destination_playlist_id,
+                create_playlist_name=defaults.create_playlist,
+                progress_reporter=progress_reporter,
+            )
         logger.info(
             "write command finished",
             run_id=result.transfer_run_id,
@@ -281,6 +293,109 @@ def _add_logging_arguments(parser: argparse.ArgumentParser) -> None:
         dest="debug_log",
         help="write DEBUG logs to logs/",
     )
+
+
+class _RichProgressReporter:
+    def __init__(self) -> None:
+        self._progress = Progress(
+            TextColumn("{task.completed}/{task.total}"),
+            TimeElapsedColumn(),
+            BarColumn(),
+            TextColumn(
+                "{task.description}",
+                table_column=Column(ratio=1, overflow="ellipsis"),
+            ),
+            console=Console(stderr=True),
+            expand=True,
+            transient=False,
+        )
+        self._task_ids: dict[str, int] = {}
+        self._last_events: dict[str, ProgressEvent] = {}
+        self._finished = False
+
+    def __enter__(self) -> ProgressReporter:
+        self._progress.start()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        success = exc_type is None
+        del exc, traceback
+        self.finish(success=success)
+
+    def finish(self, *, success: bool = True) -> None:
+        if self._finished:
+            return
+        if success:
+            self._finish_tasks()
+        self._progress.stop()
+        self._progress.console.print()
+        self._finished = True
+
+    def __call__(self, event: ProgressEvent) -> None:
+        self._last_events[event.phase] = event
+        task_id = self._task_ids.get(event.phase)
+        description = _progress_description(event)
+        if task_id is None:
+            task_id = self._progress.add_task(
+                description,
+                total=max(event.total, 0),
+                completed=max(event.current, 0),
+            )
+            self._task_ids[event.phase] = task_id
+            return
+        self._progress.update(
+            task_id,
+            total=max(event.total, 0),
+            completed=max(event.current, 0),
+            description=description,
+        )
+
+    def _finish_tasks(self) -> None:
+        for phase, task_id in self._task_ids.items():
+            event = self._last_events[phase]
+            total = max(event.total, 0)
+            self._progress.update(
+                task_id,
+                total=total,
+                completed=total,
+                description=_finished_progress_description(event),
+            )
+
+
+def _progress_context(logging_setup) -> AbstractContextManager[ProgressReporter | None]:
+    if not _should_show_progress(logging_setup):
+        return nullcontext(None)
+    return _RichProgressReporter()
+
+
+def _should_show_progress(logging_setup) -> bool:
+    return (
+        logging_setup.verbosity == 0
+        and logging_setup.log_path is None
+        and sys.stdout.isatty()
+        and sys.stderr.isatty()
+    )
+
+
+def _progress_description(event: ProgressEvent) -> str:
+    label = event.label.strip() if event.label else ""
+    if event.phase == "match":
+        prefix = "Matching tracks"
+    else:
+        prefix = "Writing tracks"
+    return f"{prefix}: {label}" if label else prefix
+
+
+def _finished_progress_description(event: ProgressEvent) -> str:
+    label = event.label.strip() if event.label else ""
+    if event.total == 0 and label:
+        return f"Done! {label}"
+    return "Done!"
 
 
 def _coalesce(*values):

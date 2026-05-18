@@ -157,6 +157,7 @@ def run_interactive_review(
     *,
     console: Console | None = None,
     pending_only: bool = False,
+    show_position: bool = True,
 ) -> int:
     """Run a simple Rich prompt loop and return the number of saved overrides."""
 
@@ -181,9 +182,15 @@ def run_interactive_review(
         )
         return 0
     saved_count = 0
-    for decision in decisions:
+    for index, decision in enumerate(decisions, start=1):
         override = overrides.get(str(decision.source_track.internal_id))
-        _render_decision(console, decision, override=override)
+        _render_decision(
+            console,
+            decision,
+            override=override,
+            review_position=index if show_position else None,
+            review_total=len(decisions) if show_position else None,
+        )
         action = Prompt.ask(
             _action_prompt(override),
             choices=["accept", "reject", "skip", "a", "r", "s"],
@@ -267,10 +274,13 @@ def _render_decision(
     decision: MatchDecision,
     *,
     override: UserOverride | None = None,
+    review_position: int | None = None,
+    review_total: int | None = None,
 ) -> None:
     source = decision.source_track
     REVIEW_DIAGNOSTICS.debug("review decision rendered", decision=decision_summary(decision))
-    console.print(f"\n[bold]{escape(source.title)}[/bold] - {escape(', '.join(source.artists))}")
+    artists = escape(", ".join(source.artists))
+    console.print(f"\n[bold]{escape(source.title)}[/bold] - {artists}")
     console.print(
         f"status={decision.status.value} score={_decision_score_text(decision.score)} "
         f"reasons={','.join(reason.value for reason in decision.reason_codes) or '-'}"
@@ -288,7 +298,14 @@ def _render_decision(
             style=_candidate_row_style(candidate, override),
         )
     console.print(table)
-    console.print(_current_decision_text(decision, override))
+    console.print(
+        _current_decision_text(
+            decision,
+            override,
+            review_position=review_position,
+            review_total=review_total,
+        )
+    )
 
 
 def _candidate_identity(candidate: TrackCandidate) -> str:
@@ -348,6 +365,23 @@ def _candidate_row_style(
 
 
 def _current_decision_text(
+    decision: MatchDecision,
+    override: UserOverride | None,
+    *,
+    review_position: int | None = None,
+    review_total: int | None = None,
+) -> Text | Table:
+    current = _current_decision_status_text(decision, override)
+    if review_position is None or review_total is None:
+        return current
+    row = Text()
+    row.append(f"(Review {review_position}/{review_total})", style="cyan")
+    row.append(" | ")
+    row.append(current)
+    return row
+
+
+def _current_decision_status_text(
     decision: MatchDecision,
     override: UserOverride | None,
 ) -> Text:
