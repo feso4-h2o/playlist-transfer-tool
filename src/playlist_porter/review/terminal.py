@@ -13,11 +13,12 @@ from rich.text import Text
 from playlist_porter.diagnostics import (
     decision_summary,
     diagnostic_logger,
+    override_snapshot,
     review_update_snapshot,
 )
 from playlist_porter.matching.status import MatchStatus, UnavailableReason
 from playlist_porter.models import MatchDecision, TrackCandidate, UniversalTrack
-from playlist_porter.persistence.repositories import TransferRepository
+from playlist_porter.persistence.repositories import TransferRepository, UserOverride
 
 REVIEW_DIAGNOSTICS = diagnostic_logger("review")
 
@@ -36,6 +37,12 @@ _ACTION_ALIASES = {
     "skip": "skip",
 }
 _ACTION_PROMPT = r"Action \[accept/reject/skip] or \[a/r/s]"
+_ACTION_PROMPT_WITH_OVERRIDE = (
+    r"Action \[accept/reject/skip] or \[a/r/s] (skip keeps current decision)"
+)
+_ACTION_PROMPT_WITHOUT_OVERRIDE = (
+    r"Action \[accept/reject/skip] or \[a/r/s] (skip leaves unresolved)"
+)
 
 
 @dataclass(frozen=True)
@@ -68,10 +75,15 @@ def apply_review_update(
 ) -> None:
     """Persist one accept/reject review update."""
 
+    existing_override = repository.load_user_override(
+        transfer_run_id,
+        update.source_track_internal_id,
+    )
     REVIEW_DIAGNOSTICS.debug(
         "review update requested",
         run_id=transfer_run_id,
         update=review_update_snapshot(update),
+        existing_override=override_snapshot(existing_override),
     )
     decision = _find_decision(repository, transfer_run_id, update.source_track_internal_id)
     action = _normalize_review_action(update.action)
@@ -83,6 +95,8 @@ def apply_review_update(
             update=review_update_snapshot(update),
             decision=decision_summary(decision),
             selected_candidate_rank=candidate.rank,
+            existing_override=override_snapshot(existing_override),
+            overwrites_existing=existing_override is not None,
         )
         repository.save_user_override(
             transfer_run_id,
@@ -100,6 +114,8 @@ def apply_review_update(
             reason_codes=[
                 reason.value for reason in (list(update.reason_codes) or decision.reason_codes)
             ],
+            existing_override=override_snapshot(existing_override),
+            overwrites_existing=existing_override is not None,
         )
         repository.save_user_override(
             transfer_run_id,
@@ -114,6 +130,9 @@ def apply_review_update(
             run_id=transfer_run_id,
             update=review_update_snapshot(update),
             decision=decision_summary(decision),
+            existing_override=override_snapshot(existing_override),
+            persistence_changed=False,
+            existing_override_kept=existing_override is not None,
         )
         return
     REVIEW_DIAGNOSTICS.debug(
@@ -137,21 +156,36 @@ def run_interactive_review(
     transfer_run_id: str,
     *,
     console: Console | None = None,
+    pending_only: bool = False,
 ) -> int:
     """Run a simple Rich prompt loop and return the number of saved overrides."""
 
     console = console or Console()
     decisions = reviewable_decisions(repository.load_match_decisions(transfer_run_id))
+    overrides = repository.load_user_overrides(transfer_run_id)
+    if pending_only:
+        decisions = _pending_review_decisions(decisions, overrides)
     REVIEW_DIAGNOSTICS.debug(
         "interactive review loaded decisions",
         run_id=transfer_run_id,
         reviewable_count=len(decisions),
+        override_count=len(overrides),
+        pending_only=pending_only,
     )
+    if not decisions:
+        console.print(_empty_review_message(pending_only=pending_only))
+        REVIEW_DIAGNOSTICS.debug(
+            "interactive review has no decisions",
+            run_id=transfer_run_id,
+            pending_only=pending_only,
+        )
+        return 0
     saved_count = 0
     for decision in decisions:
-        _render_decision(console, decision)
+        override = overrides.get(str(decision.source_track.internal_id))
+        _render_decision(console, decision, override=override)
         action = Prompt.ask(
-            _ACTION_PROMPT,
+            _action_prompt(override),
             choices=["accept", "reject", "skip", "a", "r", "s"],
             default="skip",
             show_choices=False,
@@ -188,6 +222,23 @@ def run_interactive_review(
     return saved_count
 
 
+def _pending_review_decisions(
+    decisions: list[MatchDecision],
+    overrides: dict[str, UserOverride],
+) -> list[MatchDecision]:
+    return [
+        decision
+        for decision in decisions
+        if str(decision.source_track.internal_id) not in overrides
+    ]
+
+
+def _empty_review_message(*, pending_only: bool) -> str:
+    if pending_only:
+        return "No pending tracks to review."
+    return "No tracks to review."
+
+
 def _find_decision(
     repository: TransferRepository,
     transfer_run_id: str,
@@ -211,7 +262,12 @@ def _candidate_by_rank(decision: MatchDecision, rank: int) -> TrackCandidate:
     raise ValueError(f"candidate rank {rank} not found for {decision.source_track.title}")
 
 
-def _render_decision(console: Console, decision: MatchDecision) -> None:
+def _render_decision(
+    console: Console,
+    decision: MatchDecision,
+    *,
+    override: UserOverride | None = None,
+) -> None:
     source = decision.source_track
     REVIEW_DIAGNOSTICS.debug("review decision rendered", decision=decision_summary(decision))
     console.print(f"\n[bold]{escape(source.title)}[/bold] - {escape(', '.join(source.artists))}")
@@ -229,8 +285,10 @@ def _render_decision(console: Console, decision: MatchDecision) -> None:
             _candidate_metadata(candidate),
             _candidate_ids(candidate),
             _candidate_reason_text(candidate),
+            style=_candidate_row_style(candidate, override),
         )
     console.print(table)
+    console.print(_current_decision_text(decision, override))
 
 
 def _candidate_identity(candidate: TrackCandidate) -> str:
@@ -275,6 +333,51 @@ def _candidate_reason_text(candidate: TrackCandidate) -> str:
     if isinstance(evidence_reasons, str):
         reasons.extend(reason for reason in evidence_reasons.split(",") if reason)
     return escape(", ".join(dict.fromkeys(reasons))) or "-"
+
+
+def _candidate_row_style(
+    candidate: TrackCandidate,
+    override: UserOverride | None,
+) -> str | None:
+    if override is None or override.status is not MatchStatus.USER_APPROVED:
+        return None
+    if override.selected_candidate_internal_id != str(candidate.track.internal_id):
+        return None
+    return "bold green"
+
+
+def _current_decision_text(
+    decision: MatchDecision,
+    override: UserOverride | None,
+) -> Text:
+    if override is None:
+        return Text("Current decision: none", style="yellow")
+    if override.status is MatchStatus.USER_REJECTED:
+        return Text("Current decision: rejected", style="bold red")
+    if override.status is MatchStatus.USER_APPROVED:
+        rank = _override_candidate_rank(decision, override)
+        if rank is None:
+            return Text("Current decision: approved candidate unavailable", style="bold yellow")
+        return Text(f"Current decision: approved candidate rank {rank}", style="bold green")
+    return Text(f"Current decision: {override.status.value}", style="yellow")
+
+
+def _override_candidate_rank(
+    decision: MatchDecision,
+    override: UserOverride,
+) -> int | None:
+    if override.selected_candidate_internal_id is None:
+        return None
+    for candidate in decision.candidates:
+        if str(candidate.track.internal_id) == override.selected_candidate_internal_id:
+            return candidate.rank
+    return None
+
+
+def _action_prompt(override: UserOverride | None) -> str:
+    if override is None:
+        return _ACTION_PROMPT_WITHOUT_OVERRIDE
+    return _ACTION_PROMPT_WITH_OVERRIDE
 
 
 def _track_metadata_fields(track: UniversalTrack, *, include_album: bool) -> str | Text:

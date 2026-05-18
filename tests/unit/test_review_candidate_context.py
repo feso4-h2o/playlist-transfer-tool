@@ -7,7 +7,8 @@ from rich.console import Console
 
 from playlist_porter.matching.status import MatchStatus, UnavailableReason
 from playlist_porter.models import MatchDecision, TrackCandidate, UniversalTrack
-from playlist_porter.review.terminal import _render_decision
+from playlist_porter.persistence.repositories import UserOverride
+from playlist_porter.review.terminal import _candidate_row_style, _render_decision
 
 
 def _track(
@@ -57,10 +58,10 @@ def _candidate(
     )
 
 
-def _render_text(decision: MatchDecision) -> str:
+def _render_text(decision: MatchDecision, *, override: UserOverride | None = None) -> str:
     output = StringIO()
     console = Console(file=output, force_terminal=False, width=220)
-    _render_decision(console, decision)
+    _render_decision(console, decision, override=override)
     return output.getvalue()
 
 
@@ -117,7 +118,79 @@ def test_review_output_renders_ambiguity_reason_and_candidate_metadata() -> None
     assert "duration_mismatch" in text
     assert "Link" in text
     assert "https://open.spotify.com/track/spotify-track-id" not in text
+    assert "Current decision: none" in text
     assert text.count("├") >= 2
+
+
+def test_review_output_renders_approved_current_decision() -> None:
+    candidate = _candidate(
+        _track("Destination Song", track_id="spotify-track-id"),
+        rank=1,
+        score=0.9321,
+    )
+    decision = MatchDecision(
+        source_track=_track("Source Song", track_id="source-1"),
+        status=MatchStatus.NEEDS_REVIEW,
+        candidates=[candidate],
+        reason_codes=[UnavailableReason.AMBIGUOUS_CANDIDATES],
+    )
+    override = UserOverride(
+        source_track_internal_id=str(decision.source_track.internal_id),
+        status=MatchStatus.USER_APPROVED,
+        selected_candidate_internal_id=str(candidate.track.internal_id),
+    )
+
+    text = _render_text(decision, override=override)
+
+    assert "Current decision: approved candidate rank 1" in text
+    assert _candidate_row_style(candidate, override) == "bold green"
+
+
+def test_review_output_renders_rejected_current_decision() -> None:
+    decision = MatchDecision(
+        source_track=_track("Source Song", track_id="source-1"),
+        status=MatchStatus.NEEDS_REVIEW,
+        candidates=[
+            _candidate(
+                _track("Destination Song", track_id="spotify-track-id"),
+                rank=1,
+                score=0.9321,
+            )
+        ],
+        reason_codes=[UnavailableReason.AMBIGUOUS_CANDIDATES],
+    )
+    override = UserOverride(
+        source_track_internal_id=str(decision.source_track.internal_id),
+        status=MatchStatus.USER_REJECTED,
+    )
+
+    text = _render_text(decision, override=override)
+
+    assert "Current decision: rejected" in text
+
+
+def test_review_output_renders_missing_approved_candidate() -> None:
+    candidate = _candidate(
+        _track("Destination Song", track_id="spotify-track-id"),
+        rank=1,
+        score=0.9321,
+    )
+    decision = MatchDecision(
+        source_track=_track("Source Song", track_id="source-1"),
+        status=MatchStatus.NEEDS_REVIEW,
+        candidates=[candidate],
+        reason_codes=[UnavailableReason.AMBIGUOUS_CANDIDATES],
+    )
+    override = UserOverride(
+        source_track_internal_id=str(decision.source_track.internal_id),
+        status=MatchStatus.USER_APPROVED,
+        selected_candidate_internal_id="missing-candidate",
+    )
+
+    text = _render_text(decision, override=override)
+
+    assert "Current decision: approved candidate unavailable" in text
+    assert _candidate_row_style(candidate, override) is None
 
 
 def test_review_output_derives_qqmusic_songmid_url() -> None:
