@@ -528,7 +528,7 @@ def track_from_qqmusic_payload(
     if not artists:
         raise ValidationFailure("QQ Music song payload is missing artists")
 
-    return UniversalTrack(
+    track = UniversalTrack(
         internal_id=_stable_internal_id(platform_track_id, title, artists),
         title=str(title),
         artists=artists,
@@ -543,6 +543,8 @@ def track_from_qqmusic_payload(
         explicit=None,
         source_playlist_position=source_playlist_position,
     )
+    track._public_link_evidence.update(_qqmusic_public_link_evidence(payload))
+    return track
 
 
 def _song_items_from_playlist_payload(payload: Any) -> Sequence[Any]:

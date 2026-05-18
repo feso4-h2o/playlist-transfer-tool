@@ -2,6 +2,7 @@ import asyncio
 
 import pytest
 
+from playlist_porter.matching.candidates import match_track
 from playlist_porter.platforms.base import PlatformCapabilities
 from playlist_porter.platforms.qqmusic import (
     QQMUSIC_EMPTY_SEARCH_REFRESH_THRESHOLD,
@@ -113,6 +114,14 @@ class SearchPayloadClient:
 
     def close(self) -> None:
         self.closed = True
+
+
+class EmptyDestination:
+    platform_name = "spotify"
+
+    def search_tracks(self, query: str, *, limit: int) -> list[object]:
+        del query, limit
+        return []
 
 
 def qq_policy(clock: FakeClock | None = None) -> QQMusicRateLimitPolicy:
@@ -435,6 +444,24 @@ def test_qqmusic_adapter_search_preserves_public_song_link_evidence() -> None:
     assert candidates[0].evidence["qqmusic_songmid"] == "001abcDEFghi"
     assert (
         candidates[0].evidence["qqmusic_url"]
+        == "https://y.qq.com/n/ryqq/songDetail/001abcDEFghi"
+    )
+
+
+def test_qqmusic_source_public_link_evidence_persists_to_match_decision() -> None:
+    playlist = playlist_from_qqmusic_payload(
+        {
+            "info": {"id": 12345, "title": "Source"},
+            "songs": [song_payload(id=650091207, mid="001abcDEFghi", type=1)],
+        }
+    )
+
+    decision = match_track(playlist.tracks[0], EmptyDestination())
+
+    assert decision.source_track.platform_track_id == "650091207:1"
+    assert decision.evidence["qqmusic_songmid"] == "001abcDEFghi"
+    assert (
+        decision.evidence["qqmusic_url"]
         == "https://y.qq.com/n/ryqq/songDetail/001abcDEFghi"
     )
 

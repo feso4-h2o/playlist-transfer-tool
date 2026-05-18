@@ -151,6 +151,11 @@ def match_track(
     )
     candidates = generate_candidates(source_track, destination, limit=candidate_limit)
     decision = decide_match(source_track, candidates, config=scoring_config)
+    source_evidence = _source_public_link_evidence(source_track)
+    if source_evidence:
+        decision = decision.model_copy(
+            update={"evidence": {**source_evidence, **decision.evidence}}
+        )
     MATCH_DIAGNOSTICS.debug(
         "track matching finished",
         decision=decision_summary(decision),
@@ -158,6 +163,10 @@ def match_track(
         candidate_limit=candidate_limit,
     )
     return decision
+
+
+def _source_public_link_evidence(source_track: UniversalTrack) -> dict[str, object]:
+    return dict(source_track._public_link_evidence)
 
 
 def match_playlist(

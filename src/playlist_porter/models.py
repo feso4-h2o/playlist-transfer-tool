@@ -6,7 +6,15 @@ from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 from playlist_porter.matching.status import MatchStatus, UnavailableReason
 from playlist_porter.normalization import track_fingerprint
@@ -23,6 +31,7 @@ class UniversalTrack(BaseModel):
     """
 
     model_config = ConfigDict(validate_assignment=True)
+    _public_link_evidence: dict[str, EvidenceValue] = PrivateAttr(default_factory=dict)
 
     internal_id: UUID = Field(default_factory=uuid4)
     title: str = Field(min_length=1)
