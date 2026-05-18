@@ -620,6 +620,15 @@ def test_config_owned_write_cli_args_are_rejected(tmp_path) -> None:
     assert exc_info.value.code == 2
 
 
+def test_config_owned_review_pending_only_cli_arg_is_rejected(tmp_path) -> None:
+    config_path, _, _, _ = _phase4_fixture(tmp_path)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main(["review", "--config", str(config_path), "--pending-only"])
+
+    assert exc_info.value.code == 2
+
+
 def test_write_rejects_conflicting_config_target_defaults(tmp_path, capsys) -> None:
     config_path, database_path, writes_path, _ = _config_file(
         tmp_path,
@@ -720,6 +729,32 @@ def test_review_and_export_report_use_config_defaults(tmp_path) -> None:
     assert export == 0
     report_dir = reports_path / run_id[:8]
     assert list(report_dir.glob("unavailable-*-export-report.json"))
+
+
+def test_review_uses_configured_pending_only_default(tmp_path, monkeypatch) -> None:
+    config_path, database_path, _, _ = _phase4_fixture(tmp_path)
+    main(["match", "--config", str(config_path)])
+    repo = TransferRepository(database_path)
+    run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
+    assert run_id is not None
+    _set_config_values(
+        config_path,
+        run_id=run_id,
+        commands={"review": {"pending_only": True}},
+    )
+    calls = []
+
+    def fake_review(repository, transfer_run_id, *, pending_only=False, console=None):
+        del repository, console
+        calls.append((transfer_run_id, pending_only))
+        return 0
+
+    monkeypatch.setattr("playlist_porter.cli.run_interactive_review", fake_review)
+
+    exit_code = main(["review", "--config", str(config_path)])
+
+    assert exit_code == 0
+    assert calls == [(run_id, True)]
 
 
 def test_export_reports_do_not_overwrite_same_second_snapshot(tmp_path, monkeypatch) -> None:

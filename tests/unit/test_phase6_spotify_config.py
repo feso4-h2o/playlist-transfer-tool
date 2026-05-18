@@ -75,7 +75,6 @@ def test_default_config_keeps_credentials_out_of_platform_blocks() -> None:
     assert "transfer" not in payload["commands"]
     assert "execute" not in payload["commands"]
     assert "resume" not in payload["commands"]
-    assert "review" not in payload["commands"]
     assert "export_report" not in payload["commands"]
     assert payload["source_platform"] == "mock"
     assert payload["destination_platform"] == "mock"
@@ -83,6 +82,7 @@ def test_default_config_keeps_credentials_out_of_platform_blocks() -> None:
     assert payload["run_id"] == ""
     assert "dry_run" not in payload["commands"]["match"]
     assert set(payload["commands"]["match"]) == {"source_playlist", "restart"}
+    assert payload["commands"]["review"] == {"pending_only": False}
     assert set(payload["commands"]["write"]) == {"destination_playlist_id", "create_playlist"}
 
 
@@ -224,6 +224,9 @@ def test_command_defaults_load_config_oriented_values(tmp_path) -> None:
                         "source_playlist": "playlist-url",
                         "restart": True,
                     },
+                    "review": {
+                        "pending_only": True,
+                    },
                     "write": {
                         "destination_playlist_id": "dest",
                         "create_playlist": "Copy",
@@ -243,6 +246,7 @@ def test_command_defaults_load_config_oriented_values(tmp_path) -> None:
     assert config.report_format == "both"
     assert config.commands.match.source_playlist == "playlist-url"
     assert config.commands.match.restart is True
+    assert config.commands.review.pending_only is True
     assert config.commands.write.destination_playlist_id == "dest"
     assert config.commands.write.create_playlist == "Copy"
 

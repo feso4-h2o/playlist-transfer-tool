@@ -162,6 +162,7 @@ def _main(argv: list[str] | None = None) -> int:
         config = load_config(args.config)
         logger.info("config loaded", path=args.config)
         run_id = _required(config.run_id, setting="run_id")
+        defaults = config.commands.review
         candidate_rank = _coalesce(args.candidate_rank, 1)
         repository = TransferRepository(config.database_path)
         _validate_run_direction(repository, run_id, config)
@@ -185,7 +186,11 @@ def _main(argv: list[str] | None = None) -> int:
             )
             print("saved review update")
         else:
-            saved_count = run_interactive_review(repository, run_id)
+            saved_count = run_interactive_review(
+                repository,
+                run_id,
+                pending_only=bool(defaults.pending_only),
+            )
             logger.info("interactive review finished", run_id=run_id, saved_count=saved_count)
             print(f"saved review updates: {saved_count}")
         return 0
