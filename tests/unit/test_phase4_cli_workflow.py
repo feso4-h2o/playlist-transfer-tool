@@ -1,14 +1,21 @@
 import csv
 import json
+import sys
 
 import pytest
 
-from playlist_porter.cli import build_parser, main
+from playlist_porter.cli import (
+    _finished_progress_description,
+    _progress_description,
+    build_parser,
+    main,
+)
 from playlist_porter.config import PorterConfig
 from playlist_porter.matching.status import MatchStatus
 from playlist_porter.persistence import exports as exports_module
 from playlist_porter.persistence.exports import build_unavailable_rows
 from playlist_porter.persistence.repositories import TransferRepository
+from playlist_porter.progress import ProgressEvent
 from playlist_porter.rate_limit import AuthenticationFailure
 from playlist_porter.workflow import run_transfer
 
@@ -774,9 +781,16 @@ def test_review_uses_configured_pending_only_default(tmp_path, monkeypatch) -> N
     )
     calls = []
 
-    def fake_review(repository, transfer_run_id, *, pending_only=False, console=None):
+    def fake_review(
+        repository,
+        transfer_run_id,
+        *,
+        pending_only=False,
+        console=None,
+        show_position=True,
+    ):
         del repository, console
-        calls.append((transfer_run_id, pending_only))
+        calls.append((transfer_run_id, pending_only, show_position))
         return 0
 
     monkeypatch.setattr("playlist_porter.cli.run_interactive_review", fake_review)
@@ -784,7 +798,168 @@ def test_review_uses_configured_pending_only_default(tmp_path, monkeypatch) -> N
     exit_code = main(["review", "--config", str(config_path)])
 
     assert exit_code == 0
-    assert calls == [(run_id, True)]
+    assert calls == [(run_id, True, False)]
+
+
+def test_match_uses_progress_in_default_interactive_mode(tmp_path, monkeypatch) -> None:
+    config_path, _, _, _ = _phase4_fixture(tmp_path)
+    events = []
+
+    class FakeProgress:
+        def __enter__(self):
+            return events.append
+
+        def __exit__(self, exc_type, exc, traceback):
+            del exc_type, exc, traceback
+
+    monkeypatch.setattr("playlist_porter.cli._RichProgressReporter", FakeProgress)
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
+
+    exit_code = main(["match", "--config", str(config_path)])
+
+    assert exit_code == 0
+    assert [event.phase for event in events].count("match") == 5
+
+
+def test_match_hides_progress_when_logging_is_enabled(tmp_path, monkeypatch) -> None:
+    config_path, _, _, _ = _phase4_fixture(tmp_path)
+
+    def fail_progress():
+        raise AssertionError("progress should be hidden")
+
+    monkeypatch.setattr("playlist_porter.cli._RichProgressReporter", fail_progress)
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
+
+    assert main(["match", "--config", str(config_path), "-v"]) == 0
+    assert main(["match", "--config", str(config_path), "-l"]) == 0
+
+
+def test_write_uses_progress_in_default_interactive_mode(tmp_path, monkeypatch) -> None:
+    config_path, database_path, _, _ = _phase4_fixture(tmp_path)
+    assert main(["match", "--config", str(config_path)]) == 0
+    repo = TransferRepository(database_path)
+    run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
+    assert run_id is not None
+    _set_config_values(
+        config_path,
+        run_id=run_id,
+        commands={"write": {"create_playlist": "Copied"}},
+    )
+    events = []
+
+    class FakeProgress:
+        def __enter__(self):
+            return events.append
+
+        def __exit__(self, exc_type, exc, traceback):
+            del exc_type, exc, traceback
+
+    monkeypatch.setattr("playlist_porter.cli._RichProgressReporter", FakeProgress)
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
+
+    exit_code = main(["write", "--config", str(config_path)])
+
+    assert exit_code == 0
+    assert [event.phase for event in events] == ["write", "write"]
+
+
+def test_write_finishes_progress_before_summary_rendering(tmp_path, monkeypatch) -> None:
+    config_path, database_path, _, _ = _phase4_fixture(tmp_path)
+    assert main(["match", "--config", str(config_path)]) == 0
+    repo = TransferRepository(database_path)
+    run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
+    assert run_id is not None
+    _set_config_values(
+        config_path,
+        run_id=run_id,
+        commands={"write": {"create_playlist": "Copied"}},
+    )
+    events = []
+    finishes = []
+
+    class FakeProgress:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            del exc_type, exc, traceback
+            self.finish()
+
+        def __call__(self, event):
+            events.append(event)
+
+        def finish(self):
+            finishes.append(len(events))
+
+    monkeypatch.setattr("playlist_porter.cli._RichProgressReporter", FakeProgress)
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
+
+    exit_code = main(["write", "--config", str(config_path)])
+
+    assert exit_code == 0
+    assert finishes[0] == len(events)
+
+
+def test_progress_description_uses_phase_and_song_label() -> None:
+    assert (
+        _progress_description(ProgressEvent(phase="match", current=1, total=2, label="Alpha"))
+        == "Matching tracks: Alpha"
+    )
+    assert (
+        _progress_description(ProgressEvent(phase="write", current=1, total=2, label="Beta"))
+        == "Writing tracks: Beta"
+    )
+
+
+def test_finished_progress_description_uses_done_state() -> None:
+    assert (
+        _finished_progress_description(
+            ProgressEvent(phase="match", current=2, total=2, label="Beta")
+        )
+        == "Done!"
+    )
+    assert (
+        _finished_progress_description(
+            ProgressEvent(phase="write", current=0, total=0, label="No pending tracks to write")
+        )
+        == "Done! No pending tracks to write"
+    )
+
+
+def test_match_prints_match_summary_title(tmp_path, capsys) -> None:
+    config_path, _, _, _ = _phase4_fixture(tmp_path)
+
+    exit_code = main(["match", "--config", str(config_path)])
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "Match summary" in output
+    assert "Dry run summary" not in output
+
+
+def test_write_prints_write_summary_title(tmp_path, capsys) -> None:
+    config_path, database_path, _, _ = _phase4_fixture(tmp_path)
+    assert main(["match", "--config", str(config_path)]) == 0
+    capsys.readouterr()
+    repo = TransferRepository(database_path)
+    run_id = repo.find_run_id("mock|mock|source-playlist||dry-run")
+    assert run_id is not None
+    _set_config_values(
+        config_path,
+        run_id=run_id,
+        commands={"write": {"create_playlist": "Copied"}},
+    )
+
+    exit_code = main(["write", "--config", str(config_path)])
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "Write summary" in output
+    assert "Transfer summary" not in output
 
 
 def test_export_reports_do_not_overwrite_same_second_snapshot(tmp_path, monkeypatch) -> None:

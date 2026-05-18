@@ -18,6 +18,7 @@ from playlist_porter.normalization import (
     normalize_title_forms,
 )
 from playlist_porter.platforms.base import BasePlatform
+from playlist_porter.progress import ProgressReporter, report_progress
 
 MATCH_DIAGNOSTICS = diagnostic_logger("match")
 
@@ -178,6 +179,7 @@ def match_playlist(
     *,
     candidate_limit: int = 5,
     config: ScoringConfig | None = None,
+    progress_reporter: ProgressReporter | None = None,
 ) -> list[MatchDecision]:
     """Match all source playlist tracks against a destination adapter."""
 
@@ -187,10 +189,20 @@ def match_playlist(
         destination_platform=destination.platform_name,
         track_count=len(source_playlist.tracks),
     )
-    decisions = [
-        match_track(track, destination, candidate_limit=candidate_limit, config=config)
-        for track in source_playlist.tracks
-    ]
+    total = len(source_playlist.tracks)
+    report_progress(progress_reporter, phase="match", current=0, total=total)
+    decisions = []
+    for index, track in enumerate(source_playlist.tracks, start=1):
+        decisions.append(
+            match_track(track, destination, candidate_limit=candidate_limit, config=config)
+        )
+        report_progress(
+            progress_reporter,
+            phase="match",
+            current=index,
+            total=total,
+            label=track.title,
+        )
     logger.info(
         "playlist matching finished",
         source_platform=source_playlist.platform,

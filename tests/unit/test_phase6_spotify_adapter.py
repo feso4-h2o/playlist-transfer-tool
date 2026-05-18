@@ -9,6 +9,7 @@ from playlist_porter.matching.status import UnavailableReason
 from playlist_porter.models import Playlist, TransferRun, UniversalTrack
 from playlist_porter.persistence.repositories import TransferRepository
 from playlist_porter.platforms.spotify import SPOTIFY_BATCH_LIMIT, SpotifyAdapter
+from playlist_porter.progress import ProgressEvent
 from playlist_porter.rate_limit import AuthenticationFailure, ValidationFailure
 
 
@@ -417,6 +418,7 @@ def test_spotify_write_progress_records_successful_batches_and_resumes(tmp_path)
     client = FakeSpotifyClient()
     adapter = SpotifyAdapter(client=client)
     repository = TransferRepository(tmp_path / "transfer.sqlite")
+    events: list[ProgressEvent] = []
     source_tracks = [
         UniversalTrack(title=f"Source {index}", artists=["Artist"], platform="spotify")
         for index in range(3)
@@ -431,13 +433,16 @@ def test_spotify_write_progress_records_successful_batches_and_resumes(tmp_path)
     repository.save_source_playlist(run_id, run.source_playlist)
     source_track_ids = [str(track.internal_id) for track in source_tracks]
     track_ids = ["dest-1", "dest-2", "dest-3"]
+    source_titles = [track.title for track in source_tracks]
 
     written_count = adapter.add_tracks_with_progress(
         "playlist-1",
         source_track_ids,
         track_ids,
+        source_titles,
         repository=repository,
         transfer_run_id=run_id,
+        progress_reporter=events.append,
     )
     resumed_count = adapter.add_tracks_with_progress(
         "playlist-1",
@@ -451,6 +456,9 @@ def test_spotify_write_progress_records_successful_batches_and_resumes(tmp_path)
     assert resumed_count == 0
     assert len(client.added_batches) == 1
     assert repository.load_metrics(run_id).write_success_count == 3
+    assert [(event.phase, event.current, event.total, event.label) for event in events] == [
+        ("write", 3, 3, "Source 2"),
+    ]
 
 
 def _spotify_track(

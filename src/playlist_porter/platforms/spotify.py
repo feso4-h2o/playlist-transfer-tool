@@ -19,6 +19,7 @@ from playlist_porter.models import Playlist, TrackCandidate, UniversalTrack
 from playlist_porter.normalization import normalize_text, normalize_text_forms
 from playlist_porter.persistence.repositories import TransferRepository
 from playlist_porter.platforms.base import BasePlatform, PlatformCapabilities
+from playlist_porter.progress import ProgressReporter, report_progress
 from playlist_porter.rate_limit import (
     AuthenticationFailure,
     RateLimitExceeded,
@@ -220,24 +221,43 @@ class SpotifyAdapter(BasePlatform):
         playlist_id: str,
         source_track_ids: list[str],
         track_ids: list[str],
+        source_titles: list[str] | None = None,
         *,
         repository: TransferRepository,
         transfer_run_id: str,
+        progress_reporter: ProgressReporter | None = None,
     ) -> int:
         """Append pending tracks and record write progress after each successful batch."""
 
         if len(source_track_ids) != len(track_ids):
             raise ValueError("source_track_ids must match track_ids length")
+        if source_titles is not None and len(source_titles) != len(track_ids):
+            raise ValueError("source_titles must match track_ids length")
 
         pending_pairs = [
-            (source_track_id, track_id)
-            for source_track_id, track_id in zip(source_track_ids, track_ids, strict=True)
+            (source_track_id, track_id, source_title)
+            for source_track_id, track_id, source_title in zip(
+                source_track_ids,
+                track_ids,
+                source_titles or track_ids,
+                strict=True,
+            )
             if repository.should_write_track(transfer_run_id, source_track_id, track_id)
         ]
+        written_count = 0
+        total = len(pending_pairs)
         for batch in _batched(pending_pairs, SPOTIFY_BATCH_LIMIT):
-            self.add_tracks(playlist_id, [track_id for _, track_id in batch])
-            for source_track_id, track_id in batch:
+            self.add_tracks(playlist_id, [track_id for _, track_id, _ in batch])
+            for source_track_id, track_id, _ in batch:
                 repository.record_write_success(transfer_run_id, source_track_id, track_id)
+            written_count += len(batch)
+            report_progress(
+                progress_reporter,
+                phase="write",
+                current=written_count,
+                total=total,
+                label=batch[-1][2],
+            )
         return len(pending_pairs)
 
     def _iter_playlist_items(self, playlist_id: str) -> Iterable[dict[str, Any]]:
