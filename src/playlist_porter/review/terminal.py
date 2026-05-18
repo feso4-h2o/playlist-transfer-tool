@@ -275,7 +275,7 @@ def _render_decision(
         f"status={decision.status.value} score={_decision_score_text(decision.score)} "
         f"reasons={','.join(reason.value for reason in decision.reason_codes) or '-'}"
     )
-    console.print(_source_metadata(source))
+    console.print(_source_metadata(source, evidence=decision.evidence))
     table = Table("Rank", "Track", "Score", "Metadata", "IDs", "Reasons", show_lines=True)
     for candidate in decision.candidates:
         table.add_row(
@@ -304,25 +304,26 @@ def _score_text(candidate: TrackCandidate) -> str:
     return f"{candidate.score:.4f}"
 
 
-def _source_metadata(track: UniversalTrack) -> str | Text:
-    metadata = _track_metadata_fields(track, include_album=True)
-    ids = _track_id_fields(track)
+def _source_metadata(
+    track: UniversalTrack,
+    *,
+    evidence: dict[str, object],
+) -> str | Text:
+    metadata = _track_metadata_fields(track, include_album=True, separator=" | ")
+    ids = _source_id_fields(track, evidence=evidence)
     output = Text()
-    for block in (metadata, ids):
-        _append_block(output, block)
-    position = _position_text(track.source_playlist_position)
-    if position is not None:
-        _append_block(output, position)
-    return output if output.plain else "-"
+    _append_block(output, metadata)
+    _append_block(output, ids)
+    return output
 
 
 def _candidate_metadata(candidate: TrackCandidate) -> str | Text:
-    return _track_metadata_fields(candidate.track, include_album=True)
+    return _track_metadata_fields(candidate.track, include_album=True, separator="\n")
 
 
 def _candidate_ids(candidate: TrackCandidate) -> str | Text:
     track = candidate.track
-    return _track_id_fields(track, url=_candidate_destination_url(candidate))
+    return _track_id_fields(track, url=_candidate_destination_url(candidate), separator="\n")
 
 
 def _candidate_reason_text(candidate: TrackCandidate) -> str:
@@ -380,40 +381,71 @@ def _action_prompt(override: UserOverride | None) -> str:
     return _ACTION_PROMPT_WITH_OVERRIDE
 
 
-def _track_metadata_fields(track: UniversalTrack, *, include_album: bool) -> str | Text:
+def _track_metadata_fields(
+    track: UniversalTrack,
+    *,
+    include_album: bool,
+    separator: str,
+) -> str | Text:
     values = [
         ("Album", track.album if include_album else None),
         ("Duration", _duration_text(track.duration_seconds)),
         ("Release", _release_text(track)),
         ("Explicit", _explicit_text(track.explicit)),
     ]
-    return _joined_fields(values)
+    return _joined_fields(values, separator=separator)
 
 
-def _track_id_fields(track: UniversalTrack, *, url: str | None = None) -> str | Text:
+def _track_id_fields(
+    track: UniversalTrack,
+    *,
+    url: str | None = None,
+    separator: str,
+) -> str | Text:
     destination_url = url or _destination_url(track.platform, track.platform_track_id)
     return _joined_fields(
         [
             ("ISRC", track.isrc),
             ("Platform ID", track.platform_track_id),
             ("URL", _destination_link(destination_url)),
-        ]
+        ],
+        separator=separator,
     )
 
 
-def _joined_fields(values: list[tuple[str, str | Text | None]]) -> str | Text:
+def _source_id_fields(
+    track: UniversalTrack,
+    *,
+    evidence: dict[str, object],
+) -> str | Text:
+    return _joined_fields(
+        [
+            ("ISRC", track.isrc),
+            ("Platform ID", track.platform_track_id),
+            ("URL", _destination_link(_source_destination_url(track, evidence))),
+            ("Position", _position_text(track.source_playlist_position)),
+        ],
+        separator=" | ",
+    )
+
+
+def _joined_fields(
+    values: list[tuple[str, str | Text | None]],
+    *,
+    separator: str,
+) -> str | Text:
     output = Text()
     for name, value in values:
-        if value is None or value == "":
-            continue
         if output.plain:
-            output.append("\n")
+            output.append(separator)
         output.append(f"{name}: ")
-        if isinstance(value, Text):
+        if value is None or value == "":
+            output.append("-")
+        elif isinstance(value, Text):
             output.append_text(value)
         else:
             output.append(str(value))
-    return output if output.plain else "-"
+    return output
 
 
 def _append_block(output: Text, block: str | Text) -> None:
@@ -430,7 +462,7 @@ def _append_block(output: Text, block: str | Text) -> None:
 def _position_text(position: int | None) -> str | None:
     if position is None:
         return None
-    return f"Position: {position}"
+    return str(position)
 
 
 def _duration_text(duration_seconds: int | None) -> str | None:
@@ -464,6 +496,18 @@ def _destination_url(platform: str | None, platform_track_id: str | None) -> str
     if normalized_platform == "qqmusic" and _is_qqmusic_songmid(platform_track_id):
         return f"https://y.qq.com/n/ryqq/songDetail/{platform_track_id}"
     return None
+
+
+def _source_destination_url(track: UniversalTrack, evidence: dict[str, object]) -> str | None:
+    if track.platform is None or track.platform.casefold() != "qqmusic":
+        return _destination_url(track.platform, track.platform_track_id)
+    evidence_url = _optional_text(evidence.get("qqmusic_url"))
+    if evidence_url is not None:
+        return evidence_url
+    songmid = _optional_text(evidence.get("qqmusic_songmid"))
+    if songmid is not None:
+        return f"https://y.qq.com/n/ryqq/songDetail/{songmid}"
+    return _destination_url(track.platform, track.platform_track_id)
 
 
 def _candidate_destination_url(candidate: TrackCandidate) -> str | None:

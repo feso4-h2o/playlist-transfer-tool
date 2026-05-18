@@ -8,7 +8,12 @@ from rich.console import Console
 from playlist_porter.matching.status import MatchStatus, UnavailableReason
 from playlist_porter.models import MatchDecision, TrackCandidate, UniversalTrack
 from playlist_porter.persistence.repositories import UserOverride
-from playlist_porter.review.terminal import _candidate_row_style, _render_decision
+from playlist_porter.review.terminal import (
+    _candidate_ids,
+    _candidate_metadata,
+    _candidate_row_style,
+    _render_decision,
+)
 
 
 def _track(
@@ -104,6 +109,11 @@ def test_review_output_renders_ambiguity_reason_and_candidate_metadata() -> None
     assert "ambiguous_candidates" in text
     assert "Source Album" in text
     assert "Position: 4" in text
+    assert (
+        "Album: Source Album | Duration: 3:58 | Release: 2020-05-01 | Explicit: yes"
+        in text
+    )
+    assert "ISRC: USRC17607839 | Platform ID: source-1 | URL: Link | Position: 4" in text
     assert "Destination Song" in text
     assert "Album: Album" in text
     assert "Duration: 3:01" in text
@@ -276,10 +286,50 @@ def test_review_output_keeps_numeric_qqmusic_track_id_without_link_evidence() ->
     text = _render_text(decision)
 
     assert "Platform ID: 200030089:1" in text
-    assert "URL:" not in text
+    assert "URL: -" in text
 
 
-def test_review_output_omits_missing_optional_metadata_without_none_text() -> None:
+def test_review_output_uses_qqmusic_source_url_evidence() -> None:
+    decision = MatchDecision(
+        source_track=_track("Source", platform="qqmusic", track_id="200030089:1"),
+        status=MatchStatus.NEEDS_REVIEW,
+        candidates=[
+            _candidate(
+                _track("Destination", platform="spotify", track_id="spotify-track-id"),
+                rank=1,
+                score=0.9,
+            )
+        ],
+        evidence={"qqmusic_url": "https://y.qq.com/n/ryqq/songDetail/001abcDEFghi"},
+        reason_codes=[UnavailableReason.AMBIGUOUS_CANDIDATES],
+    )
+
+    text = _render_text(decision)
+
+    assert "Platform ID: 200030089:1 | URL: Link" in text
+    assert "https://y.qq.com/n/ryqq/songDetail/001abcDEFghi" not in text
+
+
+def test_review_output_keeps_numeric_qqmusic_source_id_without_url_evidence() -> None:
+    decision = MatchDecision(
+        source_track=_track("Source", platform="qqmusic", track_id="200030089:1"),
+        status=MatchStatus.NEEDS_REVIEW,
+        candidates=[
+            _candidate(
+                _track("Destination", platform="spotify", track_id="spotify-track-id"),
+                rank=1,
+                score=0.9,
+            )
+        ],
+        reason_codes=[UnavailableReason.AMBIGUOUS_CANDIDATES],
+    )
+
+    text = _render_text(decision)
+
+    assert "Platform ID: 200030089:1 | URL: -" in text
+
+
+def test_review_output_renders_missing_optional_metadata_as_dash() -> None:
     decision = MatchDecision(
         source_track=_track(
             "Source",
@@ -316,7 +366,34 @@ def test_review_output_omits_missing_optional_metadata_without_none_text() -> No
 
     assert "Sparse" in text
     assert "None" not in text
-    assert "URL:" not in text
+    assert "Album: - | Duration: - | Release: - | Explicit: -" in text
+    assert "ISRC: - | Platform ID: - | URL: - | Position: -" in text
+
+
+def test_candidate_metadata_and_ids_render_missing_values_as_dash() -> None:
+    candidate = _candidate(
+        _track(
+            "Sparse",
+            platform="mock",
+            track_id=None,
+            album=None,
+            isrc=None,
+            duration=None,
+            release_date=None,
+            release_year=None,
+            explicit=None,
+        ),
+        rank=1,
+        score=0.8,
+    )
+
+    metadata = _candidate_metadata(candidate)
+    ids = _candidate_ids(candidate)
+
+    assert getattr(metadata, "plain", metadata) == (
+        "Album: -\nDuration: -\nRelease: -\nExplicit: -"
+    )
+    assert getattr(ids, "plain", ids) == "ISRC: -\nPlatform ID: -\nURL: -"
 
 
 def test_review_output_escapes_rich_markup_in_metadata_values() -> None:
