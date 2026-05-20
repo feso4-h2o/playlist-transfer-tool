@@ -31,6 +31,8 @@ from playlist_porter.rate_limit import (
 )
 
 SPOTIFY_BATCH_LIMIT = 100
+SPOTIFY_LIBRARY_BATCH_LIMIT = 40
+SPOTIFY_LIKED_SONGS_TARGET_ID = "liked_songs"
 
 
 class SpotifyAdapter(BasePlatform):
@@ -178,6 +180,30 @@ class SpotifyAdapter(BasePlatform):
                 lambda uris=uris: client.playlist_add_items(playlist_id, uris),
             )
 
+    def add_tracks_to_target(
+        self,
+        target_type: str,
+        target_id: str,
+        track_ids: list[str],
+    ) -> None:
+        """Append Spotify tracks to a playlist or saved-track library target."""
+
+        if target_type == "playlist":
+            self.add_tracks(target_id, track_ids)
+            return
+        if target_type != "liked_songs":
+            raise ValidationFailure(
+                f"Spotify does not support destination target type: {target_type}"
+            )
+        if target_id != SPOTIFY_LIKED_SONGS_TARGET_ID:
+            raise ValidationFailure(f"invalid Spotify Liked Songs target: {target_id}")
+        client = self._write_client_or_raise()
+        for batch in _batched(track_ids, SPOTIFY_LIBRARY_BATCH_LIMIT):
+            self._call(
+                "spotify save library tracks",
+                lambda batch=batch: client.current_user_saved_tracks_add(tracks=batch),
+            )
+
     def get_destination_track_ids(self, playlist_id: str) -> set[str]:
         """Read existing Spotify playlist track IDs before appending."""
 
@@ -190,6 +216,34 @@ class SpotifyAdapter(BasePlatform):
                 if track_id is not None:
                     track_ids.add(track_id)
         return track_ids
+
+    def get_existing_destination_target_track_ids(
+        self,
+        target_type: str,
+        target_id: str,
+        track_ids: list[str],
+    ) -> set[str]:
+        """Return Spotify destination track IDs already present for a target."""
+
+        if target_type == "playlist":
+            return self.get_destination_track_ids(target_id)
+        if target_type != "liked_songs":
+            raise ValidationFailure(
+                f"Spotify does not support destination target type: {target_type}"
+            )
+        if target_id != SPOTIFY_LIKED_SONGS_TARGET_ID:
+            raise ValidationFailure(f"invalid Spotify Liked Songs target: {target_id}")
+        client = self._write_client_or_raise()
+        existing_track_ids: set[str] = set()
+        for batch in _batched(track_ids, SPOTIFY_LIBRARY_BATCH_LIMIT):
+            contains = self._call(
+                "spotify check saved library tracks",
+                lambda batch=batch: client.current_user_saved_tracks_contains(tracks=batch),
+            )
+            for track_id, is_saved in zip(batch, contains, strict=True):
+                if is_saved:
+                    existing_track_ids.add(track_id)
+        return existing_track_ids
 
     def validate_destination_playlist(self, playlist_id: str) -> str:
         """Ensure an existing Spotify playlist is writable before adding items."""
@@ -215,6 +269,58 @@ class SpotifyAdapter(BasePlatform):
                 f"{spotify_playlist_id}"
             )
         return spotify_playlist_id
+
+    def validate_destination_target(
+        self,
+        target_type: str,
+        target_id: str | None,
+    ) -> str:
+        """Validate and normalize a Spotify write target."""
+
+        if target_type == "playlist":
+            if target_id is None:
+                raise ValidationFailure("Spotify playlist writes require a playlist id")
+            return self.validate_destination_playlist(target_id)
+        if target_type != "liked_songs":
+            raise ValidationFailure(
+                f"Spotify does not support destination target type: {target_type}"
+            )
+        if target_id not in (None, SPOTIFY_LIKED_SONGS_TARGET_ID):
+            raise ValidationFailure(
+                "Spotify Liked Songs does not accept a destination_playlist_id"
+            )
+        self._write_client_or_raise()
+        return SPOTIFY_LIKED_SONGS_TARGET_ID
+
+    def is_resolved_destination_target(self, target_type: str, target_id: str) -> bool:
+        """Return whether a Spotify target is already in its persisted write form."""
+
+        if target_type == "playlist":
+            return _playlist_id_from_input(target_id) == target_id.strip()
+        if target_type == "liked_songs":
+            return target_id == SPOTIFY_LIKED_SONGS_TARGET_ID
+        return False
+
+    def destination_target_ids_match(
+        self,
+        target_type: str,
+        left: str,
+        right: str,
+    ) -> bool:
+        """Compare Spotify playlist IDs/URLs/URIs or the stable library target."""
+
+        if target_type == "playlist":
+            return _playlist_id_from_input(left) == _playlist_id_from_input(right)
+        if target_type == "liked_songs":
+            return left == right == SPOTIFY_LIKED_SONGS_TARGET_ID
+        return left == right
+
+    def destination_target_batch_size(self, target_type: str) -> int:
+        """Return Spotify write batch size for the target type."""
+
+        if target_type == "liked_songs":
+            return SPOTIFY_LIBRARY_BATCH_LIMIT
+        return SPOTIFY_BATCH_LIMIT
 
     def add_tracks_with_progress(
         self,
@@ -477,5 +583,7 @@ def _optional_text(value: Any) -> str | None:
 
 __all__ = [
     "SPOTIFY_BATCH_LIMIT",
+    "SPOTIFY_LIBRARY_BATCH_LIMIT",
+    "SPOTIFY_LIKED_SONGS_TARGET_ID",
     "SpotifyAdapter",
 ]
