@@ -924,6 +924,43 @@
           "title": "主角"
         }
       ]
+    },
+    {
+      "description": "Two-track copy for mock Spotify to live QQ Music validation.",
+      "id": "spotify-public-smoke",
+      "name": "Spotify Public Smoke Playlist",
+      "platform": "spotify",
+      "source_run_id": "sanitized-local-run",
+      "tracks": [
+        {
+          "album": "I've Tried Everything But Therapy (Complete Edition)",
+          "artists": [
+            "Teddy Swims"
+          ],
+          "duration_seconds": 213,
+          "explicit": false,
+          "isrc": "USWB12302870",
+          "platform_track_id": "7j9GxRNmIV2L5Qe7yoTHug",
+          "release_date": "2025-06-27",
+          "release_year": 2025,
+          "source_playlist_position": 1,
+          "title": "The Door"
+        },
+        {
+          "album": "主角",
+          "artists": [
+            "Faye Wong"
+          ],
+          "duration_seconds": 300,
+          "explicit": false,
+          "isrc": "HKH722602011",
+          "platform_track_id": "12KGNSCmvbTO8sJaDlvf9w",
+          "release_date": "2026-05-07",
+          "release_year": 2026,
+          "source_playlist_position": 2,
+          "title": "主角"
+        }
+      ]
     }
   ]
 }

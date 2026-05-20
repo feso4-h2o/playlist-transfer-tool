@@ -17,6 +17,8 @@ DEFAULT_SPOTIFY_SCOPES = (
     "playlist-modify-public",
 )
 
+DESTINATION_TARGET_TYPES = {"playlist", "liked_songs"}
+
 
 @dataclass(frozen=True)
 class SpotifyConfig:
@@ -81,6 +83,7 @@ class WriteCommandConfig:
 
     destination_playlist_id: str | None = None
     create_playlist: str | None = None
+    destination_target_type: str = "playlist"
 
 
 @dataclass(frozen=True)
@@ -153,6 +156,7 @@ def default_config_payload() -> dict[str, Any]:
             "write": {
                 "destination_playlist_id": "",
                 "create_playlist": "",
+                "destination_target_type": "playlist",
             },
         },
     }
@@ -312,6 +316,9 @@ def _load_write_command_config(payload: dict[str, Any]) -> WriteCommandConfig:
     return WriteCommandConfig(
         destination_playlist_id=_optional_text(payload.get("destination_playlist_id")),
         create_playlist=_optional_text(payload.get("create_playlist")),
+        destination_target_type=_destination_target_type(
+            payload.get("destination_target_type")
+        ),
     )
 
 
@@ -371,6 +378,13 @@ def _report_format(value: Any) -> str:
     return report_format
 
 
+def _destination_target_type(value: Any) -> str:
+    target_type = _optional_text(value) or "playlist"
+    if target_type not in DESTINATION_TARGET_TYPES:
+        raise ValueError("destination_target_type must be one of playlist, liked_songs")
+    return target_type
+
+
 def _default_spotify_cache_path() -> Path:
     local_app_data = os.getenv("LOCALAPPDATA")
     if local_app_data:
@@ -380,6 +394,7 @@ def _default_spotify_cache_path() -> Path:
 
 __all__ = [
     "CommandConfig",
+    "DESTINATION_TARGET_TYPES",
     "DEFAULT_SPOTIFY_SCOPES",
     "MatchCommandConfig",
     "PorterConfig",

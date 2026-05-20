@@ -1038,11 +1038,23 @@ def _default_run_key(run: TransferRun) -> str:
     if playlist is not None:
         source_playlist_key = playlist.platform_playlist_id or str(playlist.internal_id)
     mode = "dry-run" if run.dry_run else "write"
+    target_type = _run_destination_target_type(run.metadata)
+    if target_type == "playlist":
+        return "|".join(
+            [
+                run.source_platform,
+                run.destination_platform,
+                source_playlist_key,
+                run.destination_playlist_id or "",
+                mode,
+            ]
+        )
     return "|".join(
         [
             run.source_platform,
             run.destination_platform,
             source_playlist_key,
+            target_type,
             run.destination_playlist_id or "",
             mode,
         ]
@@ -1051,6 +1063,13 @@ def _default_run_key(run: TransferRun) -> str:
 
 def _new_run_key(run: TransferRun) -> str:
     return f"{_default_run_key(run)}|run:{run.internal_id}"
+
+
+def _run_destination_target_type(metadata: dict[str, Any]) -> str:
+    value = metadata.get("destination_target_type")
+    if value is None:
+        return "playlist"
+    return str(value).strip() or "playlist"
 
 
 def _count(connection: Connection, table: Any, whereclause: Any) -> int:

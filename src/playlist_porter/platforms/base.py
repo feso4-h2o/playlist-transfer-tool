@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from playlist_porter.models import Playlist, TrackCandidate
+from playlist_porter.rate_limit import ValidationFailure
 
 
 @dataclass(frozen=True)
@@ -56,6 +57,21 @@ class BasePlatform(ABC):
         del playlist_id
         return set()
 
+    def get_existing_destination_target_track_ids(
+        self,
+        target_type: str,
+        target_id: str,
+        track_ids: list[str],
+    ) -> set[str]:
+        """Return destination track IDs that already exist for a write target."""
+
+        del track_ids
+        if target_type != "playlist":
+            raise ValidationFailure(
+                f"{self.platform_name} does not support destination target type: {target_type}"
+            )
+        return self.get_destination_track_ids(target_id)
+
     def validate_destination_playlist(self, playlist_id: str) -> str | None:
         """Validate that an existing destination playlist can receive writes.
 
@@ -65,6 +81,58 @@ class BasePlatform(ABC):
 
         del playlist_id
         return None
+
+    def validate_destination_target(
+        self,
+        target_type: str,
+        target_id: str | None,
+    ) -> str:
+        """Validate and normalize a destination write target."""
+
+        if target_type != "playlist":
+            raise ValidationFailure(
+                f"{self.platform_name} does not support destination target type: {target_type}"
+            )
+        if target_id is None:
+            raise ValidationFailure("playlist destination target requires a playlist id")
+        return self.validate_destination_playlist(target_id) or target_id
+
+    def is_resolved_destination_target(self, target_type: str, target_id: str) -> bool:
+        """Return whether a persisted target can be reused without validation."""
+
+        del target_type, target_id
+        return not self.normalizes_destination_playlist_ids
+
+    def destination_target_ids_match(
+        self,
+        target_type: str,
+        left: str,
+        right: str,
+    ) -> bool:
+        """Return whether two configured/persisted target strings identify one target."""
+
+        del target_type
+        return left == right
+
+    def destination_target_batch_size(self, target_type: str) -> int:
+        """Return the preferred write batch size for a target type."""
+
+        del target_type
+        return 1
+
+    def add_tracks_to_target(
+        self,
+        target_type: str,
+        target_id: str,
+        track_ids: list[str],
+    ) -> None:
+        """Append destination-platform track IDs to a write target."""
+
+        if target_type != "playlist":
+            raise ValidationFailure(
+                f"{self.platform_name} does not support destination target type: {target_type}"
+            )
+        self.add_tracks(target_id, track_ids)
 
 
 __all__ = ["BasePlatform", "PlatformCapabilities"]

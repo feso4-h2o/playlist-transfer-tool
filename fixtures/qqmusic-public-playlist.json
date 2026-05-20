@@ -662,6 +662,43 @@
           "qqmusic_songmid": "002Wdtka111vN8"
         }
       ]
+    },
+    {
+      "description": "Two-track copy for mock QQ Music to live Spotify validation.",
+      "id": "qqmusic-public-smoke",
+      "name": "QQ Music Public Smoke Playlist",
+      "platform": "qqmusic",
+      "source_run_id": "sanitized-local-run",
+      "tracks": [
+        {
+          "album": "Deja Vu",
+          "artists": [
+            "Post Malone",
+            "Justin Bieber"
+          ],
+          "duration_seconds": 235,
+          "platform_track_id": "108486805:1",
+          "release_date": "2016-09-09",
+          "release_year": 2016,
+          "source_playlist_position": 1,
+          "title": "Deja Vu (Explicit)",
+          "qqmusic_songmid": "003SeANQ1u8jcG"
+        },
+        {
+          "album": "Happier",
+          "artists": [
+            "Marshmello",
+            "Bastille"
+          ],
+          "duration_seconds": 214,
+          "platform_track_id": "215772049:1",
+          "release_date": "2018-08-17",
+          "release_year": 2018,
+          "source_playlist_position": 2,
+          "title": "Happier",
+          "qqmusic_songmid": "004epxOX1BPqnO"
+        }
+      ]
     }
   ]
 }

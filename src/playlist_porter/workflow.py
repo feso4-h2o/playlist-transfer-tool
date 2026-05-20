@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from inspect import Parameter, signature
 from pathlib import Path
+from time import perf_counter
 from typing import Literal
 
 from loguru import logger
@@ -12,6 +13,7 @@ from rich.console import Console
 from rich.table import Table
 
 from playlist_porter.config import PorterConfig, SpotifyConfig
+from playlist_porter.config_validation import validate_write_target_config
 from playlist_porter.diagnostics import (
     candidate_summary,
     diagnostic_logger,
@@ -44,6 +46,7 @@ WRITABLE_AUTO_STATUSES = {
 }
 
 PlatformName = Literal["mock", "spotify", "qqmusic"]
+DestinationTargetType = Literal["playlist", "liked_songs"]
 WORKFLOW_DIAGNOSTICS = diagnostic_logger("workflow")
 WRITE_DIAGNOSTICS = diagnostic_logger("write")
 
@@ -104,6 +107,75 @@ class WritePair:
     source_title: str
 
 
+@dataclass(frozen=True)
+class WriteTargetRequest:
+    """Configured destination write target request."""
+
+    target_type: str = "playlist"
+    destination_playlist_id: str | None = None
+    create_playlist_name: str | None = None
+
+    @property
+    def configured_target_id(self) -> str | None:
+        """Return the normalized configured existing-target value."""
+
+        return _optional_text(self.destination_playlist_id)
+
+    @property
+    def create_name(self) -> str | None:
+        """Return the normalized configured create-playlist value."""
+
+        return _optional_text(self.create_playlist_name)
+
+
+@dataclass(frozen=True)
+class ResolvedWriteTarget:
+    """Validated destination write target."""
+
+    target_type: str
+    target_id: str
+    configured_target_id: str | None = None
+
+
+@dataclass(frozen=True)
+class WriteTargetIdentity:
+    """Comparison helper for configured, persisted, and normalized target strings."""
+
+    target_type: str
+    configured_target_id: str | None
+    persisted_target_id: str | None
+
+    def resolved_persisted_matches_configured(self, destination: BasePlatform) -> bool:
+        """Return whether a stored resolved target safely matches current config."""
+
+        if self.configured_target_id is None or self.persisted_target_id is None:
+            return False
+        if not destination.is_resolved_destination_target(
+            self.target_type,
+            self.persisted_target_id,
+        ):
+            return False
+        return destination.destination_target_ids_match(
+            self.target_type,
+            self.configured_target_id,
+            self.persisted_target_id,
+        )
+
+    def resolved_persisted_can_be_reused(self, destination: BasePlatform) -> bool:
+        """Return whether a persisted target can be used without target validation."""
+
+        if self.persisted_target_id is None:
+            return False
+        if not destination.is_resolved_destination_target(
+            self.target_type,
+            self.persisted_target_id,
+        ):
+            return False
+        if self.configured_target_id is None:
+            return True
+        return self.resolved_persisted_matches_configured(destination)
+
+
 def create_mock_adapter(config: PorterConfig) -> MockAdapter:
     """Create the fixture-backed adapter used for Phase 4 commands."""
 
@@ -146,6 +218,7 @@ def run_transfer(
     restart: bool = False,
     destination_playlist_id: str | None = None,
     create_playlist_name: str | None = None,
+    destination_target_type: str = "playlist",
     console: Console | None = None,
     progress_reporter: ProgressReporter | None = None,
 ) -> TransferResult:
@@ -160,6 +233,12 @@ def run_transfer(
         output_dir=str(output_dir or config.report_output_dir),
         restart=restart,
     )
+    validate_write_target_config(
+        destination_platform=destination_platform,
+        destination_target_type=destination_target_type,
+        destination_playlist_id=destination_playlist_id,
+        create_playlist=create_playlist_name,
+    )
     return run_transfer_with_adapters(
         create_platform_adapter(config, source_platform),
         create_platform_adapter(config, destination_platform),
@@ -171,6 +250,7 @@ def run_transfer(
         restart=restart,
         destination_playlist_id=destination_playlist_id,
         create_playlist_name=create_playlist_name,
+        destination_target_type=destination_target_type,
         console=console,
         progress_reporter=progress_reporter,
     )
@@ -186,6 +266,7 @@ def execute_transfer_run(
     output_format: str | None = None,
     destination_playlist_id: str | None = None,
     create_playlist_name: str | None = None,
+    destination_target_type: str = "playlist",
     console: Console | None = None,
     progress_reporter: ProgressReporter | None = None,
 ) -> TransferResult:
@@ -198,6 +279,12 @@ def execute_transfer_run(
         database_path=str(database_path or config.database_path),
         output_dir=str(output_dir or config.report_output_dir),
     )
+    validate_write_target_config(
+        destination_platform=destination_platform,
+        destination_target_type=destination_target_type,
+        destination_playlist_id=destination_playlist_id,
+        create_playlist=create_playlist_name,
+    )
     return execute_transfer_run_with_adapter(
         create_platform_adapter(config, destination_platform),
         transfer_run_id=transfer_run_id,
@@ -206,6 +293,7 @@ def execute_transfer_run(
         output_format=output_format or config.report_format,
         destination_playlist_id=destination_playlist_id,
         create_playlist_name=create_playlist_name,
+        destination_target_type=destination_target_type,
         console=console,
         progress_reporter=progress_reporter,
     )
@@ -220,12 +308,19 @@ def execute_transfer_run_with_adapter(
     output_format: str = "json",
     destination_playlist_id: str | None = None,
     create_playlist_name: str | None = None,
+    destination_target_type: str = "playlist",
     console: Console | None = None,
     progress_reporter: ProgressReporter | None = None,
 ) -> TransferResult:
     """Execute approved writes from persisted decisions and review overrides."""
 
     console = console or Console()
+    validate_write_target_config(
+        destination_platform=destination.platform_name,
+        destination_target_type=destination_target_type,
+        destination_playlist_id=destination_playlist_id,
+        create_playlist=create_playlist_name,
+    )
     preflight = validate_execute_preflight(
         destination,
         database_path=database_path,
@@ -259,6 +354,7 @@ def execute_transfer_run_with_adapter(
         dry_run=False,
         destination_playlist_id=destination_playlist_id,
         create_playlist_name=create_playlist_name,
+        destination_target_type=destination_target_type,
         progress_reporter=progress_reporter,
     )
     report_paths = tuple(
@@ -308,12 +404,19 @@ def run_transfer_with_adapters(
     restart: bool = False,
     destination_playlist_id: str | None = None,
     create_playlist_name: str | None = None,
+    destination_target_type: str = "playlist",
     console: Console | None = None,
     progress_reporter: ProgressReporter | None = None,
 ) -> TransferResult:
     """Run the Phase 8 orchestration using already-created adapters."""
 
     console = console or Console()
+    validate_write_target_config(
+        destination_platform=destination.platform_name,
+        destination_target_type=destination_target_type,
+        destination_playlist_id=destination_playlist_id,
+        create_playlist=create_playlist_name,
+    )
     preflight = validate_transfer_preflight(
         source,
         destination,
@@ -358,7 +461,11 @@ def run_transfer_with_adapters(
         source_playlist=playlist,
         destination_playlist_id=destination_playlist_id,
         dry_run=dry_run,
-        metadata={"phase": 8, "dry_run": dry_run},
+        metadata={
+            "phase": 8,
+            "dry_run": dry_run,
+            "destination_target_type": destination_target_type,
+        },
     )
 
     if restart:
@@ -416,6 +523,7 @@ def run_transfer_with_adapters(
         dry_run=dry_run,
         destination_playlist_id=destination_playlist_id,
         create_playlist_name=create_playlist_name,
+        destination_target_type=destination_target_type,
         progress_reporter=progress_reporter,
     )
 
@@ -560,10 +668,13 @@ def execute_mock_transfer(
         repository,
         adapter,
         transfer_run_id,
-        destination_playlist_id=_optional_text(destination_playlist_id),
-        create_playlist_name=_optional_text(create_playlist_name),
+        request=WriteTargetRequest(
+            target_type="playlist",
+            destination_playlist_id=_optional_text(destination_playlist_id),
+            create_playlist_name=_optional_text(create_playlist_name),
+        ),
         default_create_name_suffix="mock execution",
-    )
+    ).target_id
 
     write_pairs = _eligible_write_pairs(
         repository.load_match_decisions(transfer_run_id),
@@ -576,7 +687,7 @@ def execute_mock_transfer(
     )
     write_ready_pairs = _filter_destination_duplicate_pairs(
         adapter,
-        destination_id,
+        ResolvedWriteTarget(target_type="playlist", target_id=destination_id),
         pending_pairs,
         repository=repository,
         transfer_run_id=transfer_run_id,
@@ -584,7 +695,7 @@ def execute_mock_transfer(
 
     written_count = _write_pending_pairs(
         adapter,
-        destination_id,
+        ResolvedWriteTarget(target_type="playlist", target_id=destination_id),
         write_ready_pairs,
         repository=repository,
         transfer_run_id=transfer_run_id,
@@ -615,6 +726,7 @@ def _execute_transfer_writes(
     dry_run: bool,
     destination_playlist_id: str | None,
     create_playlist_name: str | None,
+    destination_target_type: str = "playlist",
     progress_reporter: ProgressReporter | None = None,
 ) -> ExecuteResult:
     if dry_run:
@@ -635,12 +747,15 @@ def _execute_transfer_writes(
             metrics=repository.load_metrics(transfer_run_id),
         )
 
-    destination_id = _resolve_destination_write_target(
+    target = _resolve_destination_write_target(
         repository,
         destination,
         transfer_run_id,
-        destination_playlist_id=_optional_text(destination_playlist_id),
-        create_playlist_name=_optional_text(create_playlist_name),
+        request=WriteTargetRequest(
+            target_type=destination_target_type,
+            destination_playlist_id=_optional_text(destination_playlist_id),
+            create_playlist_name=_optional_text(create_playlist_name),
+        ),
         default_create_name_suffix="write",
     )
 
@@ -661,10 +776,11 @@ def _execute_transfer_writes(
     write_ready_pairs = (
         _filter_destination_duplicate_pairs(
             destination,
-            destination_id,
+            target,
             pending_pairs,
             repository=repository,
             transfer_run_id=transfer_run_id,
+            progress_reporter=progress_reporter,
         )
         if pending_pairs
         else []
@@ -683,7 +799,7 @@ def _execute_transfer_writes(
     )
     written_count = _write_pending_pairs(
         destination,
-        destination_id,
+        target,
         write_ready_pairs,
         repository=repository,
         transfer_run_id=transfer_run_id,
@@ -692,7 +808,7 @@ def _execute_transfer_writes(
 
     return ExecuteResult(
         transfer_run_id=transfer_run_id,
-        destination_playlist_id=destination_id,
+        destination_playlist_id=target.target_id,
         attempted_count=written_count,
         skipped_count=len(write_pairs) - written_count,
         metrics=repository.load_metrics(transfer_run_id),
@@ -724,85 +840,70 @@ def _resolve_destination_write_target(
     destination: BasePlatform,
     transfer_run_id: str,
     *,
-    destination_playlist_id: str | None,
-    create_playlist_name: str | None,
+    request: WriteTargetRequest,
     default_create_name_suffix: str,
-) -> str:
+) -> ResolvedWriteTarget:
     run_record = repository.load_run(transfer_run_id)
     persisted_destination_id = _optional_text(run_record.destination_playlist_id)
+    requested_target_type = _destination_target_type(request.target_type)
+    persisted_target_type = _destination_target_type_from_run(run_record)
 
-    if destination_playlist_id is not None and create_playlist_name is not None:
+    if requested_target_type != persisted_target_type:
+        raise ValueError(
+            "transfer run already targets destination target type "
+            f"{persisted_target_type}; start a new match run to use "
+            f"{requested_target_type}"
+        )
+
+    configured_target_id = request.configured_target_id
+    create_playlist_name = request.create_name
+    if configured_target_id is not None and create_playlist_name is not None:
         raise ValueError(
             "choose either destination_playlist_id or create_playlist, not both"
         )
+    if requested_target_type != "playlist" and create_playlist_name is not None:
+        raise ValueError("create_playlist is only supported for playlist destination targets")
+
+    if create_playlist_name is not None and persisted_destination_id is None:
+        return _create_destination_playlist_target(
+            repository,
+            destination,
+            transfer_run_id,
+            target_type=requested_target_type,
+            create_playlist_name=create_playlist_name,
+            default_create_name_suffix=default_create_name_suffix,
+        )
+
     if (
-        destination_playlist_id is not None
-        and persisted_destination_id is not None
-        and destination_playlist_id != persisted_destination_id
-        and not destination.normalizes_destination_playlist_ids
+        requested_target_type == "playlist"
+        and configured_target_id is None
+        and persisted_destination_id is None
     ):
-        raise ValueError(
-            "transfer run already targets destination playlist "
-            f"{persisted_destination_id}; start a new match run to use "
-            f"{destination_playlist_id}"
-        )
-    if destination_playlist_id is not None:
-        normalized_destination_id = _normalize_destination_playlist_id(
-            destination,
-            destination_playlist_id,
-        )
-        normalized_persisted_destination_id = persisted_destination_id
-        if (
-            persisted_destination_id is not None
-            and destination.normalizes_destination_playlist_ids
-        ):
-            normalized_persisted_destination_id = _normalize_destination_playlist_id(
-                destination,
-                persisted_destination_id,
-            )
-        if (
-            normalized_persisted_destination_id is not None
-            and normalized_destination_id != normalized_persisted_destination_id
-        ):
-            raise ValueError(
-                "transfer run already targets destination playlist "
-                f"{persisted_destination_id}; start a new match run to use "
-                f"{normalized_destination_id}"
-            )
-        if normalized_destination_id != persisted_destination_id:
-            repository.update_destination_playlist_id(
-                transfer_run_id,
-                normalized_destination_id,
-            )
-        logger.info("destination playlist id recorded", run_id=transfer_run_id)
-        WRITE_DIAGNOSTICS.debug(
-            "destination playlist id recorded",
-            run_id=transfer_run_id,
-            destination_platform=destination.platform_name,
-            destination_playlist_id=normalized_destination_id,
-        )
-        return normalized_destination_id
-
-    if persisted_destination_id is not None:
-        normalized_destination_id = _normalize_destination_playlist_id(
-            destination,
-            persisted_destination_id,
-        )
-        if normalized_destination_id != persisted_destination_id:
-            repository.update_destination_playlist_id(transfer_run_id, normalized_destination_id)
-        WRITE_DIAGNOSTICS.debug(
-            "destination playlist reused",
-            run_id=transfer_run_id,
-            destination_platform=destination.platform_name,
-            destination_playlist_id=normalized_destination_id,
-        )
-        return normalized_destination_id
-
-    if create_playlist_name is None:
         raise ValueError(
             "write target is required; pass --destination-playlist-id or --create-playlist"
         )
 
+    return _resolve_existing_destination_target(
+        repository,
+        destination,
+        transfer_run_id,
+        identity=WriteTargetIdentity(
+            target_type=requested_target_type,
+            configured_target_id=configured_target_id,
+            persisted_target_id=persisted_destination_id,
+        ),
+    )
+
+
+def _create_destination_playlist_target(
+    repository: TransferRepository,
+    destination: BasePlatform,
+    transfer_run_id: str,
+    *,
+    target_type: str,
+    create_playlist_name: str,
+    default_create_name_suffix: str,
+) -> ResolvedWriteTarget:
     destination_id = destination.create_playlist(
         create_playlist_name,
         f"Created by playlist-porter {default_create_name_suffix}",
@@ -820,7 +921,95 @@ def _resolve_destination_write_target(
         destination_playlist_id=destination_id,
         create_playlist_name=create_playlist_name,
     )
-    return destination_id
+    return ResolvedWriteTarget(target_type=target_type, target_id=destination_id)
+
+
+def _resolve_existing_destination_target(
+    repository: TransferRepository,
+    destination: BasePlatform,
+    transfer_run_id: str,
+    *,
+    identity: WriteTargetIdentity,
+) -> ResolvedWriteTarget:
+    if identity.resolved_persisted_can_be_reused(destination):
+        WRITE_DIAGNOSTICS.debug(
+            "destination target reused",
+            run_id=transfer_run_id,
+            destination_platform=destination.platform_name,
+            destination_target_type=identity.target_type,
+            configured_target_id=identity.configured_target_id,
+            destination_target_id=identity.persisted_target_id,
+        )
+        return ResolvedWriteTarget(
+            target_type=identity.target_type,
+            target_id=identity.persisted_target_id or "",
+            configured_target_id=identity.configured_target_id,
+        )
+
+    if (
+        identity.configured_target_id is not None
+        and identity.persisted_target_id is not None
+        and destination.is_resolved_destination_target(
+            identity.target_type,
+            identity.persisted_target_id,
+        )
+    ):
+        raise ValueError(_target_conflict_message(identity))
+
+    target_id_to_validate = identity.configured_target_id or identity.persisted_target_id
+    normalized_target_id = destination.validate_destination_target(
+        identity.target_type,
+        target_id_to_validate,
+    )
+    persisted_target_id = identity.persisted_target_id
+    if persisted_target_id is not None and normalized_target_id != persisted_target_id:
+        normalized_persisted_target_id = (
+            normalized_target_id
+            if target_id_to_validate == persisted_target_id
+            else destination.validate_destination_target(
+                identity.target_type,
+                persisted_target_id,
+            )
+        )
+        if not destination.destination_target_ids_match(
+            identity.target_type,
+            normalized_target_id,
+            normalized_persisted_target_id,
+        ):
+            raise ValueError(
+                _target_conflict_message(identity, requested_target_id=normalized_target_id)
+            )
+    if normalized_target_id != persisted_target_id:
+        repository.update_destination_playlist_id(transfer_run_id, normalized_target_id)
+    WRITE_DIAGNOSTICS.debug(
+        "destination target resolved",
+        run_id=transfer_run_id,
+        destination_platform=destination.platform_name,
+        destination_target_type=identity.target_type,
+        destination_target_id=normalized_target_id,
+    )
+    return ResolvedWriteTarget(
+        target_type=identity.target_type,
+        target_id=normalized_target_id,
+        configured_target_id=identity.configured_target_id,
+    )
+
+
+def _target_conflict_message(
+    identity: WriteTargetIdentity,
+    *,
+    requested_target_id: str | None = None,
+) -> str:
+    target_label = (
+        "destination playlist"
+        if identity.target_type == "playlist"
+        else "destination target"
+    )
+    requested = requested_target_id or identity.configured_target_id
+    return (
+        f"transfer run already targets {target_label} "
+        f"{identity.persisted_target_id}; start a new match run to use {requested}"
+    )
 
 
 def _optional_text(value: str | None) -> str | None:
@@ -830,8 +1019,16 @@ def _optional_text(value: str | None) -> str | None:
     return text or None
 
 
-def _normalize_destination_playlist_id(destination: BasePlatform, playlist_id: str) -> str:
-    return _optional_text(destination.validate_destination_playlist(playlist_id)) or playlist_id
+def _destination_target_type(value: str | None) -> str:
+    target_type = _optional_text(value) or "playlist"
+    if target_type not in {"playlist", "liked_songs"}:
+        raise ValueError("destination_target_type must be one of playlist, liked_songs")
+    return target_type
+
+
+def _destination_target_type_from_run(run_record) -> str:
+    metadata = getattr(run_record, "metadata", {}) or {}
+    return _destination_target_type(metadata.get("destination_target_type"))
 
 
 def render_metrics(console: Console, metrics: TransferMetrics, *, title: str) -> None:
@@ -955,13 +1152,33 @@ def _pending_pairs(
 
 def _filter_destination_duplicate_pairs(
     destination: BasePlatform,
-    destination_playlist_id: str,
+    target: ResolvedWriteTarget,
     pending_pairs: list[WritePair],
     *,
     repository: TransferRepository,
     transfer_run_id: str,
+    progress_reporter: ProgressReporter | None = None,
 ) -> list[WritePair]:
-    existing_destination_ids = destination.get_destination_track_ids(destination_playlist_id)
+    logger.info(
+        "checking destination for existing tracks",
+        run_id=transfer_run_id,
+        destination_platform=destination.platform_name,
+        destination_target_type=target.target_type,
+        pending_write_count=len(pending_pairs),
+    )
+    report_progress(
+        progress_reporter,
+        phase="write",
+        current=0,
+        total=len(pending_pairs),
+        label="Checking destination for existing tracks...",
+    )
+    started_at = perf_counter()
+    existing_destination_ids = destination.get_existing_destination_target_track_ids(
+        target.target_type,
+        target.target_id,
+        [pair.track_id for pair in pending_pairs],
+    )
     seen_destination_ids = set(existing_destination_ids)
     write_ready_pairs: list[WritePair] = []
     for pair in pending_pairs:
@@ -976,7 +1193,8 @@ def _filter_destination_duplicate_pairs(
                 "destination duplicate write skipped",
                 run_id=transfer_run_id,
                 destination_platform=destination.platform_name,
-                destination_playlist_id=destination_playlist_id,
+                destination_playlist_id=target.target_id,
+                destination_target_type=target.target_type,
                 pair=write_pair_snapshot(pair.source_track_id, pair.track_id),
             )
             continue
@@ -986,7 +1204,9 @@ def _filter_destination_duplicate_pairs(
         "destination duplicate filter resolved",
         run_id=transfer_run_id,
         destination_platform=destination.platform_name,
-        destination_playlist_id=destination_playlist_id,
+        destination_playlist_id=target.target_id,
+        destination_target_type=target.target_type,
+        elapsed_seconds=round(perf_counter() - started_at, 3),
         existing_destination_track_count=len(existing_destination_ids),
         pending_write_count=len(pending_pairs),
         write_ready_count=len(write_ready_pairs),
@@ -996,7 +1216,7 @@ def _filter_destination_duplicate_pairs(
 
 def _write_pending_pairs(
     destination: BasePlatform,
-    destination_playlist_id: str,
+    target: ResolvedWriteTarget,
     pending_pairs: list[WritePair],
     *,
     repository: TransferRepository,
@@ -1015,13 +1235,14 @@ def _write_pending_pairs(
         total=len(pending_pairs),
     )
     progress_writer = getattr(destination, "add_tracks_with_progress", None)
-    if callable(progress_writer):
+    if target.target_type == "playlist" and callable(progress_writer):
         try:
             WRITE_DIAGNOSTICS.debug(
                 "progress writer started",
                 run_id=transfer_run_id,
                 destination_platform=destination.platform_name,
-                destination_playlist_id=destination_playlist_id,
+                destination_playlist_id=target.target_id,
+                destination_target_type=target.target_type,
                 pending_write_count=len(pending_pairs),
             )
             writer_kwargs = {
@@ -1031,7 +1252,7 @@ def _write_pending_pairs(
             if _accepts_progress_reporter(progress_writer):
                 writer_kwargs["progress_reporter"] = progress_reporter
             writer_args = [
-                destination_playlist_id,
+                target.target_id,
                 [pair.source_track_id for pair in pending_pairs],
                 [pair.track_id for pair in pending_pairs],
             ]
@@ -1049,7 +1270,8 @@ def _write_pending_pairs(
                 "progress writer failed",
                 run_id=transfer_run_id,
                 destination_platform=destination.platform_name,
-                destination_playlist_id=destination_playlist_id,
+                destination_playlist_id=target.target_id,
+                destination_target_type=target.target_type,
                 error=exc,
             )
             _record_first_incomplete_write_failure(
@@ -1060,55 +1282,85 @@ def _write_pending_pairs(
             )
             raise
 
+    return _write_pending_pairs_in_batches(
+        destination,
+        target,
+        pending_pairs,
+        repository=repository,
+        transfer_run_id=transfer_run_id,
+        progress_reporter=progress_reporter,
+    )
+
+
+def _write_pending_pairs_in_batches(
+    destination: BasePlatform,
+    target: ResolvedWriteTarget,
+    pending_pairs: list[WritePair],
+    *,
+    repository: TransferRepository,
+    transfer_run_id: str,
+    progress_reporter: ProgressReporter | None = None,
+) -> int:
     written_count = 0
-    for pair in pending_pairs:
+    batch_size = max(1, destination.destination_target_batch_size(target.target_type))
+    for batch in _batches(pending_pairs, batch_size):
         try:
             WRITE_DIAGNOSTICS.debug(
                 "track write started",
                 run_id=transfer_run_id,
                 destination_platform=destination.platform_name,
-                destination_playlist_id=destination_playlist_id,
-                pair=write_pair_snapshot(pair.source_track_id, pair.track_id),
+                destination_playlist_id=target.target_id,
+                destination_target_type=target.target_type,
+                pending_write_count=len(batch),
             )
-            destination.add_tracks(destination_playlist_id, [pair.track_id])
+            destination.add_tracks_to_target(
+                target.target_type,
+                target.target_id,
+                [pair.track_id for pair in batch],
+            )
         except Exception as exc:
             logger.error("track write failed", run_id=transfer_run_id, error=exc)
             WRITE_DIAGNOSTICS.debug(
                 "track write failed",
                 run_id=transfer_run_id,
                 destination_platform=destination.platform_name,
-                destination_playlist_id=destination_playlist_id,
-                pair=write_pair_snapshot(pair.source_track_id, pair.track_id),
+                destination_playlist_id=target.target_id,
+                destination_target_type=target.target_type,
                 error=exc,
             )
-            repository.record_write_failure(
-                transfer_run_id,
-                pair.source_track_id,
-                pair.track_id,
+            _record_first_incomplete_write_failure(
+                batch,
+                repository=repository,
+                transfer_run_id=transfer_run_id,
                 error=str(exc) or exc.__class__.__name__,
             )
             raise
-        repository.record_write_success(
-            transfer_run_id,
-            pair.source_track_id,
-            pair.track_id,
-        )
-        written_count += 1
+        for pair in batch:
+            repository.record_write_success(
+                transfer_run_id,
+                pair.source_track_id,
+                pair.track_id,
+            )
+        written_count += len(batch)
         report_progress(
             progress_reporter,
             phase="write",
             current=written_count,
             total=len(pending_pairs),
-            label=pair.source_title,
+            label=batch[-1].source_title,
         )
         logger.debug("track write recorded", run_id=transfer_run_id, written_count=written_count)
         WRITE_DIAGNOSTICS.debug(
             "track write recorded",
             run_id=transfer_run_id,
-            pair=write_pair_snapshot(pair.source_track_id, pair.track_id),
+            pair=write_pair_snapshot(batch[-1].source_track_id, batch[-1].track_id),
             written_count=written_count,
         )
     return written_count
+
+
+def _batches[T](items: list[T], size: int) -> list[list[T]]:
+    return [items[index : index + size] for index in range(0, len(items), size)]
 
 
 def _accepts_progress_reporter(progress_writer) -> bool:

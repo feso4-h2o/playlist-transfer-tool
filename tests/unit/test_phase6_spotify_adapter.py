@@ -8,7 +8,12 @@ from playlist_porter.matching.candidates import generate_candidates
 from playlist_porter.matching.status import UnavailableReason
 from playlist_porter.models import Playlist, TransferRun, UniversalTrack
 from playlist_porter.persistence.repositories import TransferRepository
-from playlist_porter.platforms.spotify import SPOTIFY_BATCH_LIMIT, SpotifyAdapter
+from playlist_porter.platforms.spotify import (
+    SPOTIFY_BATCH_LIMIT,
+    SPOTIFY_LIBRARY_BATCH_LIMIT,
+    SPOTIFY_LIKED_SONGS_TARGET_ID,
+    SpotifyAdapter,
+)
 from playlist_porter.progress import ProgressEvent
 from playlist_porter.rate_limit import AuthenticationFailure, ValidationFailure
 
@@ -16,6 +21,9 @@ from playlist_porter.rate_limit import AuthenticationFailure, ValidationFailure
 class FakeSpotifyClient:
     def __init__(self) -> None:
         self.added_batches: list[tuple[str, list[str]]] = []
+        self.saved_track_batches: list[list[str]] = []
+        self.saved_contains_batches: list[list[str]] = []
+        self.saved_track_ids: set[str] = set()
         self.playlist_item_offsets: list[int] = []
 
     def playlist(self, playlist_id, fields=None):
@@ -78,6 +86,17 @@ class FakeSpotifyClient:
     def playlist_add_items(self, playlist_id, uris):
         self.added_batches.append((playlist_id, list(uris)))
         return {"snapshot_id": f"snapshot-{len(self.added_batches)}"}
+
+    def current_user_saved_tracks_add(self, tracks=None):
+        track_ids = list(tracks or [])
+        self.saved_track_batches.append(track_ids)
+        self.saved_track_ids.update(track_ids)
+        return None
+
+    def current_user_saved_tracks_contains(self, tracks=None):
+        track_ids = list(tracks or [])
+        self.saved_contains_batches.append(track_ids)
+        return [track_id in self.saved_track_ids for track_id in track_ids]
 
 
 def test_spotify_authentication_fails_clearly_without_credentials() -> None:
@@ -371,6 +390,51 @@ def test_spotify_add_tracks_batches_by_api_limit() -> None:
         1,
     ]
     assert client.added_batches[0][1][0] == "spotify:track:track-0"
+
+
+def test_spotify_liked_songs_writes_batch_by_library_limit() -> None:
+    client = FakeSpotifyClient()
+    adapter = SpotifyAdapter(client=client)
+    track_ids = [f"track-{index}" for index in range(SPOTIFY_LIBRARY_BATCH_LIMIT + 1)]
+
+    adapter.add_tracks_to_target(SPOTIFY_LIKED_SONGS_TARGET_ID, "liked_songs", track_ids)
+
+    assert [len(batch) for batch in client.saved_track_batches] == [
+        SPOTIFY_LIBRARY_BATCH_LIMIT,
+        1,
+    ]
+    assert client.saved_track_batches[0][0] == "track-0"
+
+
+def test_spotify_liked_songs_duplicate_check_uses_library_contains() -> None:
+    client = FakeSpotifyClient()
+    client.saved_track_ids = {"track-0", "track-40"}
+    adapter = SpotifyAdapter(client=client)
+    track_ids = [f"track-{index}" for index in range(SPOTIFY_LIBRARY_BATCH_LIMIT + 1)]
+
+    existing = adapter.get_existing_destination_target_track_ids(
+        SPOTIFY_LIKED_SONGS_TARGET_ID,
+        "liked_songs",
+        track_ids,
+    )
+
+    assert existing == {"track-0", "track-40"}
+    assert [len(batch) for batch in client.saved_contains_batches] == [
+        SPOTIFY_LIBRARY_BATCH_LIMIT,
+        1,
+    ]
+
+
+def test_spotify_liked_songs_rejects_destination_playlist_id() -> None:
+    adapter = SpotifyAdapter(client=FakeSpotifyClient())
+
+    with pytest.raises(ValidationFailure, match="does not accept"):
+        adapter.validate_destination_target("liked_songs", "playlist-1")
+
+    assert (
+        adapter.validate_destination_target("liked_songs", None)
+        == SPOTIFY_LIKED_SONGS_TARGET_ID
+    )
 
 
 def test_spotify_destination_track_ids_read_playlist_items() -> None:

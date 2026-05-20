@@ -99,7 +99,8 @@ uv run playlist-porter export-report --config cli-config.json
 See [docs/playlist-workflow.md](docs/playlist-workflow.md) for Spotify -> QQ
 Music, QQ Music -> Spotify, mock fixture examples, `cli-config.json`
 examples, playlist identifier support, write-target choices, and report export
-details.
+details. Write targets can be normal playlists/songlists or account library
+targets such as Spotify Liked Songs and QQ Music “我喜欢”.
 
 ## Development
 

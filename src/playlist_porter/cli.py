@@ -19,6 +19,7 @@ from playlist_porter.config import (
     update_config_run_id,
     write_default_config,
 )
+from playlist_porter.config_validation import validate_write_target_config
 from playlist_porter.logging_config import configure_logging
 from playlist_porter.persistence.exports import export_reports
 from playlist_porter.persistence.repositories import TransferRepository
@@ -122,6 +123,7 @@ def _main(argv: list[str] | None = None) -> int:
         config = load_config(args.config)
         logger.info("config loaded", path=args.config)
         defaults = config.commands.match
+        write_defaults = config.commands.write
         source_platform = _resolve_platform(
             config.source_platform,
             setting="source_platform",
@@ -133,6 +135,12 @@ def _main(argv: list[str] | None = None) -> int:
         source_playlist = _required(
             defaults.source_playlist,
             setting="match.source_playlist",
+        )
+        validate_write_target_config(
+            destination_platform=destination_platform,
+            destination_target_type=write_defaults.destination_target_type,
+            destination_playlist_id=write_defaults.destination_playlist_id,
+            create_playlist=write_defaults.create_playlist,
         )
         logger.info(
             "match command resolved",
@@ -151,6 +159,9 @@ def _main(argv: list[str] | None = None) -> int:
                 source_playlist_id=source_playlist,
                 dry_run=True,
                 restart=_coalesce(defaults.restart, False),
+                destination_playlist_id=write_defaults.destination_playlist_id,
+                create_playlist_name=write_defaults.create_playlist,
+                destination_target_type=write_defaults.destination_target_type,
                 progress_reporter=progress_reporter,
             )
         update_config_run_id(args.config, result.transfer_run_id)
@@ -215,6 +226,12 @@ def _main(argv: list[str] | None = None) -> int:
             run_record.destination_platform,
             setting="persisted run destination_platform",
         )
+        validate_write_target_config(
+            destination_platform=destination_platform,
+            destination_target_type=defaults.destination_target_type,
+            destination_playlist_id=defaults.destination_playlist_id,
+            create_playlist=defaults.create_playlist,
+        )
         logger.info(
             "write command resolved",
             destination_platform=destination_platform,
@@ -230,6 +247,7 @@ def _main(argv: list[str] | None = None) -> int:
                 transfer_run_id=run_id,
                 destination_playlist_id=defaults.destination_playlist_id,
                 create_playlist_name=defaults.create_playlist,
+                destination_target_type=defaults.destination_target_type,
                 progress_reporter=progress_reporter,
             )
         logger.info(
@@ -241,7 +259,7 @@ def _main(argv: list[str] | None = None) -> int:
         )
         print(f"run id: {result.transfer_run_id}")
         print("mode: write")
-        print(f"destination playlist: {result.destination_playlist_id}")
+        print(f"destination target: {result.destination_playlist_id}")
         print(f"written: {result.written_count}; skipped: {result.skipped_count}")
         for path in result.report_paths:
             print(f"wrote report: {path}")
@@ -384,6 +402,8 @@ def _should_show_progress(logging_setup) -> bool:
 
 def _progress_description(event: ProgressEvent) -> str:
     label = event.label.strip() if event.label else ""
+    if label == "Checking destination for existing tracks...":
+        return label
     if event.phase == "match":
         prefix = "Matching tracks"
     else:

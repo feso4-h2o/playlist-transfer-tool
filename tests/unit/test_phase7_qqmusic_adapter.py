@@ -116,6 +116,30 @@ class SearchPayloadClient:
         self.closed = True
 
 
+class FakePaginatedPlaylistRequest:
+    def __init__(self, pages: list[dict]) -> None:
+        self.pages = pages
+
+    async def paginate(self):
+        for page in self.pages:
+            yield page
+
+
+class FakeSonglistModule:
+    def __init__(self, pages: list[dict]) -> None:
+        self.pages = pages
+        self.detail_calls: list[tuple[int, int, int]] = []
+
+    def get_detail(self, playlist_id: int, *, dirid: int = 0, num: int = 10):
+        self.detail_calls.append((playlist_id, dirid, num))
+        return FakePaginatedPlaylistRequest(self.pages)
+
+
+class FakeFacadeClient:
+    def __init__(self, pages: list[dict]) -> None:
+        self.songlist = FakeSonglistModule(pages)
+
+
 class EmptyDestination:
     platform_name = "spotify"
 
@@ -265,6 +289,36 @@ def test_qqmusic_adapter_validates_destination_songlist_before_write() -> None:
     assert client.playlist_fetches == [(12345, 50, 0)]
 
 
+def test_qqmusic_adapter_validates_liked_songs_url_before_write() -> None:
+    client = FakeQQMusicClient(
+        playlist_payload={
+            "info": {"id": 12345, "dirid": 201, "title": "我喜欢"},
+            "songs": [],
+        }
+    )
+    adapter = QQMusicAdapter(
+        config=QQMusicConfig(page_size=50),
+        client=client,
+        rate_limit_policy=qq_policy(),
+    )
+
+    assert (
+        adapter.validate_destination_target(
+            "liked_songs",
+            "https://y.qq.com/n/ryqq_v2/playlist/12345",
+        )
+        == "201:12345"
+    )
+    assert client.playlist_fetches == [(12345, 50, 0)]
+
+
+def test_qqmusic_adapter_liked_songs_requires_target_id() -> None:
+    adapter = QQMusicAdapter(client=FakeQQMusicClient(), rate_limit_policy=qq_policy())
+
+    with pytest.raises(ValidationFailure, match="My Favorites playlist id or URL"):
+        adapter.validate_destination_target("liked_songs", None)
+
+
 def test_qqmusic_adapter_validates_resolved_destination_songlist_before_write() -> None:
     client = FakeQQMusicClient(
         playlist_payload={
@@ -410,6 +464,44 @@ def test_qqmusic_client_facade_reuses_event_loop_between_calls() -> None:
     second_loop_id = facade._run_async(loop_id())
 
     assert second_loop_id == first_loop_id
+
+
+def test_qqmusic_client_facade_logs_paginated_playlist_stats(monkeypatch) -> None:
+    records = []
+
+    class DebugLogger:
+        def debug(self, message, **kwargs):
+            records.append((message, kwargs))
+
+    monkeypatch.setattr("playlist_porter.platforms.qqmusic.logger", DebugLogger())
+    pages = [
+        {
+            "info": {"id": 12345, "title": "第一页"},
+            "songs": [song_payload(id=1)],
+            "hasmore": True,
+        },
+        {
+            "info": {"id": 12345, "title": "第二页"},
+            "songs": [song_payload(id=2)],
+            "hasmore": False,
+        },
+    ]
+    facade = QQMusicClientFacade.__new__(QQMusicClientFacade)
+    facade._client = FakeFacadeClient(pages)
+    facade._loop = None
+
+    payload = facade.get_playlist(12345, page_size=500, dirid=201)
+
+    assert [song["id"] for song in payload["songs"]] == [1, 2]
+    assert facade._client.songlist.detail_calls == [(12345, 201, 500)]
+    message, fields = records[-1]
+    assert message == "qqmusic playlist pages fetched"
+    assert fields["page_size"] == 500
+    assert fields["page_count"] == 2
+    assert fields["track_count"] == 2
+    assert fields["playlist_id"] == 12345
+    assert fields["dirid"] == 201
+    assert fields["elapsed_seconds"] >= 0
 
 
 def test_qqmusic_adapter_search_retries_transient_failures() -> None:
@@ -655,6 +747,35 @@ def test_qqmusic_destination_track_ids_use_numeric_write_ids() -> None:
 
     assert track_ids == {"1048576:0", "2048:13"}
     assert client.playlist_fetches == [(12345, 50, 777)]
+
+
+def test_qqmusic_liked_songs_track_ids_merge_paginated_payloads() -> None:
+    client = FakeQQMusicClient(
+        playlist_payload=[
+            {
+                "info": {"id": 12345, "dirid": 201, "title": "我喜欢"},
+                "songs": [song_payload(id=1048576, type=0)],
+            },
+            {
+                "info": {"id": 12345, "dirid": 201, "title": "我喜欢"},
+                "songs": [song_payload(id=2048, type=13, title="Beta")],
+            },
+        ]
+    )
+    adapter = QQMusicAdapter(
+        config=QQMusicConfig(page_size=50),
+        client=client,
+        rate_limit_policy=qq_policy(),
+    )
+
+    track_ids = adapter.get_existing_destination_target_track_ids(
+        "liked_songs",
+        "201:12345",
+        ["1048576:0", "2048:13", "999:0"],
+    )
+
+    assert track_ids == {"1048576:0", "2048:13"}
+    assert client.playlist_fetches == [(12345, 50, 201)]
 
 
 def test_qqmusic_create_playlist_returns_resolved_write_target() -> None:

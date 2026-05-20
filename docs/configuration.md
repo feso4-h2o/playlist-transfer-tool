@@ -11,10 +11,10 @@ project config.
 
 Mock fixture workflows do not need Spotify or QQ Music credentials.
 
-Spotify playlist reads, Spotify searches, and Spotify writes currently require
-OAuth environment variables because the Spotify adapter uses an authenticated
-Spotipy client. This means `match` needs Spotify credentials whenever Spotify is
-the source or destination platform.
+Spotify playlist reads, Spotify searches, playlist writes, and Liked Songs
+writes require OAuth environment variables because the Spotify adapter uses an
+authenticated Spotipy client. This means `match` needs Spotify credentials
+whenever Spotify is the source or destination platform.
 
 QQ Music public playlist reads and destination searches can run without
 `QQMUSIC_CREDENTIAL_PATH` when `qqmusic.allow_anonymous_read` is enabled in
@@ -46,7 +46,8 @@ It also includes platform and command sections:
   visibility for created playlists.
 - `qqmusic`: QQ Music adapter behavior flags and page size.
 - `commands.match`: `source_playlist` and `restart`.
-- `commands.write`: `destination_playlist_id` and `create_playlist`.
+- `commands.write`: `destination_target_type`, `destination_playlist_id`, and
+  `create_playlist`.
 
 Config owns workflow identity and shared state paths. CLI options are reserved
 for command selection, logging, config file selection, `init-config` file
@@ -86,7 +87,10 @@ SPOTIFY_SCOPES="playlist-read-private playlist-read-collaborative playlist-modif
 ```
 
 `SPOTIFY_SCOPES` is optional. Quote it in `.env` because scope values contain
-spaces. If omitted, the CLI uses the default playlist read/write scopes.
+spaces. If omitted, the CLI uses the default playlist read/write scopes. For
+Spotify Liked Songs writes, include `user-library-read user-library-modify`. If
+your token cache was created before adding those user-library scopes, delete or
+refresh the cache and authorize Spotify again.
 
 The first Spotify command that needs OAuth may ask you to open a browser URL and
 paste the redirected callback URL. Paste the full URL, including the `?code=...`
@@ -114,6 +118,11 @@ QQMUSIC_USER_ID=<optional-user-id>
 `QQMUSIC_CREDENTIAL_PATH` should point to a local JSON credential accepted by
 `qqmusic_api.Credential`. `QQMUSIC_USER_ID` is optional and only needed for
 local workflows that require an explicit account identifier.
+
+The `qqmusic.page_size` config controls how many songs are requested per page
+when reading large QQ Music songlists for duplicate checks. The generated
+default is conservative; larger values such as `1000` can reduce duplicate-check
+latency for large destination songlists when QQ Music accepts the request.
 
 ### Optional Credential Helper
 

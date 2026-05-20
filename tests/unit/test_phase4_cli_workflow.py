@@ -712,6 +712,142 @@ def test_write_rejects_conflicting_config_target_defaults(tmp_path, capsys) -> N
     assert "choose either destination_playlist_id or create_playlist" in captured.out
 
 
+def test_match_rejects_liked_songs_create_playlist_config(tmp_path, capsys) -> None:
+    config_path, database_path, _, _ = _phase4_fixture(tmp_path)
+    _set_config_values(
+        config_path,
+        commands={
+            "match": {
+                "source_playlist": "source-playlist",
+                "restart": False,
+            },
+            "write": {
+                "create_playlist": "Copied",
+                "destination_playlist_id": "",
+                "destination_target_type": "liked_songs",
+            },
+        },
+    )
+
+    exit_code = main(["match", "--config", str(config_path)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert database_path.exists() is False
+    assert "create_playlist is only supported for playlist destination targets" in captured.out
+
+
+def test_match_rejects_spotify_liked_songs_destination_playlist_id(tmp_path, capsys) -> None:
+    config_path, database_path, _, _ = _phase4_fixture(tmp_path)
+    _set_config_values(
+        config_path,
+        destination_platform="spotify",
+        commands={
+            "match": {
+                "source_playlist": "source-playlist",
+                "restart": False,
+            },
+            "write": {
+                "create_playlist": "",
+                "destination_playlist_id": "playlist-1",
+                "destination_target_type": "liked_songs",
+            },
+        },
+    )
+
+    exit_code = main(["match", "--config", str(config_path)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert database_path.exists() is False
+    assert "Spotify Liked Songs does not accept destination_playlist_id" in captured.out
+
+
+def test_match_rejects_qqmusic_liked_songs_without_destination_playlist_id(
+    tmp_path,
+    capsys,
+) -> None:
+    config_path, database_path, _, _ = _phase4_fixture(tmp_path)
+    _set_config_values(
+        config_path,
+        destination_platform="qqmusic",
+        commands={
+            "match": {
+                "source_playlist": "source-playlist",
+                "restart": False,
+            },
+            "write": {
+                "create_playlist": "",
+                "destination_playlist_id": "",
+                "destination_target_type": "liked_songs",
+            },
+        },
+    )
+
+    exit_code = main(["match", "--config", str(config_path)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert database_path.exists() is False
+    assert "QQ Music liked_songs writes require destination_playlist_id" in captured.out
+
+
+def test_write_rejects_liked_songs_create_playlist_config(tmp_path, capsys) -> None:
+    config_path, database_path, writes_path, _ = _phase4_fixture(tmp_path)
+    config = PorterConfig(
+        database_path=database_path,
+        report_output_dir=tmp_path / "reports",
+        mock_source_playlists_path=tmp_path / "fixtures" / "playlists.json",
+        mock_destination_catalog_path=tmp_path / "fixtures" / "catalog.json",
+        mock_writes_path=writes_path,
+    )
+    dry_run = _run_mock_match(config)
+    _set_config_values(
+        config_path,
+        run_id=dry_run.transfer_run_id,
+        commands={
+            "match": {
+                "source_playlist": "source-playlist",
+                "restart": False,
+            },
+            "write": {
+                "create_playlist": "Copied",
+                "destination_playlist_id": "",
+                "destination_target_type": "liked_songs",
+            },
+        },
+    )
+
+    exit_code = main(["write", "--config", str(config_path)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "create_playlist is only supported for playlist destination targets" in captured.out
+
+
+def test_match_allows_mock_liked_songs_without_destination_playlist_id(tmp_path) -> None:
+    config_path, database_path, _, _ = _phase4_fixture(tmp_path)
+    _set_config_values(
+        config_path,
+        commands={
+            "match": {
+                "source_playlist": "source-playlist",
+                "restart": False,
+            },
+            "write": {
+                "create_playlist": "",
+                "destination_playlist_id": "",
+                "destination_target_type": "liked_songs",
+            },
+        },
+    )
+
+    exit_code = main(["match", "--config", str(config_path)])
+
+    assert exit_code == 0
+    assert database_path.exists() is True
+
+
 def test_export_reports_include_expected_columns_and_region_reason(tmp_path) -> None:
     config_path, database_path, _, reports_path = _phase4_fixture(tmp_path)
     main(["match", "--config", str(config_path)])
@@ -863,7 +999,14 @@ def test_write_uses_progress_in_default_interactive_mode(tmp_path, monkeypatch) 
     exit_code = main(["write", "--config", str(config_path)])
 
     assert exit_code == 0
-    assert [event.phase for event in events] == ["write", "write"]
+    assert [
+        (event.phase, event.current, event.total, event.label)
+        for event in events
+    ] == [
+        ("write", 0, 1, "Checking destination for existing tracks..."),
+        ("write", 0, 1, None),
+        ("write", 1, 1, "Alpha"),
+    ]
 
 
 def test_write_finishes_progress_before_summary_rendering(tmp_path, monkeypatch) -> None:
@@ -912,6 +1055,17 @@ def test_progress_description_uses_phase_and_song_label() -> None:
     assert (
         _progress_description(ProgressEvent(phase="write", current=1, total=2, label="Beta"))
         == "Writing tracks: Beta"
+    )
+    assert (
+        _progress_description(
+            ProgressEvent(
+                phase="write",
+                current=0,
+                total=2,
+                label="Checking destination for existing tracks...",
+            )
+        )
+        == "Checking destination for existing tracks..."
     )
 
 

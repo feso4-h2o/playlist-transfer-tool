@@ -30,6 +30,7 @@ Configure the shared workflow state and command defaults:
       "restart": true
     },
     "write": {
+      "destination_target_type": "playlist",
       "destination_playlist_id": "",
       "create_playlist": "Spotify Copy"
     }
@@ -69,6 +70,7 @@ Configure the shared workflow state and command defaults:
       "restart": true
     },
     "write": {
+      "destination_target_type": "playlist",
       "destination_playlist_id": "",
       "create_playlist": "QQ Music Copy"
     }
@@ -120,6 +122,7 @@ Then configure the mock source playlist and optional write target:
       "restart": true
     },
     "write": {
+      "destination_target_type": "playlist",
       "destination_playlist_id": "",
       "create_playlist": "Sample Copy"
     }
@@ -192,8 +195,13 @@ Current source playlist support:
 - QQ Music accepts raw numeric songlist IDs and common playlist URL forms where
   a numeric ID can be extracted.
 
+`commands.write.destination_target_type` selects the destination target kind:
+
+- `playlist`: normal Spotify playlist, QQ Music songlist, or mock playlist.
+- `liked_songs`: Spotify Liked Songs or QQ Music “我喜欢”.
+
 `commands.write.destination_playlist_id` identifies an existing normal playlist
-or songlist on `destination_platform`.
+or songlist when `destination_target_type` is `playlist`.
 
 Current destination playlist support:
 
@@ -203,6 +211,14 @@ Current destination playlist support:
 - QQ Music accepts public numeric songlist IDs and common playlist URL forms.
   Existing targets are resolved during validation and stored as the internal
   write target needed by QQ Music.
+
+For `destination_target_type: "liked_songs"`:
+
+- Spotify Liked Songs is account-level. Leave `destination_playlist_id` and
+  `create_playlist` empty.
+- QQ Music “我喜欢” should be configured with its public playlist URL or numeric
+  ID in `destination_playlist_id`; validation resolves that target to the
+  internal `dirid:tid` pair needed for writes.
 
 ## Create Versus Existing Destination
 
@@ -217,9 +233,6 @@ are mutually exclusive write target paths:
 `create_playlist` is a creation request, not an existing-playlist lookup or
 deduplication request. If a playlist with the same name already exists, the
 platform may create another playlist with that name.
-
-Non-playlist targets such as Spotify Liked Songs are separate from normal
-playlist IDs and are not currently supported write targets.
 
 ## Reports
 

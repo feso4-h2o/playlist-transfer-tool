@@ -21,6 +21,8 @@ from playlist_porter.normalization import (
 from playlist_porter.platforms.base import BasePlatform, PlatformCapabilities
 from playlist_porter.rate_limit import ValidationFailure
 
+MOCK_LIKED_SONGS_TARGET_ID = "liked_songs"
+
 
 @dataclass(frozen=True)
 class _CatalogEntry:
@@ -201,6 +203,91 @@ class MockAdapter(BasePlatform):
             raise ValidationFailure(
                 f"mock destination playlist not found or unwritable: {playlist_id}"
             )
+
+    def get_existing_destination_target_track_ids(
+        self,
+        target_type: str,
+        target_id: str,
+        track_ids: list[str],
+    ) -> set[str]:
+        """Return destination IDs already present in a mock write target."""
+
+        del track_ids
+        if target_type == "playlist":
+            return self.get_destination_track_ids(target_id)
+        if target_type != "liked_songs":
+            raise ValidationFailure(
+                f"mock does not support destination target type: {target_type}"
+            )
+        if target_id != MOCK_LIKED_SONGS_TARGET_ID:
+            raise ValidationFailure(f"invalid mock Liked Songs target: {target_id}")
+        return self.get_destination_track_ids(MOCK_LIKED_SONGS_TARGET_ID)
+
+    def validate_destination_target(
+        self,
+        target_type: str,
+        target_id: str | None,
+    ) -> str:
+        """Validate and normalize a mock destination write target."""
+
+        if target_type == "playlist":
+            if target_id is None:
+                raise ValidationFailure("mock playlist destination target requires a playlist id")
+            self.validate_destination_playlist(target_id)
+            return target_id
+        if target_type != "liked_songs":
+            raise ValidationFailure(
+                f"mock does not support destination target type: {target_type}"
+            )
+        if target_id not in (None, MOCK_LIKED_SONGS_TARGET_ID):
+            raise ValidationFailure("Mock Liked Songs does not accept destination_playlist_id")
+        return MOCK_LIKED_SONGS_TARGET_ID
+
+    def is_resolved_destination_target(self, target_type: str, target_id: str) -> bool:
+        """Return whether a mock target is already in the write-store key form."""
+
+        if target_type == "liked_songs":
+            return target_id == MOCK_LIKED_SONGS_TARGET_ID
+        return target_type == "playlist"
+
+    def destination_target_ids_match(
+        self,
+        target_type: str,
+        left: str,
+        right: str,
+    ) -> bool:
+        """Compare mock write targets."""
+
+        if target_type == "liked_songs":
+            return left == right == MOCK_LIKED_SONGS_TARGET_ID
+        return left == right
+
+    def add_tracks_to_target(
+        self,
+        target_type: str,
+        target_id: str,
+        track_ids: list[str],
+    ) -> None:
+        """Append destination-platform track IDs to a mock write target."""
+
+        if target_type == "playlist":
+            self.add_tracks(target_id, track_ids)
+            return
+        if target_type != "liked_songs":
+            raise ValidationFailure(
+                f"mock does not support destination target type: {target_type}"
+            )
+        if target_id != MOCK_LIKED_SONGS_TARGET_ID:
+            raise ValidationFailure(f"invalid mock Liked Songs target: {target_id}")
+        if MOCK_LIKED_SONGS_TARGET_ID not in self._writes:
+            self._writes[MOCK_LIKED_SONGS_TARGET_ID] = {
+                "name": "Liked Songs",
+                "description": None,
+                "target_type": "liked_songs",
+                "track_ids": [],
+            }
+        self._writes[MOCK_LIKED_SONGS_TARGET_ID]["track_ids"].extend(track_ids)
+        self._flush_writes()
 
     @property
     def writes(self) -> dict[str, dict[str, Any]]:
@@ -410,4 +497,4 @@ def _optional_bool(value: Any) -> bool | None:
     return str(value).casefold() in {"1", "true", "yes", "y"}
 
 
-__all__ = ["MockAdapter"]
+__all__ = ["MOCK_LIKED_SONGS_TARGET_ID", "MockAdapter"]
