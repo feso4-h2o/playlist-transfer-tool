@@ -3,7 +3,7 @@ import json
 from playlist_porter.matching.candidates import build_search_queries, match_playlist, match_track
 from playlist_porter.matching.status import MatchStatus, UnavailableReason
 from playlist_porter.models import Playlist, UniversalTrack
-from playlist_porter.platforms.mock import MockAdapter
+from playlist_porter.platforms.mock import MOCK_LIKED_SONGS_TARGET_ID, MockAdapter
 
 
 def _track(
@@ -209,6 +209,29 @@ def test_mock_adapter_loads_json_fixtures_and_records_writes(tmp_path) -> None:
             "description": "Fixture write",
             "name": "Copied",
             "track_ids": ["dest-1"],
+        }
+    }
+
+
+def test_mock_adapter_records_liked_songs_target_writes(tmp_path) -> None:
+    writes_path = tmp_path / "writes.json"
+    adapter = MockAdapter(writes_path=writes_path)
+
+    target_id = adapter.validate_destination_target("liked_songs", None)
+    adapter.add_tracks_to_target("liked_songs", target_id, ["dest-1", "dest-2"])
+
+    assert target_id == MOCK_LIKED_SONGS_TARGET_ID
+    assert adapter.get_existing_destination_target_track_ids(
+        "liked_songs",
+        MOCK_LIKED_SONGS_TARGET_ID,
+        ["dest-1", "dest-3"],
+    ) == {"dest-1", "dest-2"}
+    assert json.loads(writes_path.read_text(encoding="utf-8")) == {
+        MOCK_LIKED_SONGS_TARGET_ID: {
+            "description": None,
+            "name": "Liked Songs",
+            "target_type": "liked_songs",
+            "track_ids": ["dest-1", "dest-2"],
         }
     }
 
