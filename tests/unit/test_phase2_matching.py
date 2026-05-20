@@ -1,8 +1,9 @@
 import json
 
 from playlist_porter.matching.candidates import build_search_queries, match_playlist, match_track
+from playlist_porter.matching.scoring import decide_match
 from playlist_porter.matching.status import MatchStatus, UnavailableReason
-from playlist_porter.models import Playlist, UniversalTrack
+from playlist_porter.models import Playlist, TrackCandidate, UniversalTrack
 from playlist_porter.platforms.mock import MOCK_LIKED_SONGS_TARGET_ID, MockAdapter
 
 
@@ -152,6 +153,20 @@ def test_simplified_traditional_metadata_scores_as_high_confidence_match() -> No
     assert decision.selected_candidate is not None
     assert decision.evidence["title_score"] == 1.0
     assert decision.evidence["primary_artist_score"] == 1.0
+
+
+def test_candidate_field_that_normalizes_empty_does_not_abort_scoring() -> None:
+    source = _track("Song", "Artist", album="Album", duration=180)
+    candidate = TrackCandidate(
+        track=_track("Song", "Artist", track_id="dest-1", album=".", duration=180),
+        score=1.0,
+        rank=1,
+    )
+
+    decision = decide_match(source, [candidate])
+
+    assert decision.status is MatchStatus.METADATA_HIGH_CONFIDENCE
+    assert decision.evidence["album_score"] == 0.0
 
 
 def test_mock_adapter_loads_json_fixtures_and_records_writes(tmp_path) -> None:
