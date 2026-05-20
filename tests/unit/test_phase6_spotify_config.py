@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from playlist_porter.config import (
     DEFAULT_SPOTIFY_SCOPES,
     SpotifyConfig,
@@ -83,7 +85,12 @@ def test_default_config_keeps_credentials_out_of_platform_blocks() -> None:
     assert "dry_run" not in payload["commands"]["match"]
     assert set(payload["commands"]["match"]) == {"source_playlist", "restart"}
     assert payload["commands"]["review"] == {"pending_only": False}
-    assert set(payload["commands"]["write"]) == {"destination_playlist_id", "create_playlist"}
+    assert set(payload["commands"]["write"]) == {
+        "destination_playlist_id",
+        "create_playlist",
+        "destination_target_type",
+    }
+    assert payload["commands"]["write"]["destination_target_type"] == "playlist"
 
 
 def test_spotify_config_expands_scope_environment_placeholder(tmp_path, monkeypatch) -> None:
@@ -249,6 +256,56 @@ def test_command_defaults_load_config_oriented_values(tmp_path) -> None:
     assert config.commands.review.pending_only is True
     assert config.commands.write.destination_playlist_id == "dest"
     assert config.commands.write.create_playlist == "Copy"
+    assert config.commands.write.destination_target_type == "playlist"
+
+
+def test_write_command_loads_liked_songs_target_type(tmp_path) -> None:
+    config_path = tmp_path / "porter.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "database_path": "state/playlist.sqlite",
+                "mock": {
+                    "source_playlists_path": "fixtures/playlists.json",
+                    "destination_catalog_path": "fixtures/catalog.json",
+                },
+                "commands": {
+                    "write": {
+                        "destination_target_type": "liked_songs",
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.commands.write.destination_target_type == "liked_songs"
+
+
+def test_invalid_write_target_type_fails_clearly(tmp_path) -> None:
+    config_path = tmp_path / "porter.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "database_path": "state/playlist.sqlite",
+                "mock": {
+                    "source_playlists_path": "fixtures/playlists.json",
+                    "destination_catalog_path": "fixtures/catalog.json",
+                },
+                "commands": {
+                    "write": {
+                        "destination_target_type": "albums",
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="destination_target_type"):
+        load_config(config_path)
 
 
 def test_empty_report_format_defaults_to_json(tmp_path) -> None:
