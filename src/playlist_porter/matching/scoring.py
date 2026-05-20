@@ -253,6 +253,8 @@ def _best_form_score(
     left_forms: tuple[str, ...] | list[str],
     right_forms: tuple[str, ...] | list[str],
 ) -> float:
+    if not left_forms or not right_forms:
+        return 0.0
     return max(
         fuzz.token_set_ratio(left_form, right_form) / 100
         for left_form in left_forms
