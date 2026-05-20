@@ -15,8 +15,6 @@ DEFAULT_SPOTIFY_SCOPES = (
     "playlist-read-collaborative",
     "playlist-modify-private",
     "playlist-modify-public",
-    "user-library-read",
-    "user-library-modify",
 )
 
 DESTINATION_TARGET_TYPES = {"playlist", "liked_songs"}

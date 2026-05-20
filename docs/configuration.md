@@ -87,11 +87,10 @@ SPOTIFY_SCOPES="playlist-read-private playlist-read-collaborative playlist-modif
 ```
 
 `SPOTIFY_SCOPES` is optional. Quote it in `.env` because scope values contain
-spaces. If omitted, the CLI uses the default playlist read/write and Liked
-Songs scopes. If your token cache was created before the `user-library-read`
-and `user-library-modify` scopes were added, delete or refresh the cache and
-authorize Spotify again. For Spotify Liked Songs writes, include
-`user-library-read user-library-modify`.
+spaces. If omitted, the CLI uses the default playlist read/write scopes. For
+Spotify Liked Songs writes, include `user-library-read user-library-modify`. If
+your token cache was created before adding those user-library scopes, delete or
+refresh the cache and authorize Spotify again.
 
 The first Spotify command that needs OAuth may ask you to open a browser URL and
 paste the redirected callback URL. Paste the full URL, including the `?code=...`
