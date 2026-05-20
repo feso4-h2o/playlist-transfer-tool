@@ -15,9 +15,12 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
+from time import perf_counter
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 from uuid import NAMESPACE_URL, UUID, uuid5
+
+from loguru import logger
 
 from playlist_porter.models import Playlist, TrackCandidate, UniversalTrack
 from playlist_porter.platforms.base import BasePlatform, PlatformCapabilities
@@ -148,8 +151,19 @@ class QQMusicClientFacade:
     def get_playlist(self, playlist_id: int, *, page_size: int, dirid: int = 0) -> Any:
         """Fetch a playlist detail page."""
 
+        started_at = perf_counter()
         request = self._client.songlist.get_detail(playlist_id, dirid=dirid, num=page_size)
-        return self._run_async(_collect_paginated_request(request))
+        payload, page_count = self._run_async(_collect_paginated_request(request))
+        logger.debug(
+            "qqmusic playlist pages fetched",
+            playlist_id=playlist_id,
+            dirid=dirid,
+            page_size=page_size,
+            page_count=page_count,
+            track_count=_playlist_song_count(payload),
+            elapsed_seconds=round(perf_counter() - started_at, 3),
+        )
+        return payload
 
     def search_tracks(self, query: str, *, limit: int) -> Any:
         """Search QQ Music tracks."""
@@ -374,10 +388,30 @@ class QQMusicAdapter(BasePlatform):
         if not added:
             raise ValidationFailure("QQ Music rejected one or more playlist additions")
 
-    def get_destination_track_ids(self, playlist_id: str) -> set[str]:
+    def add_tracks_to_target(
+        self,
+        target_type: str,
+        target_id: str,
+        track_ids: list[str],
+    ) -> None:
+        """Add QQ Music tracks to a songlist-backed write target."""
+
+        if target_type not in {"playlist", "liked_songs"}:
+            raise ValidationFailure(
+                f"QQ Music does not support destination target type: {target_type}"
+            )
+        self.add_tracks(target_id, track_ids)
+
+    def get_destination_track_ids(
+        self,
+        playlist_id: str,
+        *,
+        target_type: str = "playlist",
+    ) -> set[str]:
         """Read existing QQ Music song IDs in the numeric format used for writes."""
 
         target = _songlist_target_from_pair(playlist_id)
+        started_at = perf_counter()
         try:
             payload = self._policy.execute(
                 "qqmusic destination playlist items",
@@ -392,7 +426,7 @@ class QQMusicAdapter(BasePlatform):
             )
         except Exception as exc:
             _raise_classified_qqmusic_exception(exc)
-        return {
+        track_ids = {
             track.platform_track_id
             for track in playlist_from_qqmusic_payload(
                 payload,
@@ -400,6 +434,32 @@ class QQMusicAdapter(BasePlatform):
             ).tracks
             if track.platform_track_id is not None
         }
+        logger.debug(
+            "qqmusic destination tracks loaded",
+            target_type=target_type,
+            target_id=playlist_id,
+            tid=target.tid,
+            dirid=target.dirid,
+            page_size=self.config.page_size,
+            track_count=len(track_ids),
+            elapsed_seconds=round(perf_counter() - started_at, 3),
+        )
+        return track_ids
+
+    def get_existing_destination_target_track_ids(
+        self,
+        target_type: str,
+        target_id: str,
+        track_ids: list[str],
+    ) -> set[str]:
+        """Return QQ Music track IDs already present for a songlist-backed target."""
+
+        del track_ids
+        if target_type not in {"playlist", "liked_songs"}:
+            raise ValidationFailure(
+                f"QQ Music does not support destination target type: {target_type}"
+            )
+        return self.get_destination_track_ids(target_id, target_type=target_type)
 
     def validate_destination_playlist(self, playlist_id: str) -> str:
         """Fetch a QQ Music songlist before writing to fail clearly on bad targets."""
@@ -444,6 +504,50 @@ class QQMusicAdapter(BasePlatform):
             return target.as_playlist_id()
         return resolved_target.as_playlist_id()
 
+    def validate_destination_target(
+        self,
+        target_type: str,
+        target_id: str | None,
+    ) -> str:
+        """Validate a normal songlist or the user's "liked songs" songlist."""
+
+        if target_type == "playlist":
+            if target_id is None:
+                raise ValidationFailure("QQ Music playlist writes require a songlist id")
+            return self.validate_destination_playlist(target_id)
+        if target_type != "liked_songs":
+            raise ValidationFailure(
+                f"QQ Music does not support destination target type: {target_type}"
+            )
+        if target_id is None:
+            raise ValidationFailure(
+                "QQ Music liked_songs writes require the My Favorites playlist id or URL"
+            )
+        return self.validate_destination_playlist(target_id)
+
+    def is_resolved_destination_target(self, target_type: str, target_id: str) -> bool:
+        """Return whether a QQ Music target already has the internal dirid:tid pair."""
+
+        if target_type not in {"playlist", "liked_songs"}:
+            return False
+        return _songlist_target_from_optional_pair(target_id) is not None
+
+    def destination_target_ids_match(
+        self,
+        target_type: str,
+        left: str,
+        right: str,
+    ) -> bool:
+        """Compare QQ Music public IDs/URLs and resolved dirid:tid targets by tid."""
+
+        if target_type not in {"playlist", "liked_songs"}:
+            return left == right
+        left_tid = _songlist_target_tid(left)
+        right_tid = _songlist_target_tid(right)
+        if left_tid is None or right_tid is None:
+            return left == right
+        return left_tid == right_tid
+
     def _ensure_client(self) -> Any:
         if self._client is None:
             self._client = self._client_factory(self.config.load_credential_payload())
@@ -467,11 +571,11 @@ class QQMusicAdapter(BasePlatform):
         return self.config.credential_payload is not None or self.config.credential_path is not None
 
 
-async def _collect_paginated_request(request: Any) -> Any:
+async def _collect_paginated_request(request: Any) -> tuple[Any, int]:
     pages = []
     async for page in request.paginate():
         pages.append(page)
-    return _merge_playlist_pages(pages)
+    return _merge_playlist_pages(pages), len(pages)
 
 
 def playlist_from_qqmusic_payload(
@@ -554,6 +658,13 @@ def _song_items_from_playlist_payload(payload: Any) -> Sequence[Any]:
     if not isinstance(songs, Sequence) or isinstance(songs, str | bytes):
         raise ValidationFailure("QQ Music playlist response did not include a song list")
     return songs
+
+
+def _playlist_song_count(payload: Any) -> int:
+    songs = _first_value(payload, "songs", "songlist", "song", "list")
+    if isinstance(songs, Sequence) and not isinstance(songs, str | bytes):
+        return len(songs)
+    return 0
 
 
 def _song_items_from_search_payload(payload: Any) -> Sequence[Any]:
@@ -657,6 +768,16 @@ def _songlist_target_from_pair(value: str) -> QQMusicSonglistTarget:
             "QQ Music writes require a resolved dirid:tid playlist target"
         ) from exc
     return QQMusicSonglistTarget(dirid=dirid, tid=tid)
+
+
+def _songlist_target_tid(value: str) -> int | None:
+    target = _songlist_target_from_optional_pair(value)
+    if target is not None:
+        return target.tid
+    try:
+        return _playlist_id_from_value(value)
+    except ValidationFailure:
+        return None
 
 
 def _artist_names(payload: Any) -> list[str]:
