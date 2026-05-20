@@ -8,7 +8,7 @@ from playlist_porter.matching.status import MatchStatus
 from playlist_porter.models import Playlist, TrackCandidate, UniversalTrack
 from playlist_porter.persistence.repositories import TransferRepository
 from playlist_porter.platforms.base import BasePlatform, PlatformCapabilities
-from playlist_porter.platforms.mock import MockAdapter
+from playlist_porter.platforms.mock import MOCK_LIKED_SONGS_TARGET_ID, MockAdapter
 from playlist_porter.platforms.qqmusic import QQMusicAdapter, QQMusicConfig
 from playlist_porter.platforms.spotify import SpotifyAdapter
 from playlist_porter.progress import ProgressEvent
@@ -314,6 +314,281 @@ def test_phase8_write_run_allows_normalized_destination_target_reuse(tmp_path) -
     assert destination.playlist_ids == ["playlist-1"]
 
 
+def test_phase8_run_keys_differ_by_destination_target_type(tmp_path) -> None:
+    database_path = tmp_path / "transfer.sqlite"
+    source = StaticSourceAdapter()
+
+    playlist_run = run_transfer_with_adapters(
+        source,
+        FlakyDestinationAdapter(fail_after_successes=None),
+        source_playlist_id="source-playlist",
+        dry_run=True,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+    )
+    liked_run = run_transfer_with_adapters(
+        source,
+        FlakyDestinationAdapter(fail_after_successes=None),
+        source_playlist_id="source-playlist",
+        dry_run=True,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+        destination_target_type="liked_songs",
+    )
+
+    assert liked_run.transfer_run_id != playlist_run.transfer_run_id
+    assert TransferRepository(database_path).load_run(
+        liked_run.transfer_run_id
+    ).metadata["destination_target_type"] == "liked_songs"
+
+
+def test_phase8_write_run_rejects_destination_target_type_changes(tmp_path) -> None:
+    database_path = tmp_path / "transfer.sqlite"
+    dry_run = run_transfer_with_adapters(
+        StaticSourceAdapter(),
+        LibraryDestinationAdapter(existing_track_ids=set()),
+        source_playlist_id="source-playlist",
+        dry_run=True,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+        destination_target_type="liked_songs",
+    )
+
+    with pytest.raises(ValueError, match="destination target type liked_songs"):
+        execute_transfer_run_with_adapter(
+            LibraryDestinationAdapter(existing_track_ids=set()),
+            transfer_run_id=dry_run.transfer_run_id,
+            database_path=database_path,
+            output_dir=tmp_path / "reports",
+            destination_playlist_id="playlist-1",
+            destination_target_type="playlist",
+        )
+
+
+def test_phase8_liked_songs_write_skips_existing_and_writes_missing(tmp_path) -> None:
+    database_path = tmp_path / "transfer.sqlite"
+    destination = LibraryDestinationAdapter(existing_track_ids={"dest-1"})
+    dry_run = run_transfer_with_adapters(
+        TwoTrackSourceAdapter(),
+        destination,
+        source_playlist_id="source-playlist",
+        dry_run=True,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+        destination_target_type="liked_songs",
+    )
+
+    result = execute_transfer_run_with_adapter(
+        destination,
+        transfer_run_id=dry_run.transfer_run_id,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+        destination_target_type="liked_songs",
+    )
+
+    summary = _summary_report(result)
+    assert result.destination_playlist_id == "liked_songs"
+    assert result.written_count == 1
+    assert destination.added_target_batches == [("liked_songs", "liked_songs", ["dest-2"])]
+    assert summary["write_skipped_existing_count"] == 1
+
+
+def test_phase8_liked_songs_write_normalizes_persisted_plain_target(
+    tmp_path,
+) -> None:
+    database_path = tmp_path / "transfer.sqlite"
+    destination = NormalizingLibraryDestinationAdapter(existing_track_ids=set())
+    dry_run = run_transfer_with_adapters(
+        StaticSourceAdapter(),
+        destination,
+        source_playlist_id="source-playlist",
+        dry_run=True,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+        destination_playlist_id="12345",
+        destination_target_type="liked_songs",
+    )
+
+    result = execute_transfer_run_with_adapter(
+        destination,
+        transfer_run_id=dry_run.transfer_run_id,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+        destination_playlist_id="12345",
+        destination_target_type="liked_songs",
+    )
+
+    run = TransferRepository(database_path).load_run(dry_run.transfer_run_id)
+    assert result.destination_playlist_id == "201:12345"
+    assert run.destination_playlist_id == "201:12345"
+    assert destination.added_target_batches == [("liked_songs", "201:12345", ["dest-1"])]
+    assert destination.target_validations == [("liked_songs", "12345")]
+
+
+def test_phase8_liked_songs_write_reuses_resolved_target_for_configured_plain_id(
+    tmp_path,
+) -> None:
+    database_path = tmp_path / "transfer.sqlite"
+    destination = NormalizingLibraryDestinationAdapter(existing_track_ids=set())
+    dry_run = run_transfer_with_adapters(
+        StaticSourceAdapter(),
+        destination,
+        source_playlist_id="source-playlist",
+        dry_run=True,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+        destination_playlist_id="201:12345",
+        destination_target_type="liked_songs",
+    )
+    destination.target_validations.clear()
+
+    result = execute_transfer_run_with_adapter(
+        destination,
+        transfer_run_id=dry_run.transfer_run_id,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+        destination_playlist_id="12345",
+        destination_target_type="liked_songs",
+    )
+
+    assert result.destination_playlist_id == "201:12345"
+    assert destination.target_validations == []
+    assert destination.added_target_batches == [("liked_songs", "201:12345", ["dest-1"])]
+
+
+def test_phase8_mock_liked_songs_write_uses_mock_writes_store(tmp_path) -> None:
+    config = _phase8_config(tmp_path)
+    dry_run = run_transfer(
+        config,
+        source_platform="mock",
+        destination_platform="mock",
+        source_playlist_id="source-playlist",
+        dry_run=True,
+        destination_target_type="liked_songs",
+    )
+
+    result = execute_transfer_run(
+        config,
+        destination_platform="mock",
+        transfer_run_id=dry_run.transfer_run_id,
+        destination_target_type="liked_songs",
+    )
+
+    assert config.mock_writes_path is not None
+    writes = json.loads(config.mock_writes_path.read_text(encoding="utf-8"))
+    assert result.destination_playlist_id == MOCK_LIKED_SONGS_TARGET_ID
+    assert writes[MOCK_LIKED_SONGS_TARGET_ID]["target_type"] == "liked_songs"
+    assert writes[MOCK_LIKED_SONGS_TARGET_ID]["track_ids"] == ["dest-exact"]
+
+
+def test_phase8_match_rejects_invalid_static_write_target_config(tmp_path) -> None:
+    database_path = tmp_path / "transfer.sqlite"
+
+    with pytest.raises(
+        ValueError,
+        match="create_playlist is only supported for playlist destination targets",
+    ):
+        run_transfer_with_adapters(
+            StaticSourceAdapter(),
+            LibraryDestinationAdapter(existing_track_ids=set()),
+            source_playlist_id="source-playlist",
+            dry_run=True,
+            database_path=database_path,
+            output_dir=tmp_path / "reports",
+            create_playlist_name="Copied",
+            destination_target_type="liked_songs",
+        )
+
+    assert database_path.exists() is False
+
+
+def test_phase8_match_rejects_spotify_liked_songs_destination_playlist_id(
+    tmp_path,
+) -> None:
+    database_path = tmp_path / "transfer.sqlite"
+    destination = LibraryDestinationAdapter(existing_track_ids=set())
+    destination.platform_name = "spotify"
+
+    with pytest.raises(
+        ValueError,
+        match="Spotify Liked Songs does not accept destination_playlist_id",
+    ):
+        run_transfer_with_adapters(
+            StaticSourceAdapter(),
+            destination,
+            source_playlist_id="source-playlist",
+            dry_run=True,
+            database_path=database_path,
+            output_dir=tmp_path / "reports",
+            destination_playlist_id="playlist-1",
+            destination_target_type="liked_songs",
+        )
+
+    assert database_path.exists() is False
+
+
+def test_phase8_match_rejects_qqmusic_liked_songs_without_destination_playlist_id(
+    tmp_path,
+) -> None:
+    database_path = tmp_path / "transfer.sqlite"
+    destination = LibraryDestinationAdapter(existing_track_ids=set())
+    destination.platform_name = "qqmusic"
+
+    with pytest.raises(
+        ValueError,
+        match="QQ Music liked_songs writes require destination_playlist_id",
+    ):
+        run_transfer_with_adapters(
+            StaticSourceAdapter(),
+            destination,
+            source_playlist_id="source-playlist",
+            dry_run=True,
+            database_path=database_path,
+            output_dir=tmp_path / "reports",
+            destination_target_type="liked_songs",
+        )
+
+    assert database_path.exists() is False
+
+
+def test_phase8_match_allows_qqmusic_liked_songs_with_destination_playlist_id(
+    tmp_path,
+) -> None:
+    database_path = tmp_path / "transfer.sqlite"
+    destination = LibraryDestinationAdapter(existing_track_ids=set())
+    destination.platform_name = "qqmusic"
+
+    result = run_transfer_with_adapters(
+        StaticSourceAdapter(),
+        destination,
+        source_playlist_id="source-playlist",
+        dry_run=True,
+        database_path=database_path,
+        output_dir=tmp_path / "reports",
+        destination_playlist_id="9712240561",
+        destination_target_type="liked_songs",
+    )
+
+    run = TransferRepository(database_path).load_run(result.transfer_run_id)
+    assert run.destination_playlist_id == "9712240561"
+    assert run.metadata["destination_target_type"] == "liked_songs"
+
+
+def test_phase8_write_rejects_invalid_static_write_target_config(tmp_path) -> None:
+    with pytest.raises(
+        ValueError,
+        match="create_playlist is only supported for playlist destination targets",
+    ):
+        execute_transfer_run_with_adapter(
+            LibraryDestinationAdapter(existing_track_ids=set()),
+            transfer_run_id="missing-run",
+            database_path=tmp_path / "transfer.sqlite",
+            output_dir=tmp_path / "reports",
+            create_playlist_name="Copied",
+            destination_target_type="liked_songs",
+        )
+
+
 def test_phase8_write_run_rejects_destination_platform_mismatch(tmp_path) -> None:
     config = _phase8_config(tmp_path)
     dry_run = run_transfer(
@@ -426,11 +701,13 @@ def test_phase8_resume_skips_recorded_writes(tmp_path) -> None:
     assert TransferRepository(config.database_path).load_metrics(
         first.transfer_run_id
     ).write_success_count == 1
-    assert [
+    write_events = [
         (event.phase, event.current, event.total, event.label)
         for event in events
         if event.phase == "write"
-    ][-1] == ("write", 0, 0, "No pending tracks to write")
+    ]
+    assert write_events.count(("write", 0, 1, "Checking destination for existing tracks...")) == 1
+    assert write_events[-1] == ("write", 0, 0, "No pending tracks to write")
 
 
 def test_phase8_resume_skips_recorded_destination_duplicate_proofs(tmp_path) -> None:
@@ -471,6 +748,7 @@ def test_phase8_resume_skips_recorded_destination_duplicate_proofs(tmp_path) -> 
         for event in events
         if event.phase == "write"
     ] == [
+        ("write", 0, 1, "Checking destination for existing tracks..."),
         ("write", 0, 0, "No new tracks to write"),
         ("write", 0, 0, "No pending tracks to write"),
     ]
@@ -589,6 +867,7 @@ def test_phase8_emits_write_progress_events(tmp_path) -> None:
         for event in events
         if event.phase == "write"
     ] == [
+        ("write", 0, 2, "Checking destination for existing tracks..."),
         ("write", 0, 2, None),
         ("write", 1, 2, "Alpha"),
         ("write", 2, 2, "Beta"),
@@ -991,6 +1270,93 @@ class UrlNormalizingDestinationAdapter(FlakyDestinationAdapter):
     def add_tracks(self, playlist_id: str, track_ids: list[str]) -> None:
         self.playlist_ids.append(playlist_id)
         super().add_tracks(playlist_id, track_ids)
+
+
+class LibraryDestinationAdapter(FlakyDestinationAdapter):
+    platform_name = "library"
+
+    def __init__(self, *, existing_track_ids: set[str]) -> None:
+        super().__init__(fail_after_successes=None)
+        self.existing_track_ids = existing_track_ids
+        self.added_target_batches: list[tuple[str, str, list[str]]] = []
+
+    def validate_destination_target(
+        self,
+        target_type: str,
+        target_id: str | None,
+    ) -> str:
+        if target_type == "liked_songs":
+            assert target_id in (None, "liked_songs")
+            return "liked_songs"
+        if target_type == "playlist":
+            assert target_id is not None
+            return target_id
+        raise AssertionError(f"unexpected target type: {target_type}")
+
+    def get_existing_destination_target_track_ids(
+        self,
+        target_type: str,
+        target_id: str,
+        track_ids: list[str],
+    ) -> set[str]:
+        assert target_type == "liked_songs"
+        assert target_id == "liked_songs"
+        return self.existing_track_ids.intersection(track_ids)
+
+    def destination_target_batch_size(self, target_type: str) -> int:
+        assert target_type == "liked_songs"
+        return 40
+
+    def add_tracks_to_target(
+        self,
+        target_type: str,
+        target_id: str,
+        track_ids: list[str],
+    ) -> None:
+        self.added_target_batches.append((target_type, target_id, list(track_ids)))
+        self.added_track_ids.extend(track_ids)
+
+
+class NormalizingLibraryDestinationAdapter(LibraryDestinationAdapter):
+    def __init__(self, *, existing_track_ids: set[str]) -> None:
+        super().__init__(existing_track_ids=existing_track_ids)
+        self.target_validations: list[tuple[str, str | None]] = []
+
+    def is_resolved_destination_target(self, target_type: str, target_id: str) -> bool:
+        assert target_type == "liked_songs"
+        return ":" in target_id
+
+    def destination_target_ids_match(
+        self,
+        target_type: str,
+        left: str,
+        right: str,
+    ) -> bool:
+        assert target_type == "liked_songs"
+        return left.split(":", 1)[-1] == right.split(":", 1)[-1]
+
+    def validate_destination_target(
+        self,
+        target_type: str,
+        target_id: str | None,
+    ) -> str:
+        self.target_validations.append((target_type, target_id))
+        assert target_type == "liked_songs"
+        if target_id == "12345":
+            return "201:12345"
+        if target_id == "201:12345":
+            return "201:12345"
+        raise AssertionError(f"unexpected target id: {target_id}")
+
+    def get_existing_destination_target_track_ids(
+        self,
+        target_type: str,
+        target_id: str,
+        track_ids: list[str],
+    ) -> set[str]:
+        assert target_type == "liked_songs"
+        assert target_id == "201:12345"
+        return self.existing_track_ids.intersection(track_ids)
 
 
 class ProgressFailureDestinationAdapter(FlakyDestinationAdapter):
